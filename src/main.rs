@@ -1,34 +1,34 @@
 extern crate sdl2;
 
 
-mod sdl_platform;
+use sdl2::{Sdl, VideoSubsystem};
+use sdl2::event::{Event, WindowEvent};
+use sdl2::keyboard::Keycode;
+use sdl2::video::Window;
 use sdl_platform::{Platform, PlatformBuilder};
-
+use std::error::Error;
 use std::rc::Rc;
+use sdl2::pixels::Color;
+use sdl2::rect::Rect;
+
+pub mod sdl_platform;
+pub mod gl_render;
 
 
 #[cfg(test)]
 mod test;
 
-use sdl2::event::{Event, WindowEvent};
-use sdl2::keyboard::Keycode;
-use sdl2::video::Window;
-use sdl2::{Sdl, VideoSubsystem};
-use std::error::Error;
 
-struct WindowsAndContexts {
-    window: Window,
-    video_subsystem: VideoSubsystem,
-    sdl_context: Sdl,
-}
-
+///
+/// State object for main loop information, such as
+/// Event handlers and frame timers.
 #[derive(Debug)]
 struct MainLoopState {
     is_running: bool,
 }
 
 impl MainLoopState {
-    fn new(platform: Rc<Platform>) -> MainLoopState {
+    fn new() -> MainLoopState {
         MainLoopState {
             is_running: false,
         }
@@ -65,20 +65,19 @@ impl MainLoopState {
 
 
 fn game_main() -> Result<(), String> {
-    let platform =
-        Rc::new(PlatformBuilder::new().with_window_size(640, 480)
-        .with_window_title("Rust opengl demo")
-        .build()?);
-    let mut loop_state = MainLoopState::new(platform.clone());
-
-    println!("{}", platform.as_ref());
+    use sdl_platform::{platform, get_error_desc};
+    let Platform {window, video_subsystem, event_pump, ..} =
+        platform()
+            .with_window_size(640, 480)
+            .with_window_title("Rust opengl demo")
+            .build()?;
+    let mut loop_state = MainLoopState::new();
     loop_state.is_running = true;
-    
-    while loop_state.is_running {
-        let mut event_pump = platform.event_pump.borrow_mut();
-        loop_state.handle_events(&platform.window, event_pump.poll_iter());
-    }
 
+    while loop_state.is_running {
+        loop_state.handle_events(&window, event_pump.borrow_mut().poll_iter());
+
+    }
     Ok(())
 }
 
