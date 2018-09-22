@@ -1,9 +1,7 @@
 
-// use super::*;
-
-use std::cell::*;
+use super::*;
 
 #[test]
-fn test_cells() {
-   
+fn test_something(){
+    assert_eq!(1, 1);
 }

@@ -1,6 +1,4 @@
 extern crate sdl2;
-
-
 use sdl2::{Sdl, VideoSubsystem};
 use sdl2::event::{Event, WindowEvent};
 use sdl2::video::Window;
@@ -128,7 +126,3 @@ impl PlatformBuilder {
     }
 }
 
-
-pub fn get_error_desc<E: Error>(e: E) -> String {
-    String::from(e.description())
-}
