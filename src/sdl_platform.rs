@@ -1,12 +1,14 @@
 extern crate sdl2;
-use sdl2::{Sdl, VideoSubsystem};
+
 use sdl2::event::{Event, WindowEvent};
 use sdl2::video::Window;
+use sdl2::{Sdl, VideoSubsystem};
 use std::cell::RefCell;
 use std::error::Error;
 use std::fmt;
 use std::rc::Rc;
 
+use super::get_error_desc;
 
 ///
 /// Container for SDL-level resources, such as subsystems and the
@@ -18,9 +20,7 @@ pub struct Platform {
     pub event_pump: Rc<RefCell<sdl2::EventPump>>,
 }
 
-impl Platform {
-
-}
+impl Platform {}
 
 impl fmt::Debug for Platform {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -40,7 +40,6 @@ impl fmt::Display for Platform {
 }
 
 pub type PlatformResult<T> = Result<T, String>;
-
 
 /// Constructs a PlatformBuilder struct
 pub fn platform() -> PlatformBuilder {
@@ -71,10 +70,7 @@ impl PlatformBuilder {
         self
     }
 
-    pub fn with_window_title(
-        &mut self,
-        title: &str,
-    ) -> &mut PlatformBuilder {
+    pub fn with_window_title(&mut self, title: &str) -> &mut PlatformBuilder {
         self.window_title = title.to_string();
         self
     }
@@ -110,8 +106,7 @@ impl PlatformBuilder {
             } else if context_version.0 < context_version.0 {
                 return Err(format!(
                     "OpenGL version is {}.{}, requested version 3.2",
-                    context_version.0,
-                    context_version.1
+                    context_version.0, context_version.1
                 ));
             }
         }
@@ -125,4 +120,3 @@ impl PlatformBuilder {
         })
     }
 }
-

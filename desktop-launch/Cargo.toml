@@ -1,7 +1,0 @@
-[package]
-name = "desktop-launch"
-version = "0.1.0"
-authors = ["Steve Shea <stevenlsjr@gmail.com>"]
-
-[dependencies]
-sdl2 = "0.31.0"
