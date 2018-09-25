@@ -7,6 +7,9 @@ authors = ["Steve Shea <stevenlsjr@gmail.com>"]
 gl = "0.10.0"
 cgmath = "0.16.1"
 sdl2 = "0.31.0"
+failure = "0.1.2"
+serde = "1.0.79"
+serde_derive = "1.0.79"
 
 [target.wasm32-unknown-emscripten.dependencies]
 stdweb = "0.4.9"

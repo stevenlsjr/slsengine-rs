@@ -1,16 +1,16 @@
 extern crate sdl2;
 use std::error::Error;
 
+pub mod renderer;
 pub mod sdl_platform;
+
+
+#[macro_use] extern crate failure;
+//#[macro_use] extern crate serde_derive;
 
 use sdl2::event::{Event, WindowEvent};
 use sdl2::keyboard::Keycode;
-use sdl2::pixels::Color;
-use sdl2::rect::Rect;
 use sdl2::video::Window;
-use sdl2::{Sdl, VideoSubsystem};
-use sdl_platform::{Platform, PlatformBuilder};
-use std::rc::Rc;
 
 pub fn get_error_desc<E: Error>(e: E) -> String {
     e.description().to_string()

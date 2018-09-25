@@ -1,10 +1,8 @@
 extern crate sdl2;
 
-use sdl2::event::{Event, WindowEvent};
 use sdl2::video::Window;
 use sdl2::{Sdl, VideoSubsystem};
 use std::cell::RefCell;
-use std::error::Error;
 use std::fmt;
 use std::rc::Rc;
 

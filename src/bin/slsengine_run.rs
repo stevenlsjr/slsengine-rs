@@ -30,7 +30,6 @@ mod wasm {
         stdweb::event_loop();
 
         let _gl_ctx = window.gl_create_context()?;
-
         gl::load_with(|name| {
             video_subsystem.gl_get_proc_address(name) as *const _
         });
@@ -69,6 +68,8 @@ mod desktop {
         window.gl_set_context_to_current()?;
 
         loop_state.is_running = true;
+
+
 
         while loop_state.is_running {
             loop_state
