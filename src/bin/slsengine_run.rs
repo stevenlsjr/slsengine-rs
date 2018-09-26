@@ -78,7 +78,6 @@ void main(){
         )
     }?;
     Ok((vs, fs))
-
 }
 
 #[cfg(not(target_arch = "wasm32"))]

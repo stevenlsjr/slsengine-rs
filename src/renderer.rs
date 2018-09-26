@@ -246,54 +246,6 @@ mod test {
         assert_eq!(m.indices.len(), 0);
     }
 
-    fn platform_with_gl() -> (Platform, sdl2::video::GLContext) {
-        let plt = platform().build().unwrap();
-
-        let gl_ctx = plt.window.gl_create_context().unwrap();
-        gl::load_with(|name| {
-            plt.video_subsystem.gl_get_proc_address(name) as *const _
-        });
-
-        plt.window.gl_set_context_to_current().unwrap();
-
-        (plt, gl_ctx)
-    }
-
     //    #[test]
-    fn test_shader_compile() {
-        let (platform, _) = platform_with_gl();
-        platform.window.gl_set_context_to_current().unwrap();
-        let good_src = r#"
-        out vec4 out_color;
-        void main(){
-            out_color = vec4(1.0, 0.0, 0.0, 1.0);
-        }
-        "#;
 
-        let bad_src = r#"
-        out vec4 out_color;
-        void main(){
-            out_color = vec4(1.0, 0.0, 0.0, 1.0);
-
-        "#; // unmatched brackets
-
-        let header = "#version 410\n";
-
-        let good_shader =
-            unsafe { compile_source(&[header, good_src], gl::FRAGMENT_SHADER) };
-        assert!(
-            good_shader.is_ok(),
-            "shader compilation should be successful: {}",
-            good_shader.unwrap_err()
-        );
-        let bad_shader =
-            unsafe { compile_source(&[header, bad_src], gl::FRAGMENT_SHADER) };
-        assert!(bad_shader.is_err());
-        if let Err(e) = bad_shader {
-            assert!(match e {
-                ShaderError::CompileFailure { .. } => true,
-                _ => false,
-            })
-        }
-    }
 }
