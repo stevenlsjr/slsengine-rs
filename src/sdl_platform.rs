@@ -1,3 +1,4 @@
+extern crate failure;
 extern crate sdl2;
 
 use sdl2::video::Window;
@@ -7,6 +8,8 @@ use std::fmt;
 use std::rc::Rc;
 
 use super::get_error_desc;
+
+pub enum PlatformError {}
 
 ///
 /// Container for SDL-level resources, such as subsystems and the
@@ -101,11 +104,6 @@ impl PlatformBuilder {
             let context_version = gl_attr.context_version();
             if profile != GLProfile::Core {
                 return Err(format!("profile {:?} is not Core", profile));
-            } else if context_version.0 < context_version.0 {
-                return Err(format!(
-                    "OpenGL version is {}.{}, requested version 3.2",
-                    context_version.0, context_version.1
-                ));
             }
         }
 

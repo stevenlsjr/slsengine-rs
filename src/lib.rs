@@ -4,8 +4,8 @@ use std::error::Error;
 pub mod renderer;
 pub mod sdl_platform;
 
-
-#[macro_use] extern crate failure;
+#[macro_use]
+extern crate failure;
 //#[macro_use] extern crate serde_derive;
 
 use sdl2::event::{Event, WindowEvent};
