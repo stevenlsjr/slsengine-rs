@@ -4,6 +4,7 @@ extern crate gl;
 
 use std::ffi::{CStr, CString};
 
+
 #[derive(Fail, Debug)]
 pub enum RendererError {
     #[fail(display = "Failed to construct Geometry: {}", reason)]
@@ -15,8 +16,14 @@ pub enum ShaderError {
     #[fail(display = "invalid shader type: 0x{:X}", shader_type)]
     InvalidType { shader_type: u32 },
 
-    #[fail(display = "Shader compilation failed, log: `{}`", info_log)]
+    #[fail(display = "Unable to construct shader, reason: {:?}", reason)]
+    ApiFailure { reason: String },
+
+    #[fail(display = "Shader compilation failed, log: {:?}", info_log)]
     CompileFailure { info_log: String },
+
+    #[fail(display = "Link failed, reason: {:?}", reason)]
+    LinkFailure { reason: String },
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -149,7 +156,7 @@ unsafe fn debug_error_stack() {
 
 pub unsafe fn get_shader_info_log(shader: u32) -> String {
     let mut log_len = 0i32;
-    gl::GetShaderInfoLog(shader, 0, &mut log_len, 0 as *mut _);
+    gl::GetShaderiv(shader, gl::INFO_LOG_LENGTH, &mut log_len);
     let mut buffer = vec![0u8; log_len as usize];
     gl::GetShaderInfoLog(
         shader,
@@ -174,8 +181,8 @@ pub unsafe fn compile_source(
 
     let shader = gl::CreateShader(shader_type);
     if gl::IsShader(shader) == 0 {
-        return Err(ShaderError::CompileFailure {
-            info_log: "Could not construct shader".to_string(),
+        return Err(ShaderError::ApiFailure {
+            reason: "Could not construct shader".to_string(),
         });
     }
 
@@ -199,6 +206,84 @@ pub unsafe fn compile_source(
 
     Ok(shader)
 }
+
+pub fn get_program_info_log(program: u32) -> String {
+    let mut log_len = 0;
+    unsafe {
+        gl::GetProgramiv(program, gl::INFO_LOG_LENGTH, &mut log_len);
+    }
+    let mut buffer = vec![0u8; (log_len) as usize];
+    unsafe {
+        gl::GetProgramInfoLog(program, log_len, 0 as *mut _, buffer.as_mut_ptr() as *mut i8);
+    }
+    String::from_utf8_lossy(&buffer).to_string()
+}
+
+
+pub struct Program {
+    id: u32,
+}
+
+
+pub struct ProgramBuilder {
+    frag_shader: Option<u32>,
+    vert_shader: Option<u32>,
+    geometry_shader: Option<u32>,
+}
+
+
+impl ProgramBuilder {
+    pub fn new() -> ProgramBuilder {
+        ProgramBuilder {
+            frag_shader: None,
+            vert_shader: None,
+            geometry_shader: None,
+        }
+    }
+    pub fn frag_shader<'a>(
+        &'a mut self,
+        frag_shader: u32,
+    ) -> &'a mut ProgramBuilder {
+        self.frag_shader = Some(frag_shader);
+        self
+    }
+
+    pub fn vert_shader<'a>(
+        &'a mut self,
+        vert_shader: u32,
+    ) -> &'a mut ProgramBuilder {
+        self.vert_shader = Some(vert_shader);
+        self
+    }
+
+
+
+    pub unsafe fn link_program(&self) -> Result<u32, ShaderError> {
+        let program = gl::CreateProgram();
+        let (vs, fs) = self.vert_shader
+            .and_then(|vs| self.frag_shader.map(|fs| (vs, fs)))
+            .ok_or(ShaderError::LinkFailure {
+                reason: "program must have attached vertex and frag shader"
+                    .to_string(),
+            })?;
+
+
+        gl::AttachShader(program, vs);
+        gl::AttachShader(program, fs);
+        gl::LinkProgram(program);
+
+        let mut result = 0;
+        gl::GetProgramiv(program, gl::LINK_STATUS, &mut result);
+        if result != gl::TRUE as i32 {
+            let log: String = get_program_info_log(program);
+            gl::DeleteProgram(program);
+            return Err(ShaderError::LinkFailure { reason: log });
+        }
+
+        Ok(program)
+    }
+}
+
 
 #[cfg(test)]
 mod test {

@@ -7,7 +7,7 @@ use slsengine::renderer::*;
 use slsengine::sdl_platform::*;
 // #[test]
 fn test_shader_compile() {
-    let (platform, _) = platform_with_gl();
+    let (_platform, _) = platform_with_gl();
     let good_src = r#"
     out vec4 out_color;
     void main(){
@@ -69,8 +69,6 @@ fn platform_with_gl() -> (Platform, sdl2::video::GLContext) {
 }
 
 fn main() {
-    use std::panic;
-    use std::process::exit;
 
     test_shader_compile();
 }

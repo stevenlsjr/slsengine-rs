@@ -85,7 +85,7 @@ mod desktop {
     use super::*;
 
     pub fn game_main() -> Result<(), String> {
-        use renderer::compile_source;
+        use renderer::{ProgramBuilder};
         use sdl_platform::{platform, Platform};
         let Platform {
             window,
@@ -105,6 +105,21 @@ mod desktop {
         window.gl_set_context_to_current()?;
 
         let (vs, fs) = create_shaders().unwrap();
+        let mut pb = ProgramBuilder::new();
+        pb.frag_shader(fs);
+        pb.vert_shader(vs);
+
+        let program = unsafe {pb.link_program().unwrap()};
+        
+        unsafe {
+            assert_eq!(gl::IsProgram(program), gl::TRUE);
+            gl::DetachShader(program, vs);
+            gl::DeleteShader(vs);
+
+            gl::DetachShader(program, fs);
+            gl::DeleteShader( fs);
+        }
+        
 
         loop_state.is_running = true;
 
