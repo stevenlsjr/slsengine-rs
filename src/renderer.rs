@@ -1,9 +1,8 @@
 extern crate core;
 extern crate failure;
-extern crate gl;
+use super::gl as gl;
 
 use std::ffi::{CStr, CString};
-
 
 #[derive(Fail, Debug)]
 pub enum RendererError {
@@ -133,20 +132,20 @@ pub fn rectangle_mesh() -> MeshBuilder {
     mb
 }
 
-unsafe fn drain_error_stack() {
+pub fn drain_error_stack() {
     let mut err = gl::NO_ERROR;
     loop {
-        err = gl::GetError();
+        err = unsafe{ gl::GetError()};
         if err == gl::NO_ERROR {
             break;
         }
     }
 }
 
-unsafe fn debug_error_stack() {
+pub fn debug_error_stack() {
     let mut err = gl::NO_ERROR;
     loop {
-        err = gl::GetError();
+        err = unsafe{ gl::GetError()};
         if err == gl::NO_ERROR {
             break;
         }

@@ -14,4 +14,5 @@ serde_derive = "1.0.79"
 
 [target.wasm32-unknown-emscripten.dependencies]
 stdweb = "0.4.9"
+webgl_stdweb = "0.2.0"
 

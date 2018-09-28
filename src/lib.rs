@@ -4,6 +4,18 @@ use std::error::Error;
 pub mod renderer;
 pub mod sdl_platform;
 
+#[cfg(not(target_arg="wasm32"))]
+pub mod gl {
+    extern crate gl as _gl;
+    pub use self::_gl::*;
+}
+#[cfg(target_arg="wasm32")]
+pub mod gl {
+    extern crate webgl_stdweb;
+    pub use self::webgl_stdweb;
+    }
+
+
 #[macro_use]
 extern crate failure;
 //#[macro_use] extern crate serde_derive;
