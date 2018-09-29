@@ -1,10 +1,9 @@
 extern crate core;
 extern crate failure;
-extern crate gl;
-
+use super::gl;
 use std::ffi::{CStr, CString};
 
-pub mod objects;
+use super::objects;
 
 #[derive(Fail, Debug)]
 pub enum RendererError {
@@ -42,7 +41,12 @@ pub struct Mesh {
 }
 
 impl Mesh {
-    
+    pub fn new() -> Mesh {
+        Mesh {
+            vertices: Vec::new(),
+            indices: Vec::new(),
+        }
+    }
 }
 
 pub struct MeshBuilder {
@@ -129,10 +133,6 @@ pub fn rectangle_mesh() -> MeshBuilder {
     mb
 }
 
-
-
-
-
 pub fn drain_error_stack() {
     let mut err = gl::NO_ERROR;
     loop {
@@ -143,25 +143,28 @@ pub fn drain_error_stack() {
     }
 }
 
-pub fn dump_errors(errors: &mut Vec<gl::types::GLenum>) -> &mut Vec<gl::types::GLenum>  {
+/// fills up a vector with errors produced by glGetError
+/// . dump_errors returns length of errors
+pub fn dump_errors(errors: &mut Vec<gl::types::GLenum>) -> usize {
+    errors.clear();
     loop {
-        err = unsafe { gl::GetError() };
+        let err = unsafe { gl::GetError() };
         if err == gl::NO_ERROR {
             break;
         }
         errors.push(err);
     }
-    errors
+    errors.len()
 }
 
-pub fn debug_error_stack() {
+pub fn debug_error_stack(file: &str, line: u32) {
     let mut err = gl::NO_ERROR;
     loop {
         err = unsafe { gl::GetError() };
         if err == gl::NO_ERROR {
             break;
         }
-        eprintln!("GL error: 0x{:X}", err)
+        eprintln!("{}, {}, GL error: 0x{:X}", file, line, err)
     }
 }
 
@@ -253,7 +256,6 @@ impl Drop for Program {
     }
 }
 
-
 pub struct ProgramBuilder {
     frag_shader: Option<u32>,
     vert_shader: Option<u32>,
@@ -265,7 +267,7 @@ impl ProgramBuilder {
         ProgramBuilder {
             frag_shader: None,
             vert_shader: None,
-//            geometry_shader: None,
+            //            geometry_shader: None,
         }
     }
     pub fn frag_shader<'a>(
@@ -321,9 +323,9 @@ impl ProgramBuilder {
 mod test {
     extern crate sdl2;
 
+    use super::*;
     use sdl2::video;
     use sdl_platform::{platform, Platform};
-    use super::*;
 
     #[test]
     fn test_rec_mesh() {
