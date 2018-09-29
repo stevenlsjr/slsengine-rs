@@ -44,7 +44,10 @@ mod wasm {
     }
 }
 
-fn create_shaders() -> Result<(u32, u32), renderer::ShaderError> {
+fn create_shaders() -> Result<
+    (u32, u32),
+    renderer::ShaderError,
+> {
     use renderer::*;
     let header: &'static str = "#version 410\n";
     let vs = unsafe {
@@ -85,8 +88,10 @@ mod desktop {
     use super::*;
 
     pub fn game_main() -> Result<(), String> {
-        use renderer::{ProgramBuilder};
+        use renderer::ProgramBuilder;
         use sdl_platform::{platform, Platform};
+        use renderer::objects::*;
+
         let Platform {
             window,
             video_subsystem,
@@ -99,6 +104,7 @@ mod desktop {
         let mut loop_state = MainLoopState::new();
         let _gl_ctx = window.gl_create_context()?;
 
+
         gl::load_with(|name| {
             video_subsystem.gl_get_proc_address(name) as *const _
         });
@@ -109,17 +115,17 @@ mod desktop {
         pb.frag_shader(fs);
         pb.vert_shader(vs);
 
-        let program = unsafe {pb.link_program().unwrap()};
-        
-        unsafe {
-            assert_eq!(gl::IsProgram(program), gl::TRUE);
-            gl::DetachShader(program, vs);
-            gl::DeleteShader(vs);
+        let program = pb.build_program().unwrap();
 
-            gl::DetachShader(program, fs);
-            gl::DeleteShader( fs);
-        }
+        let square_mesh = renderer::rectangle_mesh().build().unwrap();
+        let mesh_buffers = MeshBuffers::new().unwrap();
         
+
+        unsafe {
+            assert_eq!(gl::IsProgram(program.id), gl::TRUE);
+            gl::DeleteShader(vs);
+            gl::DeleteShader(fs);
+        }
 
         loop_state.is_running = true;
 

@@ -1,8 +1,10 @@
 extern crate core;
 extern crate failure;
-use super::gl as gl;
+extern crate gl;
 
 use std::ffi::{CStr, CString};
+
+pub mod objects;
 
 #[derive(Fail, Debug)]
 pub enum RendererError {
@@ -40,12 +42,7 @@ pub struct Mesh {
 }
 
 impl Mesh {
-    fn new() -> Mesh {
-        Mesh {
-            vertices: Vec::new(),
-            indices: Vec::new(),
-        }
-    }
+    
 }
 
 pub struct MeshBuilder {
@@ -132,20 +129,35 @@ pub fn rectangle_mesh() -> MeshBuilder {
     mb
 }
 
+
+
+
+
 pub fn drain_error_stack() {
     let mut err = gl::NO_ERROR;
     loop {
-        err = unsafe{ gl::GetError()};
+        err = unsafe { gl::GetError() };
         if err == gl::NO_ERROR {
             break;
         }
     }
 }
 
+pub fn dump_errors(errors: &mut Vec<gl::types::GLenum>) -> &mut Vec<gl::types::GLenum>  {
+    loop {
+        err = unsafe { gl::GetError() };
+        if err == gl::NO_ERROR {
+            break;
+        }
+        errors.push(err);
+    }
+    errors
+}
+
 pub fn debug_error_stack() {
     let mut err = gl::NO_ERROR;
     loop {
-        err = unsafe{ gl::GetError()};
+        err = unsafe { gl::GetError() };
         if err == gl::NO_ERROR {
             break;
         }
@@ -213,30 +225,47 @@ pub fn get_program_info_log(program: u32) -> String {
     }
     let mut buffer = vec![0u8; (log_len) as usize];
     unsafe {
-        gl::GetProgramInfoLog(program, log_len, 0 as *mut _, buffer.as_mut_ptr() as *mut i8);
+        gl::GetProgramInfoLog(
+            program,
+            log_len,
+            0 as *mut _,
+            buffer.as_mut_ptr() as *mut i8,
+        );
     }
     String::from_utf8_lossy(&buffer).to_string()
 }
 
-
 pub struct Program {
-    id: u32,
+    pub id: u32,
+}
+
+impl Program {
+    pub fn use_program(&self) {
+        unsafe {
+            gl::UseProgram(self.id);
+        }
+    }
+}
+
+impl Drop for Program {
+    fn drop(&mut self) {
+        unsafe { gl::DeleteProgram(self.id) }
+    }
 }
 
 
 pub struct ProgramBuilder {
     frag_shader: Option<u32>,
     vert_shader: Option<u32>,
-    geometry_shader: Option<u32>,
+    // geometry_shader: Option<u32>,
 }
-
 
 impl ProgramBuilder {
     pub fn new() -> ProgramBuilder {
         ProgramBuilder {
             frag_shader: None,
             vert_shader: None,
-            geometry_shader: None,
+//            geometry_shader: None,
         }
     }
     pub fn frag_shader<'a>(
@@ -255,17 +284,20 @@ impl ProgramBuilder {
         self
     }
 
-
+    pub fn build_program(&self) -> Result<Program, ShaderError> {
+        let id = unsafe { self.link_program() }?;
+        Ok(Program { id })
+    }
 
     pub unsafe fn link_program(&self) -> Result<u32, ShaderError> {
         let program = gl::CreateProgram();
-        let (vs, fs) = self.vert_shader
+        let (vs, fs) = self
+            .vert_shader
             .and_then(|vs| self.frag_shader.map(|fs| (vs, fs)))
             .ok_or(ShaderError::LinkFailure {
                 reason: "program must have attached vertex and frag shader"
                     .to_string(),
             })?;
-
 
         gl::AttachShader(program, vs);
         gl::AttachShader(program, fs);
@@ -278,19 +310,20 @@ impl ProgramBuilder {
             gl::DeleteProgram(program);
             return Err(ShaderError::LinkFailure { reason: log });
         }
+        gl::DetachShader(program, vs);
+        gl::DetachShader(program, fs);
 
         Ok(program)
     }
 }
 
-
 #[cfg(test)]
 mod test {
     extern crate sdl2;
 
-    use super::*;
     use sdl2::video;
     use sdl_platform::{platform, Platform};
+    use super::*;
 
     #[test]
     fn test_rec_mesh() {
