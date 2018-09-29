@@ -11,8 +11,11 @@ sdl2 = "0.31.0"
 failure = "0.1.2"
 serde = "1.0.79"
 serde_derive = "1.0.79"
+memoffset = "0.2.1"
 
 [target.wasm32-unknown-emscripten.dependencies]
 stdweb = "0.4.9"
 webgl_stdweb = "0.2.0"
 
+[profile.debug]
+panic = 'abort'
