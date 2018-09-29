@@ -26,7 +26,10 @@ fn test_shader_compile() {
 
     let raw_shader = unsafe { gl::CreateShader(gl::FRAGMENT_SHADER) };
 
-    assert!(raw_shader == gl::TRUE as u32, "glCreateShader call is failing!");
+    assert!(
+        raw_shader == gl::TRUE as u32,
+        "glCreateShader call is failing!"
+    );
     unsafe {
         gl::DeleteShader(raw_shader);
     }
@@ -69,6 +72,5 @@ fn platform_with_gl() -> (Platform, sdl2::video::GLContext) {
 }
 
 fn main() {
-
     test_shader_compile();
 }

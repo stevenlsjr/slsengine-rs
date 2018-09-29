@@ -1,4 +1,7 @@
 extern crate sdl2;
+
+#[macro_use]
+extern crate memoffset;
 use std::error::Error;
 
 pub mod renderer;

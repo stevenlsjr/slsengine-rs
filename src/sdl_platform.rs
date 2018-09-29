@@ -1,13 +1,11 @@
-extern crate failure;
-extern crate sdl2;
-
+use super::failure;
+use super::get_error_desc;
+use super::sdl2;
 use sdl2::video::Window;
 use sdl2::{Sdl, VideoSubsystem};
 use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
-
-use super::get_error_desc;
 
 pub enum PlatformError {}
 
