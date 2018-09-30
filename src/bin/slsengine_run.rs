@@ -71,9 +71,12 @@ void main(){
             &[
                 header,
                 r#"
+
 out vec4 out_color;
 void main(){
-    out_color = vec4(1.0, 1.0, 1.0, 1.0);
+    float r = sin(gl_FragCoord.x / 10.0) / 0.5 + 0.5;
+    float g = sin(gl_FragCoord.y / 10.0) / 0.5 + 0.5;
+    out_color = vec4(r, g, 1.0, 1.0);
 }
             "#,
             ],
@@ -85,9 +88,9 @@ void main(){
 
 #[cfg(not(target_arch = "wasm32"))]
 mod desktop {
-    use super::*;
     use renderer::objects::*;
     use slsengine::renderer::gl_renderer::*;
+    use super::*;
 
     fn create_mesh_object(
         mesh: &Mesh,
@@ -100,12 +103,16 @@ mod desktop {
         let buffers = MeshBuffers::new().map_err(|e| format!("{:?}", e))?;
 
         program.use_program();
-        let vert_size = mesh.vertices.len() * size_of::<Vertex>();
-        let elements_size = mesh.indices.len() * size_of::<u32>();
+        let verts = [-1f32, -1f32, 0f32,
+            -1f32, 1f32, 0f32,
+            1f32, 1f32, 0f32,
+            1f32, -1f32, 0f32];
+
+        let vert_size = verts.len() * size_of::<f32>();
+        let elements = [0u32, 1, 2, 2, 3, 0];
+        let elements_size = elements.len() * size_of::<u32>();
         unsafe {
-            renderer::drain_error_stack();
             buffers.vertex_array.bind();
-            renderer::debug_error_stack(file!(), line!());
             buffers.index_buffer.bind(gl::ELEMENT_ARRAY_BUFFER);
             buffers.vertex_buffer.bind(gl::ARRAY_BUFFER);
 
@@ -113,14 +120,22 @@ mod desktop {
             gl::BufferData(
                 gl::ELEMENT_ARRAY_BUFFER,
                 elements_size as GLsizeiptr,
-                mesh.indices.as_ptr() as *const c_void,
+                elements.as_ptr() as *const c_void,
                 gl::STATIC_DRAW,
             );
             gl::BufferData(
                 gl::ARRAY_BUFFER,
                 vert_size as GLsizeiptr,
-                mesh.vertices.as_ptr() as *const c_void,
+                verts.as_ptr() as *const c_void,
                 gl::STATIC_DRAW,
+            );
+            gl::VertexAttribPointer(
+                0,
+                3,
+                gl::FLOAT,
+                gl::FALSE,
+                0,
+                0 as *const c_void
             );
 
             gl::EnableVertexAttribArray(0);
@@ -181,9 +196,9 @@ mod desktop {
             let (width, height) = window.size();
 
             unsafe {
-                gl::Viewport(0, 0, 2, 2);
+                gl::Viewport(0, 0, width as i32, height as i32);
                 mesh_buffers.vertex_array.bind();
-                gl::DrawElements(gl::TRIANGLES, n_elements, gl::UNSIGNED_INT, 0 as *const _);
+                gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, 0 as *const _);
             }
 
             window.gl_swap_window();
