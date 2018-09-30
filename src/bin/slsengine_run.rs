@@ -73,7 +73,7 @@ void main(){
                 r#"
 out vec4 out_color;
 void main(){
-    out_color = vec4(1.0, 0.0, 1.0, 1.0);
+    out_color = vec4(1.0, 1.0, 1.0, 1.0);
 }
             "#,
             ],
@@ -102,7 +102,6 @@ mod desktop {
         program.use_program();
         let vert_size = mesh.vertices.len() * size_of::<Vertex>();
         let elements_size = mesh.indices.len() * size_of::<u32>();
-        let vert_ptr: *const Vertex = mesh.vertices.as_ptr();
         unsafe {
             renderer::drain_error_stack();
             buffers.vertex_array.bind();
@@ -178,9 +177,13 @@ mod desktop {
             }
 
             program.use_program();
+            let n_elements = square_mesh.indices.len() as GLsizei;
+            let (width, height) = window.size();
+
             unsafe {
+                gl::Viewport(0, 0, 2, 2);
                 mesh_buffers.vertex_array.bind();
-                gl::DrawArrays(gl::POINTS, 0, 4 as GLsizei);
+                gl::DrawElements(gl::TRIANGLES, n_elements, gl::UNSIGNED_INT, 0 as *const _);
             }
 
             window.gl_swap_window();
