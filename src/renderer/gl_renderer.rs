@@ -1,9 +1,9 @@
 extern crate core;
 extern crate failure;
-use super::gl;
-use std::ffi::{CStr, CString};
 
+use super::gl;
 use super::objects;
+use std::ffi::{CStr, CString};
 
 #[derive(Fail, Debug)]
 pub enum RendererError {
@@ -185,7 +185,7 @@ pub unsafe fn get_shader_info_log(shader: u32) -> String {
 pub unsafe fn compile_source(
     sources: &[&str],
     shader_type: gl::types::GLenum,
-) -> Result<u32, ShaderError> {
+) -> Result<ShaderObject, ShaderError> {
     let mut ptr_sources: Vec<*const i8> = Vec::new();
     let mut lengths: Vec<i32> = Vec::new();
     for s in sources {
@@ -218,7 +218,17 @@ pub unsafe fn compile_source(
         return Err(ShaderError::CompileFailure { info_log });
     }
 
-    Ok(shader)
+    Ok(ShaderObject(shader))
+}
+
+pub struct ShaderObject(pub u32);
+
+impl Drop for ShaderObject {
+    fn drop(&mut self) {
+        unsafe {
+            gl::DeleteShader(self.0);
+        }
+    }
 }
 
 pub fn get_program_info_log(program: u32) -> String {
@@ -366,5 +376,4 @@ mod test {
     }
 
     //    #[test]
-
 }

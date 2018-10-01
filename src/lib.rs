@@ -5,7 +5,11 @@ extern crate memoffset;
 use std::error::Error;
 
 pub mod renderer;
+
 pub mod sdl_platform;
+
+//#[cfg(feature="with-vulkan")]
+//pub mod renderer_vk;
 
 #[macro_use]
 extern crate failure;

@@ -4,6 +4,9 @@ version = "0.1.0"
 authors = ["Steve Shea <stevenlsjr@gmail.com>"]
 
 
+[features]
+#with-vulkan=["ash"]
+
 [dependencies]
 gl = "0.10.0"
 cgmath = "0.16.1"
@@ -12,6 +15,10 @@ failure = "0.1.2"
 serde = "1.0.79"
 serde_derive = "1.0.79"
 memoffset = "0.2.1"
+
+[dependencies.ash]
+optional = false
+version = "0.24.0"
 
 [target.wasm32-unknown-emscripten.dependencies]
 stdweb = "0.4.9"

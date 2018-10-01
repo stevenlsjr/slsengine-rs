@@ -1,53 +1,15 @@
 extern crate gl;
-#[macro_use]
-extern crate memoffset;
 extern crate sdl2;
 extern crate slsengine;
-#[cfg(target_arch = "wasm32")]
-#[macro_use]
-extern crate stdweb;
+
+
 
 use gl::types::*;
+use renderer::objects::*;
 use slsengine::*;
+use slsengine::renderer::gl_renderer::*;
 
-#[cfg(target_arch = "wasm32")]
-mod wasm {
-    use super::*;
-
-    pub fn game_main() -> Result<(), String> {
-        use sdl_platform::{platform, Platform};
-
-        stdweb::initialize();
-
-        let Platform {
-            window,
-            video_subsystem,
-            event_pump,
-            ..
-        } = platform()
-            .with_window_size(640, 480)
-            .with_window_title("Rust opengl demo")
-            .build()?;
-        println!("window: {:?}", window.size());
-        stdweb::event_loop();
-
-        let _gl_ctx = window.gl_create_context()?;
-        gl::load_with(|name| {
-            video_subsystem.gl_get_proc_address(name) as *const _
-        });
-        window.gl_set_context_to_current()?;
-
-        unsafe {
-            gl::ClearColor(0.0, 1.0, 0.0, 1.0);
-            gl::Clear(gl::COLOR_BUFFER_BIT);
-        }
-        window.gl_swap_window();
-
-        Ok(())
-    }
-}
-
-fn create_shaders() -> Result<(u32, u32), renderer::ShaderError> {
+fn create_shaders() -> Result<Program, renderer::ShaderError> {
     use renderer::*;
     let header: &'static str = "#version 410\n";
     let vs = unsafe {
@@ -83,142 +45,56 @@ void main(){
             gl::FRAGMENT_SHADER,
         )
     }?;
-    Ok((vs, fs))
+
+    ProgramBuilder::new()
+        .frag_shader(fs.0)
+        .vert_shader(vs.0)
+        .build_program()
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-mod desktop {
-    use renderer::objects::*;
-    use slsengine::renderer::gl_renderer::*;
-    use super::*;
+pub fn game_main() -> Result<(), String> {
+    use renderer::ProgramBuilder;
+    use sdl_platform::{platform, Platform, OpenGLVersion};
 
-    fn create_mesh_object(
-        mesh: &Mesh,
-        program: &Program,
-    ) -> Result<MeshBuffers, String> {
-        use gl::types::*;
-        use std::ffi::c_void;
-        use std::mem::size_of;
+     let plt = platform()
+        .with_window_size(640, 480)
+        .with_window_title("Rust opengl demo")
+        .with_opengl(OpenGLVersion::GL41)
+        .build()?;
+    let _ctx = sdl_platform::load_opengl(&plt)?;
 
-        let buffers = MeshBuffers::new().map_err(|e| format!("{:?}", e))?;
+    let Platform {
+        window,
+        video_subsystem,
+        event_pump,
+        ..
+    } = plt;
+    let mut loop_state = MainLoopState::new();
+
+
+    let program = create_shaders().unwrap();
+
+    let _square_mesh = renderer::rectangle_mesh().build().unwrap();
+
+    loop_state.is_running = true;
+
+    while loop_state.is_running {
+        loop_state.handle_events(&window, event_pump.borrow_mut().poll_iter());
+        unsafe {
+            gl::ClearColor(0.6, 0.0, 0.8, 1.0);
+            gl::Clear(gl::COLOR_BUFFER_BIT);
+        }
 
         program.use_program();
-        let verts = [-1f32, -1f32, 0f32,
-            -1f32, 1f32, 0f32,
-            1f32, 1f32, 0f32,
-            1f32, -1f32, 0f32];
 
-        let vert_size = verts.len() * size_of::<f32>();
-        let elements = [0u32, 1, 2, 2, 3, 0];
-        let elements_size = elements.len() * size_of::<u32>();
-        unsafe {
-            buffers.vertex_array.bind();
-            buffers.index_buffer.bind(gl::ELEMENT_ARRAY_BUFFER);
-            buffers.vertex_buffer.bind(gl::ARRAY_BUFFER);
-
-
-            gl::BufferData(
-                gl::ELEMENT_ARRAY_BUFFER,
-                elements_size as GLsizeiptr,
-                elements.as_ptr() as *const c_void,
-                gl::STATIC_DRAW,
-            );
-            gl::BufferData(
-                gl::ARRAY_BUFFER,
-                vert_size as GLsizeiptr,
-                verts.as_ptr() as *const c_void,
-                gl::STATIC_DRAW,
-            );
-            gl::VertexAttribPointer(
-                0,
-                3,
-                gl::FLOAT,
-                gl::FALSE,
-                0,
-                0 as *const c_void
-            );
-
-            gl::EnableVertexAttribArray(0);
-        }
-
-        Ok(buffers)
+        window.gl_swap_window();
     }
-
-    pub fn game_main() -> Result<(), String> {
-        use renderer::ProgramBuilder;
-        use sdl_platform::{platform, Platform};
-
-        let Platform {
-            window,
-            video_subsystem,
-            event_pump,
-            ..
-        } = platform()
-            .with_window_size(640, 480)
-            .with_window_title("Rust opengl demo")
-            .build()?;
-        let mut loop_state = MainLoopState::new();
-        let _gl_ctx = window.gl_create_context()?;
-
-        gl::load_with(|name| {
-            video_subsystem.gl_get_proc_address(name) as *const _
-        });
-        window.gl_set_context_to_current()?;
-
-        let (vs, fs) = create_shaders().unwrap();
-        let mut pb = ProgramBuilder::new();
-        pb.frag_shader(fs);
-        pb.vert_shader(vs);
-
-        let program = pb.build_program().unwrap();
-
-        let square_mesh = renderer::rectangle_mesh().build().unwrap();
-        let mesh_buffers = create_mesh_object(&square_mesh, &program).unwrap();
-
-        unsafe {
-            assert_eq!(gl::IsProgram(program.id), gl::TRUE);
-            gl::DeleteShader(vs);
-            gl::DeleteShader(fs);
-        }
-
-        loop_state.is_running = true;
-
-        while loop_state.is_running {
-            loop_state
-                .handle_events(&window, event_pump.borrow_mut().poll_iter());
-            unsafe {
-                gl::ClearColor(0.6, 0.0, 0.8, 1.0);
-                gl::Clear(gl::COLOR_BUFFER_BIT);
-            }
-
-            program.use_program();
-            let n_elements = square_mesh.indices.len() as GLsizei;
-            let (width, height) = window.size();
-
-            unsafe {
-                gl::Viewport(0, 0, width as i32, height as i32);
-                mesh_buffers.vertex_array.bind();
-                gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, 0 as *const _);
-            }
-
-            window.gl_swap_window();
-        }
-        Ok(())
-    }
+    Ok(())
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 fn main() {
-    if let Err(e) = desktop::game_main() {
+    if let Err(e) = game_main() {
         eprintln!("Game error: {}", e);
         std::process::exit(-1);
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-fn main() {
-    stdweb::initialize();
-    if let Err(e) = wasm::game_main() {
-        eprintln!("wasm failed: {}", e);
     }
 }
