@@ -2,12 +2,10 @@ extern crate gl;
 extern crate sdl2;
 extern crate slsengine;
 
-
-
 use gl::types::*;
 use renderer::objects::*;
-use slsengine::*;
 use slsengine::renderer::gl_renderer::*;
+use slsengine::*;
 
 fn create_shaders() -> Result<Program, renderer::ShaderError> {
     use renderer::*;
@@ -54,9 +52,9 @@ void main(){
 
 pub fn game_main() -> Result<(), String> {
     use renderer::ProgramBuilder;
-    use sdl_platform::{platform, Platform, OpenGLVersion};
+    use sdl_platform::{platform, OpenGLVersion, Platform};
 
-     let plt = platform()
+    let plt = platform()
         .with_window_size(640, 480)
         .with_window_title("Rust opengl demo")
         .with_opengl(OpenGLVersion::GL41)
@@ -70,7 +68,6 @@ pub fn game_main() -> Result<(), String> {
         ..
     } = plt;
     let mut loop_state = MainLoopState::new();
-
 
     let program = create_shaders().unwrap();
 

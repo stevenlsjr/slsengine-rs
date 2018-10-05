@@ -1,14 +1,13 @@
-use sdl2::{Sdl, VideoSubsystem};
-use sdl2::video::{GLContext, Window};
-use std::cell::RefCell;
-use std::fmt;
-use std::rc::Rc;
 ///
 /// Module handling creation of SDL and graphics api contexts
-
 use super::failure;
 use super::get_error_desc;
 use super::sdl2;
+use sdl2::video::{GLContext, Window};
+use sdl2::{Sdl, VideoSubsystem};
+use std::cell::RefCell;
+use std::fmt;
+use std::rc::Rc;
 
 pub enum PlatformError {}
 
@@ -84,7 +83,10 @@ impl PlatformBuilder {
         }
     }
 
-    pub fn with_opengl(&mut self, version: OpenGLVersion) -> &mut PlatformBuilder {
+    pub fn with_opengl(
+        &mut self,
+        version: OpenGLVersion,
+    ) -> &mut PlatformBuilder {
         self.opengl_version = match version {
             OpenGLVersion::GL32 => Some((3, 2)),
             OpenGLVersion::GL33 => Some((3, 3)),
@@ -118,26 +120,32 @@ impl PlatformBuilder {
     pub fn build(&self) -> PlatformResult<Platform> {
         use sdl2::video::GLProfile;
 
-        let sdl_context = sdl2::init()?;
-        let video_subsystem = sdl_context.video()?;
-        if self.render_backend == RenderBackend::OpenGL {
-            let (major, minor) = self.opengl_version.unwrap_or((4, 1));
-            let gl_attr = video_subsystem.gl_attr();
-            gl_attr.set_context_profile(GLProfile::Core);
-            gl_attr.set_context_flags().debug().set();
-            gl_attr.set_context_version(major as u8, minor as u8);
-            gl_attr.set_multisample_buffers(1);
-            gl_attr.set_multisample_samples(4);
-        }
-
         let title = self.window_title.as_str();
         let (width, height) = self.window_size;
-        let window = video_subsystem
-            .window(title, width, height)
-            .resizable()
-            .opengl()
-            .build()
-            .map_err(get_error_desc)?;
+        let sdl_context = sdl2::init()?;
+        let video_subsystem = sdl_context.video()?;
+        let mut wb = video_subsystem.window(title, width, height);
+        wb.resizable();
+
+         match self.render_backend {
+            RenderBackend::OpenGL => {
+                let (major, minor) = self.opengl_version.unwrap_or((4, 1));
+                let gl_attr = video_subsystem.gl_attr();
+                gl_attr.set_context_profile(GLProfile::Core);
+                gl_attr.set_context_flags().debug().set();
+                gl_attr.set_context_version(major as u8, minor as u8);
+                gl_attr.set_multisample_buffers(1);
+                gl_attr.set_multisample_samples(4);
+                wb.opengl();
+
+            }
+            RenderBackend::Vulkan =>  {
+                wb.vulkan();
+            }
+            _ => panic!("no renderer!"),
+        }
+
+        let window = wb.build().map_err(get_error_desc)?;
         {
             let event_pump = sdl_context.event_pump()?;
 
@@ -157,12 +165,18 @@ pub fn load_opengl(platform: &Platform) -> Result<GLContext, String> {
     use super::renderer::gl;
     match platform.render_backend {
         RenderBackend::OpenGL => {}
-        _ => { return Err(format!("backend {:?} is not openGL", platform.render_backend)); }
+        _ => {
+            return Err(format!(
+                "backend {:?} is not openGL",
+                platform.render_backend
+            ));
+        }
     }
     let ctx = platform.window.gl_create_context()?;
 
-    gl::load_with(|s| platform.video_subsystem.gl_get_proc_address(s) as *const _);
-
+    gl::load_with(|s| {
+        platform.video_subsystem.gl_get_proc_address(s) as *const _
+    });
 
     platform.window.gl_make_current(&ctx)?;
     Ok(ctx)

@@ -1,28 +1,33 @@
-extern crate slsengine;
+extern crate ash;
+extern crate glutin;
 
-use slsengine::sdl_platform::*;
+use ash::Entry;
+use ash::version::V1_0;
+use ash::vk;
+use glutin::dpi::*;
+use std::default::Default;
 
 fn main() {
-    //    let plt = platform().with_window_size(640, 480)
-//        .with_window_title("Hello rust!")
-//        .with_vulkan()
-//        .build().unwrap();
-    use std::sync::mpsc;
-    use std::thread;
+    let mut event_loop = glutin::EventsLoop::new();
 
-    let (sender, receiver) = mpsc::channel();
-    thread::spawn(move || {
-        let val = "hi".to_owned();
-        sender.send(val).unwrap();
-    });
+    let wb = glutin::WindowBuilder::new()
+        .with_title("Hello vulkan")
+        .with_dimensions(LogicalSize::new(640.0, 480.0));
+
+    let window = wb.build(&event_loop);
 
 
-    let received = receiver.recv().unwrap();
-    println!("got {:?}", received);
-
-    use std::io::{self, Read};
-    if cfg!(windows) {
-        let mut buffer = [0; 1];
-        io::stdin().read(&mut buffer);
+    let mut is_running = true;
+    while is_running {
+        use glutin::{Event, WindowEvent};
+        event_loop.poll_events(|event| {
+            match event {
+                Event::WindowEvent { event, .. } => match event {
+                    WindowEvent::CloseRequested => {is_running = false;}
+                    _ => {}
+                },
+                _ => {}
+            };
+        });
     }
 }
