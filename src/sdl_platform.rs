@@ -1,7 +1,7 @@
 use super::failure;
 use super::get_error_desc;
 use super::sdl2;
-pub use sdl2::video::{GLContext, Window};
+pub use sdl2::video::{GLContext, Window, WindowBuilder};
 use sdl2::Sdl;
 pub use sdl2::VideoSubsystem;
 ///
@@ -72,7 +72,7 @@ pub trait PlatformBuilderHooks {
     ///
     /// given the platform builder instance and video subsystem, constructs a SDL window.
     /// Called after sdl runtime and video subsystem creation
-    /// 
+    ///
     fn build_window(
         &self,
         platform_builder: &PlatformBuilder,
@@ -83,8 +83,8 @@ pub trait PlatformBuilderHooks {
 ///
 /// Builder patter for Platform
 pub struct PlatformBuilder {
-    window_size: (u32, u32),
-    window_title: String,
+    pub window_size: (u32, u32),
+    pub window_title: String,
     opengl_version: Option<(u32, u32)>,
     render_backend: RenderBackend,
 }
@@ -159,6 +159,16 @@ impl PlatformBuilder {
     }
 }
 
+/// creates WindowBuilder from PlatformBuilder parameters
+pub fn make_window_builder(
+    platform_builder: &PlatformBuilder,
+    video_subsystem: &VideoSubsystem,
+) -> WindowBuilder {
+    let title = &platform_builder.window_title;
+    let (width, height) = platform_builder.window_size;
+    video_subsystem.window(title, width, height)
+}
+
 pub struct GlPlatformBuilder {
     gl_ctx: RefCell<Option<GLContext>>,
 }
@@ -180,9 +190,7 @@ impl PlatformBuilderHooks for GlPlatformBuilder {
         video_subsystem: &VideoSubsystem,
     ) -> PlatformResult<Window> {
         use sdl2::video::GLProfile;
-        let (width, height) = platform_builder.window_size;
-        let title = &platform_builder.window_title;
-        let mut wb = video_subsystem.window(title, width, height);
+        let mut wb = make_window_builder(platform_builder, video_subsystem);
         let gl_attr = video_subsystem.gl_attr();
         gl_attr.set_context_profile(GLProfile::Core);
         gl_attr.set_context_version(4, 1);
