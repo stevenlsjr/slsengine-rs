@@ -50,22 +50,20 @@ void main(){
         .build_program()
 }
 
-pub fn game_main() -> Result<(), String> {
+pub fn game_main() {
     use renderer::ProgramBuilder;
     use sdl_platform::{platform, OpenGLVersion, Platform};
 
-    let plt = platform()
+    let (plt, gl_platform_builder) = platform()
         .with_window_size(640, 480)
         .with_window_title("Rust opengl demo")
         .with_opengl(OpenGLVersion::GL41)
-        .build()?;
-    let _ctx = sdl_platform::load_opengl(&plt)?;
+        .build_gl()
+        .unwrap();
+    let _ctx = gl_platform_builder.gl_ctx();
 
     let Platform {
-        window,
-        video_subsystem,
-        event_pump,
-        ..
+        window, event_pump, ..
     } = plt;
     let mut loop_state = MainLoopState::new();
 
@@ -86,7 +84,6 @@ pub fn game_main() -> Result<(), String> {
 
         window.gl_swap_window();
     }
-    Ok(())
 }
 
 fn main() {

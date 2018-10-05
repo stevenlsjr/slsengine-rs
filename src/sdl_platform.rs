@@ -1,11 +1,12 @@
-///
-/// Module handling creation of SDL and graphics api contexts
 use super::failure;
 use super::get_error_desc;
 use super::sdl2;
-use sdl2::video::{GLContext, Window};
-use sdl2::{Sdl, VideoSubsystem};
-use std::cell::RefCell;
+pub use sdl2::video::{GLContext, Window};
+use sdl2::Sdl;
+pub use sdl2::VideoSubsystem;
+///
+/// Module handling creation of SDL and graphics api contexts
+use std::cell::{Cell, Ref, RefCell};
 use std::fmt;
 use std::rc::Rc;
 
@@ -64,6 +65,21 @@ pub enum RenderBackend {
     Undefined,
 }
 
+/// Defines hooks for platform creation lifecycle.
+/// Provides both method hooks for constructing platform windows,
+/// as well as a structure for storing side-effects of platform creation
+pub trait PlatformBuilderHooks {
+    ///
+    /// given the platform builder instance and video subsystem, constructs a SDL window.
+    /// Called after sdl runtime and video subsystem creation
+    /// 
+    fn build_window(
+        &self,
+        platform_builder: &PlatformBuilder,
+        video_subsystem: &VideoSubsystem,
+    ) -> PlatformResult<Window>;
+}
+
 ///
 /// Builder patter for Platform
 pub struct PlatformBuilder {
@@ -98,11 +114,6 @@ impl PlatformBuilder {
         self
     }
 
-    pub fn with_vulkan(&mut self) -> &mut PlatformBuilder {
-        self.render_backend = RenderBackend::Vulkan;
-        self
-    }
-
     pub fn with_window_size(
         &mut self,
         width: u32,
@@ -117,35 +128,16 @@ impl PlatformBuilder {
         self
     }
 
-    pub fn build(&self) -> PlatformResult<Platform> {
-        use sdl2::video::GLProfile;
-
+    pub fn build<H: PlatformBuilderHooks>(
+        &self,
+        hooks: &H,
+    ) -> PlatformResult<Platform> {
         let title = self.window_title.as_str();
         let (width, height) = self.window_size;
         let sdl_context = sdl2::init()?;
         let video_subsystem = sdl_context.video()?;
-        let mut wb = video_subsystem.window(title, width, height);
-        wb.resizable();
 
-         match self.render_backend {
-            RenderBackend::OpenGL => {
-                let (major, minor) = self.opengl_version.unwrap_or((4, 1));
-                let gl_attr = video_subsystem.gl_attr();
-                gl_attr.set_context_profile(GLProfile::Core);
-                gl_attr.set_context_flags().debug().set();
-                gl_attr.set_context_version(major as u8, minor as u8);
-                gl_attr.set_multisample_buffers(1);
-                gl_attr.set_multisample_samples(4);
-                wb.opengl();
-
-            }
-            RenderBackend::Vulkan =>  {
-                wb.vulkan();
-            }
-            _ => panic!("no renderer!"),
-        }
-
-        let window = wb.build().map_err(get_error_desc)?;
+        let window = hooks.build_window(self, &video_subsystem)?;
         {
             let event_pump = sdl_context.event_pump()?;
 
@@ -159,25 +151,61 @@ impl PlatformBuilder {
             })
         }
     }
+
+    pub fn build_gl(&self) -> PlatformResult<(Platform, GlPlatformBuilder)> {
+        let pb = GlPlatformBuilder::new();
+        let platform = self.build(&pb)?;
+        Ok((platform, pb))
+    }
 }
 
-pub fn load_opengl(platform: &Platform) -> Result<GLContext, String> {
-    use super::renderer::gl;
-    match platform.render_backend {
-        RenderBackend::OpenGL => {}
-        _ => {
-            return Err(format!(
-                "backend {:?} is not openGL",
-                platform.render_backend
-            ));
+pub struct GlPlatformBuilder {
+    gl_ctx: RefCell<Option<GLContext>>,
+}
+impl GlPlatformBuilder {
+    fn new() -> GlPlatformBuilder {
+        GlPlatformBuilder {
+            gl_ctx: RefCell::new(None),
         }
     }
-    let ctx = platform.window.gl_create_context()?;
 
-    gl::load_with(|s| {
-        platform.video_subsystem.gl_get_proc_address(s) as *const _
-    });
+    pub fn gl_ctx(&self) -> Ref<Option<GLContext>> {
+        self.gl_ctx.borrow()
+    }
+}
+impl PlatformBuilderHooks for GlPlatformBuilder {
+    fn build_window(
+        &self,
+        platform_builder: &PlatformBuilder,
+        video_subsystem: &VideoSubsystem,
+    ) -> PlatformResult<Window> {
+        use sdl2::video::GLProfile;
+        let (width, height) = platform_builder.window_size;
+        let title = &platform_builder.window_title;
+        let mut wb = video_subsystem.window(title, width, height);
+        let gl_attr = video_subsystem.gl_attr();
+        gl_attr.set_context_profile(GLProfile::Core);
+        gl_attr.set_context_version(4, 1);
+        wb.opengl();
+        let window = wb.build().map_err(|e| e.to_string())?;
 
-    platform.window.gl_make_current(&ctx)?;
+        let gl_ctx = load_opengl(&window, video_subsystem)?;
+        self.gl_ctx.replace(Some(gl_ctx));
+
+        Ok(window)
+    }
+}
+
+pub fn load_opengl(
+    window: &Window,
+    video_subsystem: &VideoSubsystem,
+) -> Result<GLContext, String> {
+    use super::renderer::gl;
+
+    let ctx = window.gl_create_context()?;
+
+    gl::load_with(|s| video_subsystem.gl_get_proc_address(s) as *const _);
+
+    window.gl_make_current(&ctx)?;
     Ok(ctx)
 }
