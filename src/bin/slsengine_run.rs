@@ -87,8 +87,5 @@ pub fn game_main() {
 }
 
 fn main() {
-    if let Err(e) = game_main() {
-        eprintln!("Game error: {}", e);
-        std::process::exit(-1);
-    }
+    game_main();
 }

@@ -9,12 +9,14 @@ authors = ["Steve Shea <stevenlsjr@gmail.com>"]
 [dependencies]
 gl = "0.10.0"
 cgmath = "0.16.1"
-sdl2 = "0.31.0"
 failure = "0.1.2"
 serde = "1.0.79"
 serde_derive = "1.0.79"
 memoffset = "0.2.1"
 glutin = "0.18.0"
+
+[dependencies.sdl2]
+git = "https://github.com/AngryLawyer/rust-sdl2.git"
 
 [dependencies.ash]
 optional = false
