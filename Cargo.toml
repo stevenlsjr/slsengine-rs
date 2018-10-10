@@ -13,7 +13,7 @@ failure = "0.1.2"
 serde = "1.0.79"
 serde_derive = "1.0.79"
 memoffset = "0.2.1"
-glutin = "0.18.0"
+genmesh = "0.6.2"
 
 [dependencies.sdl2]
 git = "https://github.com/AngryLawyer/rust-sdl2.git"
