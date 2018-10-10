@@ -1,12 +1,10 @@
-use super::failure;
-use super::get_error_desc;
 use super::sdl2;
 pub use sdl2::video::{GLContext, Window, WindowBuilder};
 use sdl2::Sdl;
 pub use sdl2::VideoSubsystem;
 ///
 /// Module handling creation of SDL and graphics api contexts
-use std::cell::{Cell, Ref, RefCell};
+use std::cell::{Ref, RefCell};
 use std::fmt;
 use std::rc::Rc;
 
@@ -132,8 +130,6 @@ impl PlatformBuilder {
         &self,
         hooks: &H,
     ) -> PlatformResult<Platform> {
-        let title = self.window_title.as_str();
-        let (width, height) = self.window_size;
         let sdl_context = sdl2::init()?;
         let video_subsystem = sdl_context.video()?;
 

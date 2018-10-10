@@ -1,4 +1,6 @@
 extern crate sdl2;
+#[macro_use]
+extern crate ash;
 
 #[macro_use]
 extern crate memoffset;
@@ -9,7 +11,7 @@ pub mod renderer;
 pub mod sdl_platform;
 
 //#[cfg(feature="with-vulkan")]
-//pub mod renderer_vk;
+pub mod renderer_vk;
 
 #[macro_use]
 extern crate failure;

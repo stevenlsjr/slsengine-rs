@@ -51,7 +51,6 @@ void main(){
 }
 
 pub fn game_main() {
-    use renderer::ProgramBuilder;
     use sdl_platform::{platform, OpenGLVersion, Platform};
 
     let (plt, gl_platform_builder) = platform()
