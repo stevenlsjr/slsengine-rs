@@ -1,9 +1,8 @@
+extern crate genmesh;
 extern crate gl;
 extern crate sdl2;
 extern crate slsengine;
 
-use gl::types::*;
-use renderer::objects::*;
 use slsengine::renderer::gl_renderer::*;
 use slsengine::*;
 
@@ -50,6 +49,30 @@ void main(){
         .build_program()
 }
 
+fn make_mesh() {
+    use genmesh::generators::Cone;
+    use genmesh::*;
+    use slsengine::renderer::Vertex as SlsVertex;
+    let generator = || {
+        MapToVertices::vertex(Cone::new(8), |v: Vertex| {
+            use std::default::Default;
+            let mut vert: SlsVertex = Default::default();
+            vert.position = v.pos.into();
+            vert.normal = v.pos.into();
+            vert
+        })
+        .triangulate()
+    };
+
+    let verts: Vec<SlsVertex> = generator().vertices().collect();
+    let indices: Vec<_> = verts.iter().zip(0..).map(|(_, b)| b).collect();
+    println!(
+        "vertices: len {}, indices: len {}",
+        verts.len(),
+        indices.len()
+    );
+}
+
 pub fn game_main() {
     use sdl_platform::{platform, OpenGLVersion, Platform};
 
@@ -68,7 +91,7 @@ pub fn game_main() {
 
     let program = create_shaders().unwrap();
 
-    let _square_mesh = renderer::rectangle_mesh().build().unwrap();
+    let _square_mesh = make_mesh();
 
     loop_state.is_running = true;
 

@@ -2,6 +2,7 @@ extern crate core;
 extern crate failure;
 
 use super::gl;
+pub use renderer_common::*;
 
 #[derive(Fail, Debug)]
 pub enum RendererError {
@@ -22,86 +23,6 @@ pub enum ShaderError {
 
     #[fail(display = "Link failed, reason: {:?}", reason)]
     LinkFailure { reason: String },
-}
-
-#[derive(Debug, Copy, Clone)]
-#[repr(C)]
-pub struct Vertex {
-    pub position: [f32; 3],
-    pub normal: [f32; 3],
-    pub uv: [f32; 2],
-    pub color: [f32; 4],
-}
-
-pub struct Mesh {
-    pub vertices: Vec<Vertex>,
-    pub indices: Vec<u32>,
-}
-
-impl Mesh {
-    pub fn new() -> Mesh {
-        Mesh {
-            vertices: Vec::new(),
-            indices: Vec::new(),
-        }
-    }
-}
-
-pub struct MeshBuilder {
-    pub positions: Vec<[f32; 3]>,
-    pub normals: Vec<[f32; 3]>,
-    pub uvs: Vec<[f32; 2]>,
-    pub colors: Vec<[f32; 4]>,
-    pub indices: Vec<u32>,
-}
-
-impl MeshBuilder {
-    pub fn new() -> MeshBuilder {
-        MeshBuilder {
-            positions: vec![],
-            normals: vec![],
-            uvs: vec![],
-            colors: vec![],
-            indices: vec![],
-        }
-    }
-    pub fn build(&self) -> Result<Mesh, String> {
-        let len = self.positions.len();
-
-        let normals_len = self.normals.len();
-        let uvs_len = self.uvs.len();
-        let colors_len = self.colors.len();
-
-        let mut verts: Vec<Vertex> = Vec::new();
-        verts.reserve(len);
-        for i in 0..len {
-            let vertex = Vertex {
-                position: self.positions[i].clone(),
-                normal: if i < normals_len {
-                    self.normals[i].clone()
-                } else {
-                    [0.0, 0.0, 1.0]
-                },
-                uv: if i < uvs_len {
-                    self.uvs[i].clone()
-                } else {
-                    [0.0, 0.0]
-                },
-                color: if i < colors_len {
-                    self.colors[i].clone()
-                } else {
-                    [1.0, 1.0, 1.0, 1.0]
-                },
-            };
-            verts.push(vertex);
-        }
-        let indices = self.indices.clone();
-
-        Ok(Mesh {
-            indices,
-            vertices: verts,
-        })
-    }
 }
 
 pub fn rectangle_mesh() -> MeshBuilder {
@@ -181,7 +102,7 @@ pub unsafe fn get_shader_info_log(shader: u32) -> String {
 pub unsafe fn compile_source(
     sources: &[&str],
     shader_type: gl::types::GLenum,
-) -> Result<ShaderObject, ShaderError> {
+) -> Result<ShaderStage, ShaderError> {
     let mut ptr_sources: Vec<*const i8> = Vec::new();
     let mut lengths: Vec<i32> = Vec::new();
     for s in sources {
@@ -214,12 +135,12 @@ pub unsafe fn compile_source(
         return Err(ShaderError::CompileFailure { info_log });
     }
 
-    Ok(ShaderObject(shader))
+    Ok(ShaderStage(shader))
 }
 
-pub struct ShaderObject(pub u32);
+pub struct ShaderStage(pub u32);
 
-impl Drop for ShaderObject {
+impl Drop for ShaderStage {
     fn drop(&mut self) {
         unsafe {
             gl::DeleteShader(self.0);
@@ -276,18 +197,12 @@ impl ProgramBuilder {
             //            geometry_shader: None,
         }
     }
-    pub fn frag_shader<'a>(
-        &'a mut self,
-        frag_shader: u32,
-    ) -> &'a mut ProgramBuilder {
+    pub fn frag_shader(&mut self, frag_shader: u32) -> &mut ProgramBuilder {
         self.frag_shader = Some(frag_shader);
         self
     }
 
-    pub fn vert_shader<'a>(
-        &'a mut self,
-        vert_shader: u32,
-    ) -> &'a mut ProgramBuilder {
+    pub fn vert_shader(&mut self, vert_shader: u32) -> &mut ProgramBuilder {
         self.vert_shader = Some(vert_shader);
         self
     }
@@ -331,7 +246,6 @@ mod test {
 
     use super::*;
     use sdl2::video;
-    use sdl_platform::{platform, Platform};
 
     #[test]
     fn test_rec_mesh() {

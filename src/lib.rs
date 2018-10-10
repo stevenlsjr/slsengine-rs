@@ -4,9 +4,11 @@ extern crate ash;
 
 #[macro_use]
 extern crate memoffset;
+
 use std::error::Error;
 
 pub mod renderer;
+pub mod renderer_common;
 
 pub mod sdl_platform;
 
@@ -65,4 +67,15 @@ impl MainLoopState {
             }
         }
     }
+}
+
+/// application error handling
+#[derive(Fail, Debug)]
+pub enum AppError {
+    //    #[cfg(feature="with-vulkan")]
+    #[fail(display = "vulkan error: {}", _0)]
+    VkError(ash::vk::Result),
+
+    #[fail(display = "misc error: '{}'", _0)]
+    Misc(String),
 }

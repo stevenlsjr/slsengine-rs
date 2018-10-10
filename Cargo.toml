@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["Steve Shea <stevenlsjr@gmail.com>"]
 
 [features]
-#with-vulkan=["ash"]
+#with-vulkan = ["ash"]
 
 [dependencies]
 gl = "0.10.0"
