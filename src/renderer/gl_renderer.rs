@@ -245,7 +245,6 @@ mod test {
     extern crate sdl2;
 
     use super::*;
-    use sdl2::video;
 
     #[test]
     fn test_rec_mesh() {

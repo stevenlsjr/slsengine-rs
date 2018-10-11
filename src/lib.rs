@@ -1,7 +1,10 @@
 extern crate sdl2;
+
+#[allow(unused_imports)]
 #[macro_use]
 extern crate ash;
 
+#[allow(unused_imports)]
 #[macro_use]
 extern crate memoffset;
 

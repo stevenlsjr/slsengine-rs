@@ -1,4 +1,6 @@
+#[allow(unused_imports)]
 use super::ash;
+
 use ash::extensions::{DebugReport, Surface};
 
 #[cfg(target_os = "macos")]
@@ -12,7 +14,7 @@ use super::{get_error_desc, AppError};
 use ash::version::{EntryV1_0, InstanceV1_0, V1_0};
 use ash::vk;
 use ash::vk::types as vkt;
-use ash::vk::types::{PhysicalDeviceFeatures, PhysicalDeviceProperties};
+use ash::vk::types::{PhysicalDeviceFeatures, PhysicalDeviceProperties, PhysicalDevice};
 use ash::{Entry, Instance};
 use std::default::Default;
 use std::ffi::CStr;
@@ -141,7 +143,12 @@ pub fn pick_physical_device(
         }
     }
     let chosen_device =
-        top_device.1.expect("A suitible device should be inserted");
+        top_device.1.expect("If no devices availible, pick_physical_device should have already returned");
+    let queue_family = find_queue_family(instance, &chosen_device);
+    if queue_family.is_none() {
+        return Err(AppError::Misc(format!("could not find suitible queue family for device")))
+    }
+
     Ok(chosen_device)
 }
 
@@ -163,6 +170,18 @@ fn stub_physical_device() -> PhysicalDeviceProperties {
             sparse_properties: uninitialized(),
         }
     }
+}
+
+pub fn find_queue_family(instance: &Instance<V1_0>, device: &PhysicalDevice) -> Option<vk::QueueFamilyProperties> {
+    let queue_families = instance.get_physical_device_queue_family_properties(*device);
+    for queue_family in queue_families {
+        let mask = vk::QUEUE_GRAPHICS_BIT & vk::QUEUE_COMPUTE_BIT;
+        let is_valid = queue_family.queue_count > 0 && (queue_family.queue_flags & mask) != Default::default();
+        if is_valid {
+            return Some(queue_family);
+        }
+    }
+    None
 }
 
 #[test]
