@@ -176,7 +176,9 @@ pub fn find_queue_family(instance: &Instance<V1_0>, device: &PhysicalDevice) -> 
     let queue_families = instance.get_physical_device_queue_family_properties(*device);
     for queue_family in queue_families {
         let mask = vk::QUEUE_GRAPHICS_BIT & vk::QUEUE_COMPUTE_BIT;
-        let is_valid = queue_family.queue_count > 0 && (queue_family.queue_flags & mask) != Default::default();
+        let has_queue_count = queue_family.queue_count > 0;
+        let is_valid = has_queue_count && (queue_family.queue_flags & mask) == mask;
+        println!("mask:0x{:x}, has_queue_count:{}, is_valid:{}", mask.flags(), has_queue_count, is_valid);
         if is_valid {
             return Some(queue_family);
         }
