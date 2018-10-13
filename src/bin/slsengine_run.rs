@@ -60,8 +60,7 @@ fn make_mesh() {
             vert.position = v.pos.into();
             vert.normal = v.pos.into();
             vert
-        })
-        .triangulate()
+        }).triangulate()
     };
 
     let verts: Vec<SlsVertex> = generator().vertices().collect();

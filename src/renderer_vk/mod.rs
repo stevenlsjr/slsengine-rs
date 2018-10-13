@@ -14,7 +14,9 @@ use super::{get_error_desc, AppError};
 use ash::version::{EntryV1_0, InstanceV1_0, V1_0};
 use ash::vk;
 use ash::vk::types as vkt;
-use ash::vk::types::{PhysicalDeviceFeatures, PhysicalDeviceProperties, PhysicalDevice};
+use ash::vk::types::{
+    PhysicalDevice, PhysicalDeviceFeatures, PhysicalDeviceProperties,
+};
 use ash::{Entry, Instance};
 use std::default::Default;
 use std::ffi::CStr;
@@ -144,12 +146,72 @@ pub fn pick_physical_device(
     }
     let chosen_device =
         top_device.1.expect("If no devices availible, pick_physical_device should have already returned");
-    let queue_family = find_queue_family(instance, &chosen_device);
-    if queue_family.is_none() {
-        return Err(AppError::Misc(format!("could not find suitible queue family for device")))
-    }
+    let _queue_family =
+        find_queue_family(instance, &chosen_device).ok_or(AppError::Misc(
+            format!("could not find suitible queue family for device"),
+        ))?;
 
     Ok(chosen_device)
+}
+
+pub fn find_queue_family(
+    instance: &Instance<V1_0>,
+    device: &PhysicalDevice,
+) -> Option<QueueFamilyIndex> {
+    let queue_families =
+        instance.get_physical_device_queue_family_properties(*device);
+    let mut index = 0;
+
+    for queue_family in queue_families {
+        let mask = vk::QUEUE_GRAPHICS_BIT & vk::QUEUE_COMPUTE_BIT;
+        let has_queue_count = queue_family.queue_count > 0;
+        let is_valid =
+            has_queue_count && (queue_family.queue_flags & mask) == mask;
+        println!(
+            "mask:0x{:x}, has_queue_count:{}, is_valid:{}",
+            mask.flags(),
+            has_queue_count,
+            is_valid
+        );
+        if is_valid {
+            return Some(QueueFamilyIndex{properties: queue_family, index});
+        }
+        index += 1;
+    }
+    None
+}
+
+#[derive(Debug, Clone)]
+pub struct QueueFamilyIndex{
+    pub index: u32,
+    pub properties: vkt::QueueFamilyProperties
+}
+
+pub fn create_logical_device(
+    instance: &Instance<V1_0>,
+    physical_device: &PhysicalDevice
+) -> Result<(), AppError> {
+    use std::mem;
+    use std::ptr;
+    let queue_index = find_queue_family(
+        instance,
+        physical_device,
+    ).ok_or(AppError::Misc("could not find graphics family".to_string()))?;
+    let  queue_create_info: vk::DeviceQueueCreateInfo =
+        vk::DeviceCreateInfo{
+            s_type: vk::StructureType::DeviceCreateInfo,
+            p_next: ptr::null(),
+            flags: (),
+            queue_create_info_count: 0,
+            p_queue_create_infos: ptr::null(),
+            enabled_layer_count: 0,
+            pp_enabled_layer_names: ptr::null(),
+            enabled_extension_count: 0,
+            pp_enabled_extension_names: ptr::null(),
+            p_enabled_features: ptr::null(),
+        }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -171,21 +233,6 @@ fn stub_physical_device() -> PhysicalDeviceProperties {
         }
     }
 }
-
-pub fn find_queue_family(instance: &Instance<V1_0>, device: &PhysicalDevice) -> Option<vk::QueueFamilyProperties> {
-    let queue_families = instance.get_physical_device_queue_family_properties(*device);
-    for queue_family in queue_families {
-        let mask = vk::QUEUE_GRAPHICS_BIT & vk::QUEUE_COMPUTE_BIT;
-        let has_queue_count = queue_family.queue_count > 0;
-        let is_valid = has_queue_count && (queue_family.queue_flags & mask) == mask;
-        println!("mask:0x{:x}, has_queue_count:{}, is_valid:{}", mask.flags(), has_queue_count, is_valid);
-        if is_valid {
-            return Some(queue_family);
-        }
-    }
-    None
-}
-
 #[test]
 fn test_device_name() {
     let mut dev_properties = stub_physical_device();
