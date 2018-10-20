@@ -1,4 +1,4 @@
-#[allow(unused_imports)]
+
 use super::ash;
 
 use ash::extensions::{DebugReport, Surface};
@@ -174,7 +174,10 @@ pub fn find_queue_family(
             is_valid
         );
         if is_valid {
-            return Some(QueueFamilyIndex{properties: queue_family, index});
+            return Some(QueueFamilyIndex {
+                properties: queue_family,
+                index,
+            });
         }
         index += 1;
     }
@@ -182,34 +185,31 @@ pub fn find_queue_family(
 }
 
 #[derive(Debug, Clone)]
-pub struct QueueFamilyIndex{
+pub struct QueueFamilyIndex {
     pub index: u32,
-    pub properties: vkt::QueueFamilyProperties
+    pub properties: vkt::QueueFamilyProperties,
 }
 
 pub fn create_logical_device(
     instance: &Instance<V1_0>,
-    physical_device: &PhysicalDevice
+    physical_device: &PhysicalDevice,
 ) -> Result<(), AppError> {
     use std::mem;
     use std::ptr;
-    let queue_index = find_queue_family(
-        instance,
-        physical_device,
-    ).ok_or(AppError::Misc("could not find graphics family".to_string()))?;
-    let  queue_create_info: vk::DeviceQueueCreateInfo =
-        vk::DeviceCreateInfo{
-            s_type: vk::StructureType::DeviceCreateInfo,
-            p_next: ptr::null(),
-            flags: (),
-            queue_create_info_count: 0,
-            p_queue_create_infos: ptr::null(),
-            enabled_layer_count: 0,
-            pp_enabled_layer_names: ptr::null(),
-            enabled_extension_count: 0,
-            pp_enabled_extension_names: ptr::null(),
-            p_enabled_features: ptr::null(),
-        }
+    let queue_index = find_queue_family(instance, physical_device)
+        .ok_or(AppError::Misc("could not find graphics family".to_string()))?;
+    // let queue_create_info: vk::DeviceQueueCreateInfo = vk::DeviceQueueCreateInfo {
+    //     s_type: vk::StructureType::DeviceCreateInfo,
+    //     p_next: ptr::null(),
+    //     flags: Default::default(),
+    //     queue_create_info_count: 0,
+    //     p_queue_create_infos: ptr::null(),
+    //     enabled_layer_count: 0,
+    //     pp_enabled_layer_names: ptr::null(),
+    //     enabled_extension_count: 0,
+    //     pp_enabled_extension_names: ptr::null(),
+    //     p_enabled_features: ptr::null(),
+    // };
 
     Ok(())
 }

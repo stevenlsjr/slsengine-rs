@@ -1,8 +1,6 @@
 extern crate sdl2;
 
-#[allow(unused_imports)]
-#[macro_use]
-extern crate ash;
+
 
 #[allow(unused_imports)]
 #[macro_use]
@@ -15,12 +13,18 @@ pub mod renderer_common;
 
 pub mod sdl_platform;
 
-//#[cfg(feature="with-vulkan")]
+// vulkan feature
+
+#[cfg(feature="with-vulkan")]
+#[allow(unused_imports)]
+#[macro_use]
+extern crate ash;
+
+#[cfg(feature="with-vulkan")]
 pub mod renderer_vk;
 
 #[macro_use]
 extern crate failure;
-//#[macro_use] extern crate serde_derive;
 
 use sdl2::event::{Event, WindowEvent};
 use sdl2::keyboard::Keycode;
@@ -75,7 +79,7 @@ impl MainLoopState {
 /// application error handling
 #[derive(Fail, Debug)]
 pub enum AppError {
-    //    #[cfg(feature="with-vulkan")]
+       #[cfg(feature="with-vulkan")]
     #[fail(display = "vulkan error: {}", _0)]
     VkError(ash::vk::Result),
 
