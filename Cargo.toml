@@ -4,10 +4,12 @@ version = "0.1.0"
 authors = ["Steve Shea <stevenlsjr@gmail.com>"]
 
 [features]
+default=["with-vulkan"]
 with-vulkan = ["ash"]
+gl-debug-output = []
 
 [dependencies]
-gl = "0.10.0"
+gl = {path ="lib/gl"}
 cgmath = "0.16.1"
 failure = "0.1.2"
 serde = "1.0.79"
@@ -24,5 +26,5 @@ version = "0.24.0"
 
 [target.wasm32-unknown-emscripten.dependencies]
 stdweb = "0.4.9"
-webgl_stdweb = "0.2.0"
+webgl = {path= "lib/webgl"}
 

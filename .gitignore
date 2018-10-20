@@ -145,3 +145,4 @@ flycheck_*.el
 # directory configuration
 .dir-locals.el
 
+.vs/slnx.sqlite

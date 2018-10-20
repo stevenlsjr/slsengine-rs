@@ -190,14 +190,57 @@ impl PlatformBuilderHooks for GlPlatformBuilder {
         let gl_attr = video_subsystem.gl_attr();
         gl_attr.set_context_profile(GLProfile::Core);
         gl_attr.set_context_version(4, 1);
+        gl_attr.set_context_flags().debug().set();
+
         wb.opengl();
         let window = wb.build().map_err(|e| e.to_string())?;
 
         let gl_ctx = load_opengl(&window, video_subsystem)?;
-        self.gl_ctx.replace(Some(gl_ctx));
+        {
+            self.gl_ctx.replace(Some(gl_ctx));
+        }
 
         Ok(window)
     }
+}
+
+#[allow(unused_variables, dead_code)]
+extern "system" fn gl_debug_output(
+    source: gl::types::GLenum,
+    err_type: gl::types::GLenum,
+    id: gl::types::GLuint,
+    severity: gl::types::GLenum,
+    length: gl::types::GLsizei,
+    _message: *const gl::types::GLchar,
+    user_param: *mut std::ffi::c_void,
+) {
+    use std::ffi::CStr;
+    let message = unsafe { CStr::from_ptr(_message) };
+    eprintln!("------------------------------");
+    eprintln!("Debug message ({}):", id);
+    match source {
+        gl::DEBUG_SOURCE_API => eprint!("Source: DEBUG_SOURCE_API\t"),
+        gl::DEBUG_SOURCE_WINDOW_SYSTEM => eprint!("Source: DEBUG_SOURCE_WINDOW_SYSTEM\t"),
+        gl::DEBUG_SOURCE_SHADER_COMPILER => eprint!("Source: DEBUG_SOURCE_SHADER_COMPILER\t"),
+        gl::DEBUG_SOURCE_THIRD_PARTY => eprint!("Source: DEBUG_SOURCE_THIRD_PARTY\t"),
+        gl::DEBUG_SOURCE_APPLICATION => eprint!("Source: DEBUG_SOURCE_APPLICATION\t"),
+        gl::DEBUG_SOURCE_OTHER => eprint!("Source: DEBUG_SOURCE_OTHER\t"),
+        other => eprint!("Source: unknown:0x{:x};\t", other)
+    };
+    match err_type {
+        gl::DEBUG_TYPE_ERROR => eprint!("Type: DEBUG_TYPE_ERROR\t"),
+        gl::DEBUG_TYPE_DEPRECATED_BEHAVIOR => eprint!("Type: DEBUG_SOURCE_OTHER\t"),
+        gl::DEBUG_TYPE_UNDEFINED_BEHAVIOR => eprint!("Type: DEBUG_TYPE_UNDEFINED_BEHAVIOR\t"),
+        gl::DEBUG_TYPE_PORTABILITY => eprint!("Type: DEBUG_TYPE_PORTABILITY\t"),
+        gl::DEBUG_TYPE_PERFORMANCE => eprint!("Type: DEBUG_TYPE_PORTABILITY\t"),
+        gl::DEBUG_TYPE_MARKER => eprint!("Type: DEBUG_TYPE_PORTABILITY\t"),
+        gl::DEBUG_TYPE_PUSH_GROUP => eprint!("Type: DEBUG_TYPE_PUSH_GROUP\t"),
+        gl::DEBUG_TYPE_POP_GROUP => eprint!("Type: DEBUG_TYPE_POP_GROUP\t"),
+
+        gl::DEBUG_TYPE_OTHER => eprint!("Type: DEBUG_TYPE_OTHER\t"),
+        other => eprint!("Type: unknown 0x{:x}\t", other)
+    };
+    eprintln!("\n------------------------------");
 }
 
 pub fn load_opengl(
@@ -205,10 +248,31 @@ pub fn load_opengl(
     video_subsystem: &VideoSubsystem,
 ) -> Result<GLContext, String> {
     use super::renderer::gl;
+    use std::ptr::null;
 
     let ctx = window.gl_create_context()?;
 
     gl::load_with(|s| video_subsystem.gl_get_proc_address(s) as *const _);
+    // setup opengl debug context
+    {
+        let mut flags: i32 = 0;
+        unsafe { gl::GetIntegerv(gl::CONTEXT_FLAGS, &mut flags) };
+        if 0 != (flags & gl::CONTEXT_FLAG_DEBUG_BIT as i32) {
+            unsafe {
+                gl::Enable(gl::DEBUG_OUTPUT);
+                gl::Enable(gl::DEBUG_OUTPUT_SYNCHRONOUS);
+                gl::DebugMessageCallback(gl_debug_output, null());
+                gl::DebugMessageControl(
+                    gl::DONT_CARE,
+                    gl::DONT_CARE,
+                    gl::DEBUG_SEVERITY_LOW,
+                    0,
+                    null(),
+                    gl::TRUE,
+                );
+            }
+        }
+    }
 
     window.gl_make_current(&ctx)?;
     Ok(ctx)
