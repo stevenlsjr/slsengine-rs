@@ -187,10 +187,15 @@ impl PlatformBuilderHooks for GlPlatformBuilder {
     ) -> PlatformResult<Window> {
         use sdl2::video::GLProfile;
         let mut wb = make_window_builder(platform_builder, video_subsystem);
+
         let gl_attr = video_subsystem.gl_attr();
+
         gl_attr.set_context_profile(GLProfile::Core);
         gl_attr.set_context_version(4, 1);
-        gl_attr.set_context_flags().debug().set();
+        #[cfg(feature = "gl-debug-output")]
+        {
+            gl_attr.set_context_flags().debug().set();
+        }
 
         wb.opengl();
         let window = wb.build().map_err(|e| e.to_string())?;
@@ -217,20 +222,36 @@ extern "system" fn gl_debug_output(
     use std::ffi::CStr;
     let message = unsafe { CStr::from_ptr(_message) };
     eprintln!("------------------------------");
-    eprintln!("Debug message ({}):", id);
+    eprintln!(
+        "Error {} (0x{:x}):",
+        message.to_str().unwrap_or("unknown error"),
+        id
+    );
     match source {
         gl::DEBUG_SOURCE_API => eprint!("Source: DEBUG_SOURCE_API\t"),
-        gl::DEBUG_SOURCE_WINDOW_SYSTEM => eprint!("Source: DEBUG_SOURCE_WINDOW_SYSTEM\t"),
-        gl::DEBUG_SOURCE_SHADER_COMPILER => eprint!("Source: DEBUG_SOURCE_SHADER_COMPILER\t"),
-        gl::DEBUG_SOURCE_THIRD_PARTY => eprint!("Source: DEBUG_SOURCE_THIRD_PARTY\t"),
-        gl::DEBUG_SOURCE_APPLICATION => eprint!("Source: DEBUG_SOURCE_APPLICATION\t"),
+        gl::DEBUG_SOURCE_WINDOW_SYSTEM => {
+            eprint!("Source: DEBUG_SOURCE_WINDOW_SYSTEM\t")
+        }
+        gl::DEBUG_SOURCE_SHADER_COMPILER => {
+            eprint!("Source: DEBUG_SOURCE_SHADER_COMPILER\t")
+        }
+        gl::DEBUG_SOURCE_THIRD_PARTY => {
+            eprint!("Source: DEBUG_SOURCE_THIRD_PARTY\t")
+        }
+        gl::DEBUG_SOURCE_APPLICATION => {
+            eprint!("Source: DEBUG_SOURCE_APPLICATION\t")
+        }
         gl::DEBUG_SOURCE_OTHER => eprint!("Source: DEBUG_SOURCE_OTHER\t"),
-        other => eprint!("Source: unknown:0x{:x};\t", other)
+        other => eprint!("Source: unknown:0x{:x};\t", other),
     };
     match err_type {
         gl::DEBUG_TYPE_ERROR => eprint!("Type: DEBUG_TYPE_ERROR\t"),
-        gl::DEBUG_TYPE_DEPRECATED_BEHAVIOR => eprint!("Type: DEBUG_SOURCE_OTHER\t"),
-        gl::DEBUG_TYPE_UNDEFINED_BEHAVIOR => eprint!("Type: DEBUG_TYPE_UNDEFINED_BEHAVIOR\t"),
+        gl::DEBUG_TYPE_DEPRECATED_BEHAVIOR => {
+            eprint!("Type: DEBUG_SOURCE_OTHER\t")
+        }
+        gl::DEBUG_TYPE_UNDEFINED_BEHAVIOR => {
+            eprint!("Type: DEBUG_TYPE_UNDEFINED_BEHAVIOR\t")
+        }
         gl::DEBUG_TYPE_PORTABILITY => eprint!("Type: DEBUG_TYPE_PORTABILITY\t"),
         gl::DEBUG_TYPE_PERFORMANCE => eprint!("Type: DEBUG_TYPE_PORTABILITY\t"),
         gl::DEBUG_TYPE_MARKER => eprint!("Type: DEBUG_TYPE_PORTABILITY\t"),
@@ -238,7 +259,14 @@ extern "system" fn gl_debug_output(
         gl::DEBUG_TYPE_POP_GROUP => eprint!("Type: DEBUG_TYPE_POP_GROUP\t"),
 
         gl::DEBUG_TYPE_OTHER => eprint!("Type: DEBUG_TYPE_OTHER\t"),
-        other => eprint!("Type: unknown 0x{:x}\t", other)
+        other => eprint!("Type: unknown 0x{:x}\t", other),
+    };
+
+    match severity {
+        gl::DEBUG_SEVERITY_HIGH => eprint!("Severity: high\n"),
+        gl::DEBUG_SEVERITY_MEDIUM => eprint!("Severity: medium\n"),
+        gl::DEBUG_SEVERITY_LOW => eprint!("Severity: low\n"),
+        other => eprint!("Severity: Unknown 0x{:x}\t", other),
     };
     eprintln!("\n------------------------------");
 }
@@ -272,6 +300,8 @@ pub fn load_opengl(
                 );
             }
         }
+
+        
     }
 
     window.gl_make_current(&ctx)?;
