@@ -7,20 +7,43 @@ use slsengine::renderer::gl_renderer::*;
 use slsengine::*;
 
 fn create_shaders() -> Result<Program, renderer::ShaderError> {
+    use renderer::ShaderError;
     use renderer::*;
+    use std::fs::File;
+    use std::io::Read;
     let header: &'static str = "#version 410\n";
+    let mut vs_source = String::new();
+    let mut fs_source = String::new();
+
+    {
+        let mut vsf = File::open("./assets/flat-shading.vert").map_err(|e| {
+            ShaderError::CompileFailure {
+                info_log: format!("Error opening source {}", e),
+            }
+        })?;
+        let mut fsf = File::open("./assets/flat-shading.frag").map_err(|e| {
+            ShaderError::CompileFailure {
+                info_log: format!("Error opening source {}", e),
+            }
+        })?;
+
+        vsf.read_to_string(&mut vs_source).map_err(|_| {
+            ShaderError::CompileFailure {
+                info_log: "could not read vert shader".to_string(),
+            }
+        })?;
+        fsf.read_to_string(&mut fs_source).map_err(|_| {
+            ShaderError::CompileFailure {
+                info_log: "could not read vert shader".to_string(),
+            }
+        })?;
+    }
+
     let vs = unsafe {
         compile_source(
             &[
                 header,
-                r#"
-layout (location = 0) in vec3 v_pos;
-
-void main(){
-    gl_Position = vec4(v_pos, 1.0);
-}
-                "#,
-            ],
+                &vs_source],
             gl::VERTEX_SHADER,
         )
     }?;
@@ -29,15 +52,7 @@ void main(){
         compile_source(
             &[
                 header,
-                r#"
-
-out vec4 out_color;
-void main(){
-    float r = sin(gl_FragCoord.x / 10.0) / 0.5 + 0.5;
-    float g = sin(gl_FragCoord.y / 10.0) / 0.5 + 0.5;
-    out_color = vec4(r, g, 1.0, 1.0);
-}
-            "#,
+                &fs_source
             ],
             gl::FRAGMENT_SHADER,
         )
@@ -60,8 +75,7 @@ fn make_mesh() {
             vert.position = v.pos.into();
             vert.normal = v.pos.into();
             vert
-        })
-        .triangulate()
+        }).triangulate()
     };
 
     let verts: Vec<SlsVertex> = generator().vertices().collect();

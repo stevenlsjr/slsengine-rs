@@ -7,6 +7,8 @@ pub use sdl2::VideoSubsystem;
 use std::cell::{Ref, RefCell};
 use std::fmt;
 use std::rc::Rc;
+use super::renderer::gl;
+
 
 pub enum PlatformError {}
 
@@ -217,7 +219,7 @@ extern "system" fn gl_debug_output(
     severity: gl::types::GLenum,
     length: gl::types::GLsizei,
     _message: *const gl::types::GLchar,
-    user_param: *mut std::ffi::c_void,
+    user_param: *mut gl::types::GLvoid,
 ) {
     use std::ffi::CStr;
     let message = unsafe { CStr::from_ptr(_message) };
@@ -275,6 +277,7 @@ pub fn load_opengl(
     window: &Window,
     video_subsystem: &VideoSubsystem,
 ) -> Result<GLContext, String> {
+
     use super::renderer::gl;
     use std::ptr::null;
 
@@ -300,6 +303,7 @@ pub fn load_opengl(
                 );
             }
         }
+
 
         
     }
