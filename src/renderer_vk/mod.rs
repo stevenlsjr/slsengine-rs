@@ -196,7 +196,7 @@ pub fn create_logical_device(
 ) -> Result<(), AppError> {
     use std::mem;
     use std::ptr;
-    let queue_index = find_queue_family(instance, physical_device)
+    let _queue_index = find_queue_family(instance, physical_device)
         .ok_or(AppError::Misc("could not find graphics family".to_string()))?;
     // let queue_create_info: vk::DeviceQueueCreateInfo = vk::DeviceQueueCreateInfo {
     //     s_type: vk::StructureType::DeviceCreateInfo,

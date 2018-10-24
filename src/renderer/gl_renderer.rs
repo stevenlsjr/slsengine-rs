@@ -23,6 +23,8 @@ pub enum ShaderError {
 
     #[fail(display = "Link failed, reason: {:?}", reason)]
     LinkFailure { reason: String },
+    #[fail(display = "Could not bind uniform, name: {}, {}", name, msg)]
+    UniformBindFailure { name: String, msg: String },
 }
 
 pub fn rectangle_mesh() -> MeshBuilder {
@@ -170,10 +172,31 @@ pub struct Program {
 }
 
 impl Program {
+    pub fn id(&self) -> u32 {
+        self.id
+    }
     pub fn use_program(&self) {
         unsafe {
             gl::UseProgram(self.id);
         }
+    }
+
+    pub fn uniform_location(&self, name: &str) -> Result<i32, ShaderError> {
+        use std::ffi::CString;
+        let cs_name = CString::new(name).map_err(|e| {
+            ShaderError::UniformBindFailure {
+                name: name.to_string(),
+                msg: format!("name can't be converted to c string: {}", e),
+            }
+        })?;
+        let id = unsafe { gl::GetUniformLocation(self.id, cs_name.as_ptr()) };
+        if id < 0 {
+            return Err(ShaderError::UniformBindFailure {
+                name: name.to_string(),
+                msg: "".to_string(),
+            });
+        }
+        Ok(id)
     }
 }
 

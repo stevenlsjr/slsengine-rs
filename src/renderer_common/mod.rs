@@ -32,6 +32,7 @@ impl PartialEq for Vertex {
     }
 }
 
+#[derive(Debug, PartialEq)]
 pub struct Mesh {
     pub vertices: Vec<Vertex>,
     pub indices: Vec<u32>,
@@ -43,6 +44,17 @@ impl Mesh {
             vertices: Vec::new(),
             indices: Vec::new(),
         }
+    }
+
+    pub fn verts_size(&self) -> usize {
+        use std::mem::size_of;
+        (self.vertices.len() * size_of::<Vertex>())
+    }
+    pub fn indices_size(&self) -> usize {
+        use std::mem::size_of;
+        (self.indices.len() * size_of::<u32>())
+
+
     }
 }
 

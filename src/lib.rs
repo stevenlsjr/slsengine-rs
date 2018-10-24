@@ -6,6 +6,7 @@ extern crate sdl2;
 #[macro_use]
 extern crate memoffset;
 
+use std::time::SystemTime;
 use std::error::Error;
 
 pub mod renderer;
@@ -40,11 +41,13 @@ pub fn get_error_desc<E: Error>(e: E) -> String {
 #[derive(Debug)]
 pub struct MainLoopState {
     pub is_running: bool,
+    pub last_time: SystemTime
 }
 
 impl MainLoopState {
     pub fn new() -> MainLoopState {
-        MainLoopState { is_running: false }
+        MainLoopState { is_running: false,
+        last_time: SystemTime::now() }
     }
 
     pub fn on_resize(&mut self, _window: &Window, width: i32, height: i32) {

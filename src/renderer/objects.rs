@@ -4,11 +4,15 @@
 extern crate failure;
 use super::gl;
 use super::gl::types::*;
+use renderer_common::Mesh;
 
 #[derive(Fail, Debug)]
 pub enum ObjectError {
     #[fail(display = "Could not create object: {:?}", reason)]
     ObjectCreationFailure { reason: String },
+
+    #[fail(display = "Could not bind mesh data, '{}'", _0)]
+    ObjectBindFailure(String),
 }
 
 pub enum BufferObjectTarget {
@@ -103,10 +107,7 @@ impl MeshBuffers {
         let mut vao = 0u32;
 
         unsafe {
-            super::drain_error_stack();
             gl::GenBuffers(2, buffers.as_mut_ptr());
-            let mut errors: Vec<gl::types::GLenum> = Vec::new();
-            super::dump_errors(&mut errors);
 
             gl::GenVertexArrays(1, &mut vao);
         }
@@ -116,6 +117,44 @@ impl MeshBuffers {
             index_buffer: BufferObject(buffers[1]),
             vertex_array: VertexArrayObject(vao),
         })
+    }
+
+    pub fn bind_mesh(&self, mesh: &Mesh) -> Result<&Self, failure::Error> {
+        use renderer_common::Vertex;
+        use std::mem::size_of;
+        unsafe {
+            gl::BindVertexArray(self.vertex_array.id());
+            gl::BindBuffer(gl::ARRAY_BUFFER, self.vertex_buffer.id());
+            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, self.index_buffer.id());
+
+            gl::BufferData(
+                gl::ARRAY_BUFFER,
+                mesh.verts_size() as isize,
+                mesh.vertices.as_ptr() as *const _,
+                gl::STATIC_DRAW,
+            );
+
+            gl::BufferData(
+                gl::ELEMENT_ARRAY_BUFFER,
+                mesh.indices_size() as isize,
+                mesh.indices.as_ptr() as *const _,
+                gl::STATIC_DRAW,
+            );
+
+            let pos_offset = offset_of!(Vertex, position);
+            gl::VertexAttribPointer(
+                0,
+                3,
+                gl::FLOAT,
+                gl::FALSE,
+                size_of::<Vertex>() as i32,
+                pos_offset as *const _,
+            );
+
+            gl::EnableVertexAttribArray(0);
+        }
+
+        Ok(&self)
     }
 }
 
