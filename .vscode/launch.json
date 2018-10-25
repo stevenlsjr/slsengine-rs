@@ -13,8 +13,7 @@
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
-            "externalConsole": true,
-            "preLaunchTask": "cargo-build"
+            "externalConsole": true
         },
         {
             "name": "vk_run",

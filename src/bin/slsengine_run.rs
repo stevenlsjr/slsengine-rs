@@ -68,7 +68,8 @@ fn make_mesh() -> Mesh {
             vert.position = v.pos.into();
             vert.normal = v.pos.into();
             vert
-        }).triangulate()
+        })
+        .triangulate()
     };
 
     let verts: Vec<SlsVertex> = generator().vertices().collect();
@@ -85,9 +86,10 @@ fn make_mesh() -> Mesh {
 }
 
 pub fn game_main() {
-    use std::time::*;
     use renderer::objects::MeshBuffers;
+    use renderer::BindUniform;
     use sdl_platform::{platform, OpenGLVersion, Platform};
+    use std::time::*;
 
     let (plt, gl_platform_builder) = platform()
         .with_window_size(640, 480)
@@ -111,20 +113,28 @@ pub fn game_main() {
         .bind_mesh(&mesh)
         .expect("could not bind mesh to buffers");
 
-    // let projection_id = program.uniform_location("projection").unwrap();
+    let projection_id = program.uniform_location("projection").unwrap_or(0);
     let modelview_id = program.uniform_location("modelview").unwrap();
 
-    // let projection = cgmath::Matrix4::identity();
-    let mut angle = 0.0;
-    let mut modelview = Matrix4::from_angle_x(Rad(1.0));
+    let projection = cgmath::Matrix4::from(PerspectiveFov {
+        fovy: Deg(45.0).into(),
+        aspect: 1.0,
+        near: 0.001,
+        far: 1000.0,
+    });
+    let mut modelview: Matrix4<f32> = Matrix4::identity();
+    let mut timer = game::Timer::new(Duration::from_millis(1000 / 50));
+    let translation = Matrix4::<f32>::from_translation(Vector3::new(0.0, 0.0, -10.0));
 
     loop_state.is_running = true;
     while loop_state.is_running {
         loop_state.handle_events(&window, event_pump.borrow_mut().poll_iter());
-        let now = SystemTime::now();
-        let dt: Duration = now.duration_since(loop_state.last_time).unwrap();
-        loop_state.last_time = now;
-        dt.as_millis();
+        let game::Tick { delta, .. } = timer.tick();
+
+        let ticks = Instant::now().duration_since(timer.start_instant());
+        let theta = game::duration_as_f64(ticks);
+
+        modelview = translation * Matrix4::from_angle_x(Rad(theta as f32));
 
         unsafe {
             gl::ClearColor(0.6, 0.0, 0.8, 1.0);
@@ -133,13 +143,10 @@ pub fn game_main() {
         }
 
         program.use_program();
+        program.bind_uniform(modelview_id, &modelview);
+        program.bind_uniform(projection_id, &projection);
         unsafe {
-            gl::UniformMatrix4fv(
-                modelview_id,
-                1,
-                gl::FALSE,
-                modelview.as_ptr(),
-            );
+
             gl::BindVertexArray(buffers.vertex_array.id());
             gl::DrawElements(
                 gl::TRIANGLES,

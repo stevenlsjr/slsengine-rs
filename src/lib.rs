@@ -6,13 +6,14 @@ extern crate sdl2;
 #[macro_use]
 extern crate memoffset;
 
-use std::time::SystemTime;
+use std::time::Instant;
 use std::error::Error;
 
 pub mod renderer;
 pub mod renderer_common;
 
 pub mod sdl_platform;
+pub mod game;
 
 // vulkan feature
 
@@ -41,13 +42,13 @@ pub fn get_error_desc<E: Error>(e: E) -> String {
 #[derive(Debug)]
 pub struct MainLoopState {
     pub is_running: bool,
-    pub last_time: SystemTime
+    pub last_time: Instant
 }
 
 impl MainLoopState {
     pub fn new() -> MainLoopState {
         MainLoopState { is_running: false,
-        last_time: SystemTime::now() }
+        last_time: Instant::now() }
     }
 
     pub fn on_resize(&mut self, _window: &Window, width: i32, height: i32) {

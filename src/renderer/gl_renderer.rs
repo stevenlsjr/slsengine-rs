@@ -1,8 +1,10 @@
 extern crate core;
 extern crate failure;
+extern crate cgmath;
 
 use super::gl;
 pub use renderer_common::*;
+use self::cgmath::*;
 
 #[derive(Fail, Debug)]
 pub enum RendererError {
@@ -198,6 +200,26 @@ impl Program {
         }
         Ok(id)
     }
+}
+pub trait BindUniform<T> {
+    type Id;    
+    fn bind_uniform(&self, id: Self::Id, val: &T);
+}
+
+impl BindUniform<Matrix4<f32>> for Program {
+    type Id = i32;
+    fn bind_uniform(&self, id: i32, val: &Matrix4<f32>) {
+        unsafe {
+            gl::UniformMatrix4fv(
+                id,
+                1,
+                gl::FALSE,
+                val.as_ptr(),
+            );
+        }
+    }
+
+
 }
 
 impl Drop for Program {
