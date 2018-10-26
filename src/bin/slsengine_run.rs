@@ -56,20 +56,30 @@ fn create_shaders() -> Result<Program, renderer::ShaderError> {
         .vert_shader(vs.0)
         .build_program()
 }
+// returns the [u, v] surface coordinates for a unit sphere.
+fn uv_for_unit_sphere(pos: Vector3<f32>) -> [f32;2] {
+    use std::f32::consts::PI;
+    let normal: Vector3<f32> = pos.normalize();
+    let u = normal.x.atan2(normal.z) / (2.0* PI) + 0.5;
+    let v = normal.y * 0.5 + 0.5;
+    [u, v]
+}
 
 fn make_mesh() -> Mesh {
-    use genmesh::generators::Cone;
+    use genmesh::generators::*;
     use genmesh::*;
     use slsengine::renderer::Vertex as SlsVertex;
     let generator = || {
-        MapToVertices::vertex(Cone::new(8), |v: Vertex| {
+        MapToVertices::vertex(Cone::new(32), |v: Vertex| {
             use std::default::Default;
             let mut vert: SlsVertex = Default::default();
             vert.position = v.pos.into();
             vert.normal = v.pos.into();
+            // approximate texture coordinates by taking long/lat on unit sphere.
+            // obvs doesn't work great for non-spheres
+            vert.uv = uv_for_unit_sphere(vec3(vert.position[0], vert.position[1], vert.position[2]));
             vert
-        })
-        .triangulate()
+        }).triangulate()
     };
 
     let verts: Vec<SlsVertex> = generator().vertices().collect();
@@ -104,6 +114,8 @@ pub fn game_main() {
     } = plt;
     let mut loop_state = MainLoopState::new();
 
+    let renderer = Box::new(GlRenderer::new(&window, Deg(45.0).into()));
+
     let program = create_shaders().unwrap();
 
     let mesh = make_mesh();
@@ -116,25 +128,19 @@ pub fn game_main() {
     let projection_id = program.uniform_location("projection").unwrap_or(0);
     let modelview_id = program.uniform_location("modelview").unwrap();
 
-    let projection = cgmath::Matrix4::from(PerspectiveFov {
-        fovy: Deg(45.0).into(),
-        aspect: 1.0,
-        near: 0.001,
-        far: 1000.0,
-    });
-    let mut modelview: Matrix4<f32> = Matrix4::identity();
     let mut timer = game::Timer::new(Duration::from_millis(1000 / 50));
-    let translation = Matrix4::<f32>::from_translation(Vector3::new(0.0, 0.0, -10.0));
+    let translation =
+        Matrix4::<f32>::from_translation(Vector3::new(0.0, 0.0, -10.0));
 
     loop_state.is_running = true;
     while loop_state.is_running {
         loop_state.handle_events(&window, event_pump.borrow_mut().poll_iter());
-        let game::Tick { delta, .. } = timer.tick();
+        let game::Tick { delta:_delta, .. } = timer.tick();
 
         let ticks = Instant::now().duration_since(timer.start_instant());
         let theta = game::duration_as_f64(ticks);
 
-        modelview = translation * Matrix4::from_angle_x(Rad(theta as f32));
+        let modelview = translation * Matrix4::from_angle_x(Rad(theta as f32));
 
         unsafe {
             gl::ClearColor(0.6, 0.0, 0.8, 1.0);
@@ -144,9 +150,8 @@ pub fn game_main() {
 
         program.use_program();
         program.bind_uniform(modelview_id, &modelview);
-        program.bind_uniform(projection_id, &projection);
+        program.bind_uniform(projection_id, renderer.projection());
         unsafe {
-
             gl::BindVertexArray(buffers.vertex_array.id());
             gl::DrawElements(
                 gl::TRIANGLES,

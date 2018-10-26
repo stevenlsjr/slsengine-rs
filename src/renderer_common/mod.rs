@@ -53,8 +53,6 @@ impl Mesh {
     pub fn indices_size(&self) -> usize {
         use std::mem::size_of;
         (self.indices.len() * size_of::<u32>())
-
-
     }
 }
 
@@ -115,3 +113,25 @@ impl MeshBuilder {
     }
 }
 
+pub struct Color {
+    pub r: f32,
+    pub g: f32,
+    pub b: f32,
+    pub a: f32,
+}
+
+pub trait ShaderProgram<T: Renderer> {
+    fn use_program(&self, renderer: &T);
+}
+
+pub trait Renderer {
+    fn clear(&self);
+    fn set_clear_color(&mut self, color: Color);
+    fn on_resize(&mut self, _window: &Window, _size: (u32, u32)) {}
+}
+
+use sdl2::video::Window;
+
+pub trait PlatformCallback {
+    fn on_resize(&mut self, window: &Window, size: (u32, u32));
+}

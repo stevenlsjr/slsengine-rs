@@ -1,6 +1,6 @@
 #![allow(unused_imports)]
 #![allow(unused_variables)]
-#![cfg(feature="with-vulkan")]
+#![cfg(feature = "with-vulkan")]
 
 extern crate ash;
 extern crate slsengine;

@@ -1,5 +1,4 @@
-
-use super::ash;
+// use super::ash;
 
 use ash::extensions::{DebugReport, Surface};
 
@@ -194,8 +193,7 @@ pub fn create_logical_device(
     instance: &Instance<V1_0>,
     physical_device: &PhysicalDevice,
 ) -> Result<(), AppError> {
-    use std::mem;
-    use std::ptr;
+    // use std::ptr;
     let _queue_index = find_queue_family(instance, physical_device)
         .ok_or(AppError::Misc("could not find graphics family".to_string()))?;
     // let queue_create_info: vk::DeviceQueueCreateInfo = vk::DeviceQueueCreateInfo {

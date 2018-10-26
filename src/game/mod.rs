@@ -1,4 +1,3 @@
-use failure::Error;
 use std::time::{Duration, Instant};
 
 /*--------------------------------------
@@ -8,8 +7,7 @@ use std::time::{Duration, Instant};
 /// Converts a duration to a floating point number.
 /// Will perform unchecked math, so a very long duration will overflow
 pub fn duration_as_f64(dur: Duration) -> f64 {
-    let sec: u64 = dur
-        .as_secs() * 1000;
+    let sec: u64 = dur.as_secs() * 1000;
     let milli: u64 = dur.subsec_millis() as u64;
     let result = (sec + milli) as f64 / 1000f64;
     result
@@ -20,21 +18,19 @@ fn test_duration_as_f64() {
     use std::u64;
     let dur = Duration::from_secs(10);
     assert_eq!(duration_as_f64(dur), 10.0);
-
-
 }
 
 #[derive(Clone, Debug)]
 pub struct Timer {
     last_instant: Instant,
     start_instant: Instant,
-    pub desired_period: Duration
+    pub desired_period: Duration,
 }
 
 #[derive(Clone, Debug)]
 pub struct Tick {
     pub last_instant: Instant,
-    pub delta: Duration
+    pub delta: Duration,
 }
 
 impl Timer {
@@ -43,7 +39,7 @@ impl Timer {
         Timer {
             desired_period,
             start_instant,
-            last_instant: start_instant
+            last_instant: start_instant,
         }
     }
 
@@ -51,7 +47,7 @@ impl Timer {
         self.last_instant
     }
 
-    pub fn start_instant(&self)->Instant {
+    pub fn start_instant(&self) -> Instant {
         self.start_instant
     }
 
@@ -63,7 +59,10 @@ impl Timer {
         let last_instant = self.last_instant;
         self.last_instant = Instant::now();
         let delta = self.last_instant.duration_since(last_instant);
-        Tick {last_instant, delta}
+        Tick {
+            last_instant,
+            delta,
+        }
     }
 }
 

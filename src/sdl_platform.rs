@@ -1,3 +1,4 @@
+use super::renderer::gl;
 use super::sdl2;
 pub use sdl2::video::{GLContext, Window, WindowBuilder};
 use sdl2::Sdl;
@@ -7,8 +8,6 @@ pub use sdl2::VideoSubsystem;
 use std::cell::{Ref, RefCell};
 use std::fmt;
 use std::rc::Rc;
-use super::renderer::gl;
-
 
 pub enum PlatformError {}
 
@@ -277,7 +276,6 @@ pub fn load_opengl(
     window: &Window,
     video_subsystem: &VideoSubsystem,
 ) -> Result<GLContext, String> {
-
     use super::renderer::gl;
     use std::ptr::null;
 
@@ -303,9 +301,6 @@ pub fn load_opengl(
                 );
             }
         }
-
-
-        
     }
 
     window.gl_make_current(&ctx)?;

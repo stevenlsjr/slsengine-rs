@@ -1,10 +1,14 @@
+extern crate cgmath;
 extern crate core;
 extern crate failure;
-extern crate cgmath;
 
+extern crate sdl2;
+
+use self::cgmath::prelude::*;
+use self::cgmath::*;
+use self::sdl2::video::Window;
 use super::gl;
 pub use renderer_common::*;
-use self::cgmath::*;
 
 #[derive(Fail, Debug)]
 pub enum RendererError {
@@ -202,7 +206,7 @@ impl Program {
     }
 }
 pub trait BindUniform<T> {
-    type Id;    
+    type Id;
     fn bind_uniform(&self, id: Self::Id, val: &T);
 }
 
@@ -210,16 +214,9 @@ impl BindUniform<Matrix4<f32>> for Program {
     type Id = i32;
     fn bind_uniform(&self, id: i32, val: &Matrix4<f32>) {
         unsafe {
-            gl::UniformMatrix4fv(
-                id,
-                1,
-                gl::FALSE,
-                val.as_ptr(),
-            );
+            gl::UniformMatrix4fv(id, 1, gl::FALSE, val.as_ptr());
         }
     }
-
-
 }
 
 impl Drop for Program {
@@ -330,4 +327,54 @@ mod test {
     }
 
     //    #[test]
+}
+
+pub struct GlRenderer {
+    fovy: Rad<f32>,
+    projection: Matrix4<f32>,
+}
+
+impl GlRenderer {
+    pub fn projection(&self) -> &Matrix4<f32> {
+        &self.projection
+    }
+    pub fn new(window: &Window, fovy: Rad<f32>) -> GlRenderer {
+        let mut renderer = GlRenderer {
+            fovy,
+            projection: Matrix4::identity(),
+        };
+
+        renderer.on_resize(window, window.size());
+
+        renderer
+    }
+}
+
+impl Renderer for GlRenderer {
+    fn clear(&self) {
+        unsafe {
+            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
+        }
+    }
+    fn set_clear_color(&mut self, color: Color) {
+        unsafe {
+            gl::ClearColor(color.r, color.g, color.b, color.a);
+        }
+    }
+
+    fn on_resize(&mut self, _window: &Window, size: (u32, u32)) {
+        let (width, height) = size;
+        let aspect = width as f32 / height as f32;
+
+        self.projection = (PerspectiveFov {
+            aspect,
+            fovy: self.fovy,
+            near: 0.01,
+            far: 1000.0,
+        }).into();
+
+        unsafe {
+            gl::Viewport(0, 0, width as i32, height as i32);
+        }
+    }
 }

@@ -1,28 +1,26 @@
 extern crate sdl2;
 
-
-
 #[allow(unused_imports)]
 #[macro_use]
 extern crate memoffset;
 
-use std::time::Instant;
 use std::error::Error;
+use std::time::Instant;
 
 pub mod renderer;
 pub mod renderer_common;
 
-pub mod sdl_platform;
 pub mod game;
+pub mod sdl_platform;
 
 // vulkan feature
 
-#[cfg(feature="with-vulkan")]
+#[cfg(feature = "with-vulkan")]
 #[allow(unused_imports)]
 #[macro_use]
 extern crate ash;
 
-#[cfg(feature="with-vulkan")]
+#[cfg(feature = "with-vulkan")]
 pub mod renderer_vk;
 
 #[macro_use]
@@ -42,13 +40,15 @@ pub fn get_error_desc<E: Error>(e: E) -> String {
 #[derive(Debug)]
 pub struct MainLoopState {
     pub is_running: bool,
-    pub last_time: Instant
+    pub last_time: Instant,
 }
 
 impl MainLoopState {
     pub fn new() -> MainLoopState {
-        MainLoopState { is_running: false,
-        last_time: Instant::now() }
+        MainLoopState {
+            is_running: false,
+            last_time: Instant::now(),
+        }
     }
 
     pub fn on_resize(&mut self, _window: &Window, width: i32, height: i32) {
@@ -83,7 +83,7 @@ impl MainLoopState {
 /// application error handling
 #[derive(Fail, Debug)]
 pub enum AppError {
-       #[cfg(feature="with-vulkan")]
+    #[cfg(feature = "with-vulkan")]
     #[fail(display = "vulkan error: {}", _0)]
     VkError(ash::vk::Result),
 
