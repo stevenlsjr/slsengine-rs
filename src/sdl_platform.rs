@@ -1,7 +1,7 @@
-use ::gl;
-use ::sdl2;
-use sdl2::Sdl;
+use gl;
+use sdl2;
 use sdl2::video::{GLContext, Window, WindowBuilder};
+use sdl2::Sdl;
 use sdl2::VideoSubsystem;
 ///
 /// Module handling creation of SDL and graphics api contexts
@@ -197,9 +197,9 @@ impl PlatformBuilderHooks for GlPlatformBuilder {
         gl_attr.set_context_profile(GLProfile::Core);
         gl_attr.set_context_version(4, 1);
         #[cfg(feature = "gl-debug-output")]
-            {
-                gl_attr.set_context_flags().debug().set();
-            }
+        {
+            gl_attr.set_context_flags().debug().set();
+        }
 
         wb.opengl();
         let window = wb.build().map_err(|e| e.to_string())?;

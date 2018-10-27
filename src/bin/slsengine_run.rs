@@ -10,6 +10,9 @@ use slsengine::renderer::gl_renderer::*;
 use slsengine::*;
 use std::ptr::null;
 
+static CAMERA_VIEW: Matrix4<f32> =
+    Matrix4::<f32>::from_translation(Vector3::new(0.0, 0.0, -10.0));
+
 fn create_shaders() -> Result<Program, renderer::ShaderError> {
     use renderer::ShaderError;
     use renderer::*;
@@ -57,10 +60,10 @@ fn create_shaders() -> Result<Program, renderer::ShaderError> {
         .build_program()
 }
 // returns the [u, v] surface coordinates for a unit sphere.
-fn uv_for_unit_sphere(pos: Vector3<f32>) -> [f32;2] {
+fn uv_for_unit_sphere(pos: Vector3<f32>) -> [f32; 2] {
     use std::f32::consts::PI;
     let normal: Vector3<f32> = pos.normalize();
-    let u = normal.x.atan2(normal.z) / (2.0* PI) + 0.5;
+    let u = normal.x.atan2(normal.z) / (2.0 * PI) + 0.5;
     let v = normal.y * 0.5 + 0.5;
     [u, v]
 }
@@ -77,7 +80,11 @@ fn make_mesh() -> Mesh {
             vert.normal = v.pos.into();
             // approximate texture coordinates by taking long/lat on unit sphere.
             // obvs doesn't work great for non-spheres
-            vert.uv = uv_for_unit_sphere(vec3(vert.position[0], vert.position[1], vert.position[2]));
+            vert.uv = uv_for_unit_sphere(vec3(
+                vert.position[0],
+                vert.position[1],
+                vert.position[2],
+            ));
             vert
         }).triangulate()
     };
@@ -135,12 +142,12 @@ pub fn game_main() {
     loop_state.is_running = true;
     while loop_state.is_running {
         loop_state.handle_events(&window, event_pump.borrow_mut().poll_iter());
-        let game::Tick { delta:_delta, .. } = timer.tick();
+        let game::Tick { delta: _delta, .. } = timer.tick();
 
         let ticks = Instant::now().duration_since(timer.start_instant());
         let theta = game::duration_as_f64(ticks);
 
-        let modelview = translation * Matrix4::from_angle_x(Rad(theta as f32));
+        let modelview = CAMERA_VIEW * Matrix4::from_angle_x(Rad(theta as f32));
 
         unsafe {
             gl::ClearColor(0.6, 0.0, 0.8, 1.0);

@@ -2,8 +2,8 @@
  *  objects.rs: Managed OpenGL buffer, texture, and vertex objects
  **/
 extern crate failure;
-use ::gl;
-use ::gl::types::*;
+use gl;
+use gl::types::*;
 use renderer_common::Mesh;
 
 #[derive(Fail, Debug)]
@@ -158,7 +158,7 @@ impl MeshBuffers {
                 offset_of!(Vertex, normal) as *const _,
             );
 
-             gl::VertexAttribPointer(
+            gl::VertexAttribPointer(
                 2,
                 2,
                 gl::FLOAT,

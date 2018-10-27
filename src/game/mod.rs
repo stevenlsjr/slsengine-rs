@@ -1,3 +1,5 @@
+use cgmath;
+use cgmath::prelude::*;
 use std::time::{Duration, Instant};
 
 /*--------------------------------------
@@ -69,3 +71,10 @@ impl Timer {
 /*--------------------------------------
  * Scene
  */
+
+use cgmath::{Matrix4, Quaternion, Vector3};
+
+#[derive(Debug, Clone)]
+pub struct Camera {
+    pub position: Vector3<f32>,
+}

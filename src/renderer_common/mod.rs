@@ -1,4 +1,5 @@
-
+use cgmath::Vector4;
+use sdl2::video::Window;
 
 /// A cffi and GPU-friendly vertex representaion
 #[derive(Debug, Copy, Clone)]
@@ -122,7 +123,26 @@ pub struct Color {
     pub a: f32,
 }
 
+pub fn color4f(r: f32, g: f32, b: f32, a: f32) -> Color {
+    Color { r, g, b, a }
+}
 
+impl Into<Vector4<f32>> for Color {
+    fn into(self) -> Vector4<S> {
+        ::cgmath::vec4(self.r, self.g, self.b, self.a)
+    }
+}
+
+impl From<Vector4<f32>> for Color {
+    fn from(v: Vector4<f32>) -> Self {
+        Color {
+            r: v.x(),
+            g: v.y(),
+            b: v.z(),
+            a: v.w(),
+        }
+    }
+}
 
 pub trait ShaderProgram<T: Renderer> {
     fn use_program(&self, renderer: &T);
@@ -133,8 +153,6 @@ pub trait Renderer {
     fn set_clear_color(&mut self, color: Color);
     fn on_resize(&mut self, _window: &Window, _size: (u32, u32)) {}
 }
-
-use sdl2::video::Window;
 
 pub trait PlatformCallback {
     fn on_resize(&mut self, window: &Window, size: (u32, u32));

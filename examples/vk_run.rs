@@ -3,12 +3,13 @@
 #![cfg(feature = "with-vulkan")]
 
 extern crate ash;
+extern crate sdl2;
 extern crate slsengine;
-
 use ash::version::*;
 use ash::vk::PhysicalDevice;
 use ash::Entry;
 use ash::*;
+use sdl2::video::Window;
 use slsengine::renderer_vk::*;
 use slsengine::sdl_platform::*;
 

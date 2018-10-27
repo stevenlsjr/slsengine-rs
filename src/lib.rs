@@ -1,11 +1,10 @@
-extern crate sdl2;
 extern crate cgmath;
 extern crate core;
+extern crate sdl2;
 
 #[allow(unused_imports)]
 #[macro_use]
 extern crate memoffset;
-
 
 #[macro_use]
 extern crate failure;
@@ -24,11 +23,8 @@ pub mod renderer_common;
 pub mod game;
 pub mod sdl_platform;
 
-
-
 #[cfg(feature = "with-vulkan")]
 pub mod renderer_vk;
-
 
 use std::error::Error;
 use std::time::Instant;
