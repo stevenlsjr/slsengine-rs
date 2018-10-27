@@ -2,8 +2,8 @@
  *  objects.rs: Managed OpenGL buffer, texture, and vertex objects
  **/
 extern crate failure;
-use super::gl;
-use super::gl::types::*;
+use ::gl;
+use ::gl::types::*;
 use renderer_common::Mesh;
 
 #[derive(Fail, Debug)]

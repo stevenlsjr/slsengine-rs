@@ -1,18 +1,14 @@
 extern crate sdl2;
+extern crate cgmath;
+extern crate core;
 
 #[allow(unused_imports)]
 #[macro_use]
 extern crate memoffset;
 
-use std::error::Error;
-use std::time::Instant;
 
-pub mod renderer;
-pub mod renderer_common;
-
-pub mod game;
-pub mod sdl_platform;
-
+#[macro_use]
+extern crate failure;
 // vulkan feature
 
 #[cfg(feature = "with-vulkan")]
@@ -20,11 +16,22 @@ pub mod sdl_platform;
 #[macro_use]
 extern crate ash;
 
+extern crate gl;
+
+pub mod renderer;
+pub mod renderer_common;
+
+pub mod game;
+pub mod sdl_platform;
+
+
+
 #[cfg(feature = "with-vulkan")]
 pub mod renderer_vk;
 
-#[macro_use]
-extern crate failure;
+
+use std::error::Error;
+use std::time::Instant;
 
 use sdl2::event::{Event, WindowEvent};
 use sdl2::keyboard::Keycode;

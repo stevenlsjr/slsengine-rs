@@ -1,3 +1,5 @@
+
+
 /// A cffi and GPU-friendly vertex representaion
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
@@ -119,6 +121,8 @@ pub struct Color {
     pub b: f32,
     pub a: f32,
 }
+
+
 
 pub trait ShaderProgram<T: Renderer> {
     fn use_program(&self, renderer: &T);

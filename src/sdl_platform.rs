@@ -1,12 +1,13 @@
-use super::renderer::gl;
-use super::sdl2;
-pub use sdl2::video::{GLContext, Window, WindowBuilder};
+use ::gl;
+use ::sdl2;
 use sdl2::Sdl;
-pub use sdl2::VideoSubsystem;
+use sdl2::video::{GLContext, Window, WindowBuilder};
+use sdl2::VideoSubsystem;
 ///
 /// Module handling creation of SDL and graphics api contexts
 use std::cell::{Ref, RefCell};
 use std::fmt;
+use std::ptr;
 use std::rc::Rc;
 
 pub enum PlatformError {}
@@ -169,6 +170,7 @@ pub fn make_window_builder(
 pub struct GlPlatformBuilder {
     gl_ctx: RefCell<Option<GLContext>>,
 }
+
 impl GlPlatformBuilder {
     fn new() -> GlPlatformBuilder {
         GlPlatformBuilder {
@@ -180,6 +182,7 @@ impl GlPlatformBuilder {
         self.gl_ctx.borrow()
     }
 }
+
 impl PlatformBuilderHooks for GlPlatformBuilder {
     fn build_window(
         &self,
@@ -194,9 +197,9 @@ impl PlatformBuilderHooks for GlPlatformBuilder {
         gl_attr.set_context_profile(GLProfile::Core);
         gl_attr.set_context_version(4, 1);
         #[cfg(feature = "gl-debug-output")]
-        {
-            gl_attr.set_context_flags().debug().set();
-        }
+            {
+                gl_attr.set_context_flags().debug().set();
+            }
 
         wb.opengl();
         let window = wb.build().map_err(|e| e.to_string())?;
@@ -276,9 +279,6 @@ pub fn load_opengl(
     window: &Window,
     video_subsystem: &VideoSubsystem,
 ) -> Result<GLContext, String> {
-    use super::renderer::gl;
-    use std::ptr::null;
-
     let ctx = window.gl_create_context()?;
 
     gl::load_with(|s| video_subsystem.gl_get_proc_address(s) as *const _);
@@ -290,13 +290,13 @@ pub fn load_opengl(
             unsafe {
                 gl::Enable(gl::DEBUG_OUTPUT);
                 gl::Enable(gl::DEBUG_OUTPUT_SYNCHRONOUS);
-                gl::DebugMessageCallback(gl_debug_output, null());
+                gl::DebugMessageCallback(gl_debug_output, ptr::null());
                 gl::DebugMessageControl(
                     gl::DONT_CARE,
                     gl::DONT_CARE,
                     gl::DEBUG_SEVERITY_LOW,
                     0,
-                    null(),
+                    ptr::null(),
                     gl::TRUE,
                 );
             }

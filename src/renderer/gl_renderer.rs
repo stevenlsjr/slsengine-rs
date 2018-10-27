@@ -1,14 +1,12 @@
-extern crate cgmath;
-extern crate core;
-extern crate failure;
-
-extern crate sdl2;
-
-use self::cgmath::prelude::*;
-use self::cgmath::*;
-use self::sdl2::video::Window;
-use super::gl;
+use ::cgmath;
+use ::core;
+use ::failure;
+use ::gl;
+use cgmath::*;
+use cgmath::prelude::*;
 pub use renderer_common::*;
+use sdl2;
+use sdl2::video::Window;
 
 #[derive(Fail, Debug)]
 pub enum RendererError {
@@ -205,6 +203,7 @@ impl Program {
         Ok(id)
     }
 }
+
 pub trait BindUniform<T> {
     type Id;
     fn bind_uniform(&self, id: Self::Id, val: &T);
