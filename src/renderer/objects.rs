@@ -17,18 +17,18 @@ pub enum ObjectError {
 
 pub enum BufferObjectTarget {
     ArrayBuffer = gl::ARRAY_BUFFER as isize,
-    AtomicCounterBuffer = gl::ATOMIC_COUNTER_BUFFER as isize,
-    CopyReadBuffer = gl::COPY_READ_BUFFER as isize,
-    CopyWriteBuffer = gl::COPY_WRITE_BUFFER as isize,
-    DispatchIndirectBuffer = gl::DISPATCH_INDIRECT_BUFFER as isize,
-    DrawIndirectBuffer = gl::DRAW_INDIRECT_BUFFER as isize,
+//    AtomicCounterBuffer = gl::ATOMIC_COUNTER_BUFFER as isize,
+//    CopyReadBuffer = gl::COPY_READ_BUFFER as isize,
+//    CopyWriteBuffer = gl::COPY_WRITE_BUFFER as isize,
+//    DispatchIndirectBuffer = gl::DISPATCH_INDIRECT_BUFFER as isize,
+//    DrawIndirectBuffer = gl::DRAW_INDIRECT_BUFFER as isize,
     ElementArrayBuffer = gl::ELEMENT_ARRAY_BUFFER as isize,
-    PixelPackBuffer = gl::PIXEL_PACK_BUFFER as isize,
-    PixelUnpackBuffer = gl::PIXEL_UNPACK_BUFFER as isize,
-    QueryBuffer = gl::QUERY_BUFFER as isize,
-    ShaderStorageBuffer = gl::SHADER_STORAGE_BUFFER as isize,
+//    PixelPackBuffer = gl::PIXEL_PACK_BUFFER as isize,
+//    PixelUnpackBuffer = gl::PIXEL_UNPACK_BUFFER as isize,
+//    QueryBuffer = gl::QUERY_BUFFER as isize,
+//    ShaderStorageBuffer = gl::SHADER_STORAGE_BUFFER as isize,
     TextureBuffer = gl::TEXTURE_BUFFER as isize,
-    TransformFeedbackBuffer = gl::TRANSFORM_FEEDBACK_BUFFER as isize,
+//    TransformFeedbackBuffer = gl::TRANSFORM_FEEDBACK_BUFFER as isize,
     UniformBuffer = gl::UNIFORM_BUFFER as isize,
 }
 
@@ -186,3 +186,5 @@ impl Drop for MeshBuffers {
         }
     }
 }
+
+

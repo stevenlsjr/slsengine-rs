@@ -202,6 +202,7 @@ impl PlatformBuilderHooks for GlPlatformBuilder {
         }
 
         wb.opengl();
+        wb.resizable();
         let window = wb.build().map_err(|e| e.to_string())?;
 
         let gl_ctx = load_opengl(&window, video_subsystem)?;

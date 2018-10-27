@@ -1,5 +1,7 @@
-use cgmath::Vector4;
+use cgmath::*;
+use cgmath::prelude::*;
 use sdl2::video::Window;
+use std::cell;
 
 /// A cffi and GPU-friendly vertex representaion
 #[derive(Debug, Copy, Clone)]
@@ -128,7 +130,7 @@ pub fn color4f(r: f32, g: f32, b: f32, a: f32) -> Color {
 }
 
 impl Into<Vector4<f32>> for Color {
-    fn into(self) -> Vector4<S> {
+    fn into(self) -> Vector4<f32> {
         ::cgmath::vec4(self.r, self.g, self.b, self.a)
     }
 }
@@ -136,10 +138,10 @@ impl Into<Vector4<f32>> for Color {
 impl From<Vector4<f32>> for Color {
     fn from(v: Vector4<f32>) -> Self {
         Color {
-            r: v.x(),
-            g: v.y(),
-            b: v.z(),
-            a: v.w(),
+            r: v.x,
+            g: v.y,
+            b: v.z,
+            a: v.w,
         }
     }
 }
@@ -150,10 +152,44 @@ pub trait ShaderProgram<T: Renderer> {
 
 pub trait Renderer {
     fn clear(&self);
+    fn camera(&self) -> cell::Ref<Camera>;
     fn set_clear_color(&mut self, color: Color);
     fn on_resize(&mut self, _window: &Window, _size: (u32, u32)) {}
 }
 
-pub trait PlatformCallback {
-    fn on_resize(&mut self, window: &Window, size: (u32, u32));
+pub trait Resizable {
+    fn on_resize(&mut self, size: (u32, u32));
+}
+
+/*
+ *  Camera
+ **/
+
+pub struct Camera {
+    pub projection: Matrix4<f32>,
+    perspective: PerspectiveFov<f32>,
+}
+
+impl Camera {
+    pub fn new(perspective: PerspectiveFov<f32>) -> Camera {
+        let cam = Camera {
+            perspective,
+            projection: perspective.into(),
+        };
+        cam
+    }
+
+    pub fn perspective(&self) -> PerspectiveFov<f32> { self.perspective }
+
+    fn build_perspective(&mut self) {
+        self.projection = self.perspective.into();
+    }
+}
+
+impl Resizable for Camera {
+    fn on_resize(&mut self, (width, height): (u32, u32)) {
+        let aspect = width as f32 / height as f32;
+        self.perspective.aspect = aspect;
+        self.build_perspective();
+    }
 }

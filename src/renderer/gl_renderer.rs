@@ -1,17 +1,21 @@
 use cgmath;
-use cgmath::prelude::*;
 use cgmath::*;
+use cgmath::prelude::*;
 use core;
 use failure;
 use gl;
 pub use renderer_common::*;
 use sdl2;
 use sdl2::video::Window;
+use std::cell::Ref;
+use std::cell::RefCell;
 
 #[derive(Fail, Debug)]
 pub enum RendererError {
     #[fail(display = "Failed to construct Geometry: {}", reason)]
     GeometryFailure { reason: String },
+    #[fail(display="ShaderError: {}", _0)]
+    ShaderError(ShaderError)
 }
 
 #[derive(Fail, Debug)]
@@ -328,24 +332,103 @@ mod test {
     //    #[test]
 }
 
+
+fn create_scene_shaders() -> Result<Program, ShaderError> {
+    use renderer::ShaderError;
+    use renderer::*;
+    use std::fs::File;
+    use std::io::Read;
+    let header: &'static str = "#version 410\n";
+    let mut vs_source = String::new();
+    let mut fs_source = String::new();
+
+    {
+        let mut vsf =
+            File::open("./assets/flat-shading.vert").map_err(|e| {
+                ShaderError::CompileFailure {
+                    info_log: format!("Error opening source {}", e),
+                }
+            })?;
+        let mut fsf =
+            File::open("./assets/flat-shading.frag").map_err(|e| {
+                ShaderError::CompileFailure {
+                    info_log: format!("Error opening source {}", e),
+                }
+            })?;
+
+        vsf.read_to_string(&mut vs_source).map_err(|_| {
+            ShaderError::CompileFailure {
+                info_log: "could not read vert shader".to_string(),
+            }
+        })?;
+        fsf.read_to_string(&mut fs_source).map_err(|_| {
+            ShaderError::CompileFailure {
+                info_log: "could not read vert shader".to_string(),
+            }
+        })?;
+    }
+
+    let vs =
+        unsafe { compile_source(&[header, &vs_source], gl::VERTEX_SHADER) }?;
+
+    let fs =
+        unsafe { compile_source(&[header, &fs_source], gl::FRAGMENT_SHADER) }?;
+
+    ProgramBuilder::new()
+        .frag_shader(fs.0)
+        .vert_shader(vs.0)
+        .build_program()
+}
+
+///
+/// Stores uniform ids for the main
+/// scene shader
+struct SceneUniforms {
+    modelview: i32,
+    projection: i32
+}
+
+/// the renderer backend for openGL
 pub struct GlRenderer {
-    fovy: Rad<f32>,
-    projection: Matrix4<f32>,
+    camera: RefCell<Camera>,
+    scene_program: Program,
+    scene_uniforms: SceneUniforms
 }
 
 impl GlRenderer {
-    pub fn projection(&self) -> &Matrix4<f32> {
-        &self.projection
+    pub fn projection(&self) -> Matrix4<f32> {
+        self.camera.borrow().projection
     }
-    pub fn new(window: &Window, fovy: Rad<f32>) -> GlRenderer {
-        let mut renderer = GlRenderer {
-            fovy,
-            projection: Matrix4::identity(),
+
+    pub fn new(window: &Window, fovy: Rad<f32>) -> Result<GlRenderer, RendererError> {
+        let (width, height) = window.size();
+        let perspective = PerspectiveFov {
+            fovy: fovy,
+            aspect: width as f32 / height as f32,
+            near: 0.1,
+            far: 1000.0,
+
+
+        };
+        let scene_program = create_scene_shaders().map_err(RendererError::ShaderError)?;
+        let mut scene_uniforms = SceneUniforms {
+            modelview: -1,
+            projection: -1
+        };
+        scene_uniforms.modelview = scene_program.uniform_location("modelview").unwrap_or(-1);
+        scene_uniforms.projection = scene_program.uniform_location("projection").unwrap_or(-1);
+        let renderer = GlRenderer {
+            scene_program,
+            scene_uniforms,
+            camera: RefCell::new(Camera::new(perspective)),
         };
 
-        renderer.on_resize(window, window.size());
 
-        renderer
+        Ok(renderer)
+    }
+
+    pub fn scene_program(&self) -> &Program {
+        &self.scene_program
     }
 }
 
@@ -355,6 +438,11 @@ impl Renderer for GlRenderer {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
         }
     }
+
+    fn camera(&self) -> Ref<Camera> {
+        self.camera.borrow()
+    }
+
     fn set_clear_color(&mut self, color: Color) {
         unsafe {
             gl::ClearColor(color.r, color.g, color.b, color.a);
@@ -362,15 +450,10 @@ impl Renderer for GlRenderer {
     }
 
     fn on_resize(&mut self, _window: &Window, size: (u32, u32)) {
+        self.camera.borrow_mut().on_resize(size);
         let (width, height) = size;
-        let aspect = width as f32 / height as f32;
-
-        self.projection = (PerspectiveFov {
-            aspect,
-            fovy: self.fovy,
-            near: 0.01,
-            far: 1000.0,
-        }).into();
+        self.scene_program.use_program();
+        self.scene_program.bind_uniform(self.scene_uniforms.projection, &self.camera.borrow().projection);
 
         unsafe {
             gl::Viewport(0, 0, width as i32, height as i32);

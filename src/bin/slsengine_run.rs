@@ -10,55 +10,8 @@ use slsengine::renderer::gl_renderer::*;
 use slsengine::*;
 use std::ptr::null;
 
-static CAMERA_VIEW: Matrix4<f32> =
-    Matrix4::<f32>::from_translation(Vector3::new(0.0, 0.0, -10.0));
 
-fn create_shaders() -> Result<Program, renderer::ShaderError> {
-    use renderer::ShaderError;
-    use renderer::*;
-    use std::fs::File;
-    use std::io::Read;
-    let header: &'static str = "#version 410\n";
-    let mut vs_source = String::new();
-    let mut fs_source = String::new();
 
-    {
-        let mut vsf =
-            File::open("./assets/flat-shading.vert").map_err(|e| {
-                ShaderError::CompileFailure {
-                    info_log: format!("Error opening source {}", e),
-                }
-            })?;
-        let mut fsf =
-            File::open("./assets/flat-shading.frag").map_err(|e| {
-                ShaderError::CompileFailure {
-                    info_log: format!("Error opening source {}", e),
-                }
-            })?;
-
-        vsf.read_to_string(&mut vs_source).map_err(|_| {
-            ShaderError::CompileFailure {
-                info_log: "could not read vert shader".to_string(),
-            }
-        })?;
-        fsf.read_to_string(&mut fs_source).map_err(|_| {
-            ShaderError::CompileFailure {
-                info_log: "could not read vert shader".to_string(),
-            }
-        })?;
-    }
-
-    let vs =
-        unsafe { compile_source(&[header, &vs_source], gl::VERTEX_SHADER) }?;
-
-    let fs =
-        unsafe { compile_source(&[header, &fs_source], gl::FRAGMENT_SHADER) }?;
-
-    ProgramBuilder::new()
-        .frag_shader(fs.0)
-        .vert_shader(vs.0)
-        .build_program()
-}
 // returns the [u, v] surface coordinates for a unit sphere.
 fn uv_for_unit_sphere(pos: Vector3<f32>) -> [f32; 2] {
     use std::f32::consts::PI;
@@ -121,9 +74,10 @@ pub fn game_main() {
     } = plt;
     let mut loop_state = MainLoopState::new();
 
-    let renderer = Box::new(GlRenderer::new(&window, Deg(45.0).into()));
+    let renderer = GlRenderer::new(&window, Deg(45.0).into()).unwrap();
 
-    let program = create_shaders().unwrap();
+    let camera_view: Matrix4<f32> =
+        Matrix4::<f32>::from_translation(Vector3::new(0.0, 0.0, -10.0));
 
     let mesh = make_mesh();
     let buffers =
@@ -131,13 +85,12 @@ pub fn game_main() {
     buffers
         .bind_mesh(&mesh)
         .expect("could not bind mesh to buffers");
+    let program= renderer.scene_program();
 
     let projection_id = program.uniform_location("projection").unwrap_or(0);
     let modelview_id = program.uniform_location("modelview").unwrap();
 
     let mut timer = game::Timer::new(Duration::from_millis(1000 / 50));
-    let translation =
-        Matrix4::<f32>::from_translation(Vector3::new(0.0, 0.0, -10.0));
 
     loop_state.is_running = true;
     while loop_state.is_running {
@@ -147,7 +100,7 @@ pub fn game_main() {
         let ticks = Instant::now().duration_since(timer.start_instant());
         let theta = game::duration_as_f64(ticks);
 
-        let modelview = CAMERA_VIEW * Matrix4::from_angle_x(Rad(theta as f32));
+        let modelview = camera_view * Matrix4::from_angle_x(Rad(theta as f32));
 
         unsafe {
             gl::ClearColor(0.6, 0.0, 0.8, 1.0);
@@ -157,7 +110,6 @@ pub fn game_main() {
 
         program.use_program();
         program.bind_uniform(modelview_id, &modelview);
-        program.bind_uniform(projection_id, renderer.projection());
         unsafe {
             gl::BindVertexArray(buffers.vertex_array.id());
             gl::DrawElements(
