@@ -3,6 +3,7 @@ extern crate genmesh;
 extern crate gl;
 extern crate sdl2;
 extern crate slsengine;
+extern crate stb_image;
 
 use cgmath::prelude::*;
 use cgmath::*;
@@ -15,7 +16,7 @@ use std::ptr::null;
 fn uv_for_unit_sphere(pos: Vector3<f32>) -> [f32; 2] {
     use std::f32::consts::PI;
     let normal: Vector3<f32> = pos.normalize();
-    let u = normal.x.atan2(normal.z) / (2.0 * PI) + 0.5;
+    let mut u = normal.x.atan2(normal.z) / (2.0 * PI) + 0.5;
     let v = normal.y * 0.5 + 0.5;
     [u, v]
 }
@@ -25,7 +26,7 @@ fn make_mesh() -> Mesh {
     use genmesh::*;
     use slsengine::renderer::Vertex as SlsVertex;
     let generator = || {
-        MapToVertices::vertex(Cone::new(32), |v: Vertex| {
+        MapToVertices::vertex(SphereUv::new(32, 32), |v: Vertex| {
             use std::default::Default;
             let mut vert: SlsVertex = Default::default();
             vert.position = v.pos.into();
@@ -38,7 +39,8 @@ fn make_mesh() -> Mesh {
                 vert.position[2],
             ));
             vert
-        }).triangulate()
+        })
+        .triangulate()
     };
 
     let verts: Vec<SlsVertex> = generator().vertices().collect();
@@ -55,11 +57,21 @@ fn make_mesh() -> Mesh {
 }
 
 fn make_texture() -> objects::TextureObjects {
-    use image;
-    let dimg =
-        image::open("assets/checker-map.png").expect("could not load image");
+    use stb_image::image;
+    let img: image::Image<u8> = match image::load("assets/checker-map.png") {
+        image::LoadResult::ImageU8(i) => i,
+        _ => panic!("unsupported image format!"),
+    };
+
+    
+    let textures =
+        objects::TextureObjects::new(1).expect("could not create texture");
+
+    let id = textures.ids()[0];
+    let in_format = if img.depth == 3 {gl::RGB} else {gl::RGBA};
     unsafe {
-        gl::TexParameteri(
+        gl::BindTexture(gl::TEXTURE_2D, id);
+           gl::TexParameteri(
             gl::TEXTURE_2D,
             gl::TEXTURE_MIN_FILTER,
             gl::LINEAR_MIPMAP_LINEAR as i32,
@@ -69,13 +81,21 @@ fn make_texture() -> objects::TextureObjects {
             gl::TEXTURE_MAG_FILTER,
             gl::LINEAR as i32,
         );
+        gl::TexImage2D(
+            gl::TEXTURE_2D,
+            0,
+            gl::RGBA as i32,
+            img.width as i32,
+            img.height as i32,
+            0,
+            in_format,
+            gl::UNSIGNED_BYTE,
+            img.data.as_ptr() as *const _,
+        );
+        gl::GenerateMipmap(gl::TEXTURE_2D)
     }
-    let tex =
-        objects::TextureObjects::new(1).expect("could not create texture");
 
-    //    tex.bind_to_image(&dimg);
-
-    tex
+    textures
 }
 
 fn main() {
