@@ -7,10 +7,9 @@ extern crate slsengine;
 use cgmath::prelude::*;
 use cgmath::*;
 use slsengine::renderer::gl_renderer::*;
+use slsengine::renderer::objects;
 use slsengine::*;
 use std::ptr::null;
-
-
 
 // returns the [u, v] surface coordinates for a unit sphere.
 fn uv_for_unit_sphere(pos: Vector3<f32>) -> [f32; 2] {
@@ -55,7 +54,31 @@ fn make_mesh() -> Mesh {
     }
 }
 
-pub fn game_main() {
+fn make_texture() -> objects::TextureObjects {
+    use image;
+    let dimg =
+        image::open("assets/checker-map.png").expect("could not load image");
+    unsafe {
+        gl::TexParameteri(
+            gl::TEXTURE_2D,
+            gl::TEXTURE_MIN_FILTER,
+            gl::LINEAR_MIPMAP_LINEAR as i32,
+        );
+        gl::TexParameteri(
+            gl::TEXTURE_2D,
+            gl::TEXTURE_MAG_FILTER,
+            gl::LINEAR as i32,
+        );
+    }
+    let tex =
+        objects::TextureObjects::new(1).expect("could not create texture");
+
+    //    tex.bind_to_image(&dimg);
+
+    tex
+}
+
+fn main() {
     use renderer::objects::MeshBuffers;
     use renderer::BindUniform;
     use sdl_platform::{platform, OpenGLVersion, Platform};
@@ -85,16 +108,21 @@ pub fn game_main() {
     buffers
         .bind_mesh(&mesh)
         .expect("could not bind mesh to buffers");
-    let program= renderer.scene_program();
+    let program = renderer.scene_program();
 
-    let projection_id = program.uniform_location("projection").unwrap_or(0);
+    let texture = make_texture();
+
     let modelview_id = program.uniform_location("modelview").unwrap();
 
     let mut timer = game::Timer::new(Duration::from_millis(1000 / 50));
 
     loop_state.is_running = true;
     while loop_state.is_running {
-        loop_state.handle_events(&window, event_pump.borrow_mut().poll_iter());
+        loop_state.handle_events(
+            &window,
+            event_pump.borrow_mut().poll_iter(),
+            &renderer,
+        );
         let game::Tick { delta: _delta, .. } = timer.tick();
 
         let ticks = Instant::now().duration_since(timer.start_instant());
@@ -122,8 +150,4 @@ pub fn game_main() {
 
         window.gl_swap_window();
     }
-}
-
-fn main() {
-    game_main();
 }

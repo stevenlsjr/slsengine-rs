@@ -1,21 +1,25 @@
-extern crate cgmath;
-extern crate core;
-extern crate sdl2;
-
-#[allow(unused_imports)]
-#[macro_use]
-extern crate memoffset;
-
-#[macro_use]
-extern crate failure;
-// vulkan feature
-
 #[cfg(feature = "with-vulkan")]
 #[allow(unused_imports)]
 #[macro_use]
-extern crate ash;
+pub extern crate ash;
+pub extern crate cgmath;
+extern crate core;
+#[macro_use]
+extern crate failure;
+pub extern crate gl;
+pub extern crate image;
+#[allow(unused_imports)]
+#[macro_use]
+extern crate memoffset;
+pub extern crate sdl2;
 
-extern crate gl;
+// vulkan feature
+
+use sdl2::event::{Event, WindowEvent};
+use sdl2::keyboard::Keycode;
+use sdl2::video::Window;
+use std::error::Error;
+use std::time::Instant;
 
 pub mod renderer;
 pub mod renderer_common;
@@ -25,13 +29,6 @@ pub mod sdl_platform;
 
 #[cfg(feature = "with-vulkan")]
 pub mod renderer_vk;
-
-use std::error::Error;
-use std::time::Instant;
-
-use sdl2::event::{Event, WindowEvent};
-use sdl2::keyboard::Keycode;
-use sdl2::video::Window;
 
 pub fn get_error_desc<E: Error>(e: E) -> String {
     e.description().to_string()
@@ -54,13 +51,21 @@ impl MainLoopState {
         }
     }
 
-    pub fn on_resize(&mut self, _window: &Window, width: i32, height: i32) {
-        eprintln!("Hello world!!! {}, {}", width, height)
+    pub fn on_resize(
+        &mut self,
+        window: &Window,
+        width: i32,
+        height: i32,
+        renderer: &renderer::Renderer,
+    ) {
+        eprintln!("Hello world!!! {}, {}", width, height);
+        renderer.on_resize(window, (width as u32, height as u32));
     }
     pub fn handle_events(
         &mut self,
         window: &Window,
         events: sdl2::event::EventPollIterator,
+        renderer: &renderer::Renderer,
     ) {
         for event in events {
             match event {
@@ -73,7 +78,7 @@ impl MainLoopState {
                 }
                 Event::Window { win_event, .. } => match win_event {
                     WindowEvent::Resized(width, height) => {
-                        self.on_resize(window, width, height);
+                        self.on_resize(window, width, height, renderer);
                     }
                     _ => {}
                 },

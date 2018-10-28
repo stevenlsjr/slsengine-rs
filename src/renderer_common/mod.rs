@@ -1,5 +1,5 @@
-use cgmath::*;
 use cgmath::prelude::*;
+use cgmath::*;
 use sdl2::video::Window;
 use std::cell;
 
@@ -154,7 +154,7 @@ pub trait Renderer {
     fn clear(&self);
     fn camera(&self) -> cell::Ref<Camera>;
     fn set_clear_color(&mut self, color: Color);
-    fn on_resize(&mut self, _window: &Window, _size: (u32, u32)) {}
+    fn on_resize(&self, _window: &Window, _size: (u32, u32)) {}
 }
 
 pub trait Resizable {
@@ -179,7 +179,9 @@ impl Camera {
         cam
     }
 
-    pub fn perspective(&self) -> PerspectiveFov<f32> { self.perspective }
+    pub fn perspective(&self) -> PerspectiveFov<f32> {
+        self.perspective
+    }
 
     fn build_perspective(&mut self) {
         self.projection = self.perspective.into();

@@ -2,9 +2,12 @@
  *  objects.rs: Managed OpenGL buffer, texture, and vertex objects
  **/
 extern crate failure;
+
 use gl;
 use gl::types::*;
+use image;
 use renderer_common::Mesh;
+use std::ops::*;
 
 #[derive(Fail, Debug)]
 pub enum ObjectError {
@@ -17,18 +20,18 @@ pub enum ObjectError {
 
 pub enum BufferObjectTarget {
     ArrayBuffer = gl::ARRAY_BUFFER as isize,
-//    AtomicCounterBuffer = gl::ATOMIC_COUNTER_BUFFER as isize,
-//    CopyReadBuffer = gl::COPY_READ_BUFFER as isize,
-//    CopyWriteBuffer = gl::COPY_WRITE_BUFFER as isize,
-//    DispatchIndirectBuffer = gl::DISPATCH_INDIRECT_BUFFER as isize,
-//    DrawIndirectBuffer = gl::DRAW_INDIRECT_BUFFER as isize,
+    //    AtomicCounterBuffer = gl::ATOMIC_COUNTER_BUFFER as isize,
+    //    CopyReadBuffer = gl::COPY_READ_BUFFER as isize,
+    //    CopyWriteBuffer = gl::COPY_WRITE_BUFFER as isize,
+    //    DispatchIndirectBuffer = gl::DISPATCH_INDIRECT_BUFFER as isize,
+    //    DrawIndirectBuffer = gl::DRAW_INDIRECT_BUFFER as isize,
     ElementArrayBuffer = gl::ELEMENT_ARRAY_BUFFER as isize,
-//    PixelPackBuffer = gl::PIXEL_PACK_BUFFER as isize,
-//    PixelUnpackBuffer = gl::PIXEL_UNPACK_BUFFER as isize,
-//    QueryBuffer = gl::QUERY_BUFFER as isize,
-//    ShaderStorageBuffer = gl::SHADER_STORAGE_BUFFER as isize,
+    //    PixelPackBuffer = gl::PIXEL_PACK_BUFFER as isize,
+    //    PixelUnpackBuffer = gl::PIXEL_UNPACK_BUFFER as isize,
+    //    QueryBuffer = gl::QUERY_BUFFER as isize,
+    //    ShaderStorageBuffer = gl::SHADER_STORAGE_BUFFER as isize,
     TextureBuffer = gl::TEXTURE_BUFFER as isize,
-//    TransformFeedbackBuffer = gl::TRANSFORM_FEEDBACK_BUFFER as isize,
+    //    TransformFeedbackBuffer = gl::TRANSFORM_FEEDBACK_BUFFER as isize,
     UniformBuffer = gl::UNIFORM_BUFFER as isize,
 }
 
@@ -187,4 +190,41 @@ impl Drop for MeshBuffers {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct TextureName(u32);
 
+
+#[derive(Debug)]
+pub struct TextureObjects {
+    ids: Vec<TextureName>,
+}
+
+impl TextureObjects {
+    pub fn new(len: usize) -> Result<TextureObjects, ObjectError> {
+        let mut ids: Vec<u32> = vec![0; len];
+        
+        unsafe {
+            gl::GenTextures(len as i32, ids.as_mut_ptr());
+        }
+
+        Ok(TextureObjects { ids: ids.iter().map(|id| TextureName(*id)).collect() })
+    }
+
+    pub fn ids(&self) -> &[TextureName] {
+        &self.ids
+    }
+
+    pub fn len(&self) -> usize {self.ids.len()}
+}
+
+
+impl Drop for TextureObjects {
+    fn drop(&mut self) {
+        let mut ids: Vec<u32> = self.ids.iter().map(|id| id.0).collect();
+        unsafe {
+            gl::DeleteTextures(self.ids.len() as i32, ids.as_mut_ptr());
+        }
+        
+        self.ids.clear();
+    }
+}

@@ -1,6 +1,6 @@
 use cgmath;
-use cgmath::*;
 use cgmath::prelude::*;
+use cgmath::*;
 use core;
 use failure;
 use gl;
@@ -14,8 +14,8 @@ use std::cell::RefCell;
 pub enum RendererError {
     #[fail(display = "Failed to construct Geometry: {}", reason)]
     GeometryFailure { reason: String },
-    #[fail(display="ShaderError: {}", _0)]
-    ShaderError(ShaderError)
+    #[fail(display = "ShaderError: {}", _0)]
+    ShaderError(ShaderError),
 }
 
 #[derive(Fail, Debug)]
@@ -332,7 +332,6 @@ mod test {
     //    #[test]
 }
 
-
 fn create_scene_shaders() -> Result<Program, ShaderError> {
     use renderer::ShaderError;
     use renderer::*;
@@ -380,19 +379,23 @@ fn create_scene_shaders() -> Result<Program, ShaderError> {
         .build_program()
 }
 
+/*
+ * Opengl renderer implementation
+ */
+
 ///
 /// Stores uniform ids for the main
 /// scene shader
 struct SceneUniforms {
     modelview: i32,
-    projection: i32
+    projection: i32,
 }
 
 /// the renderer backend for openGL
 pub struct GlRenderer {
     camera: RefCell<Camera>,
     scene_program: Program,
-    scene_uniforms: SceneUniforms
+    scene_uniforms: SceneUniforms,
 }
 
 impl GlRenderer {
@@ -400,29 +403,34 @@ impl GlRenderer {
         self.camera.borrow().projection
     }
 
-    pub fn new(window: &Window, fovy: Rad<f32>) -> Result<GlRenderer, RendererError> {
+    pub fn new(
+        window: &Window,
+        fovy: Rad<f32>,
+    ) -> Result<GlRenderer, RendererError> {
         let (width, height) = window.size();
         let perspective = PerspectiveFov {
             fovy: fovy,
             aspect: width as f32 / height as f32,
             near: 0.1,
             far: 1000.0,
-
-
         };
-        let scene_program = create_scene_shaders().map_err(RendererError::ShaderError)?;
+        let scene_program =
+            create_scene_shaders().map_err(RendererError::ShaderError)?;
         let mut scene_uniforms = SceneUniforms {
             modelview: -1,
-            projection: -1
+            projection: -1,
         };
-        scene_uniforms.modelview = scene_program.uniform_location("modelview").unwrap_or(-1);
-        scene_uniforms.projection = scene_program.uniform_location("projection").unwrap_or(-1);
+        scene_uniforms.modelview =
+            scene_program.uniform_location("modelview").unwrap_or(-1);
+        scene_uniforms.projection =
+            scene_program.uniform_location("projection").unwrap_or(-1);
         let renderer = GlRenderer {
             scene_program,
             scene_uniforms,
             camera: RefCell::new(Camera::new(perspective)),
         };
 
+        renderer.on_resize(window, (width, height));
 
         Ok(renderer)
     }
@@ -449,11 +457,14 @@ impl Renderer for GlRenderer {
         }
     }
 
-    fn on_resize(&mut self, _window: &Window, size: (u32, u32)) {
+    fn on_resize(&self, _window: &Window, size: (u32, u32)) {
         self.camera.borrow_mut().on_resize(size);
         let (width, height) = size;
         self.scene_program.use_program();
-        self.scene_program.bind_uniform(self.scene_uniforms.projection, &self.camera.borrow().projection);
+        self.scene_program.bind_uniform(
+            self.scene_uniforms.projection,
+            &self.camera.borrow().projection,
+        );
 
         unsafe {
             gl::Viewport(0, 0, width as i32, height as i32);
