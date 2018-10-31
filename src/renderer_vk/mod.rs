@@ -20,6 +20,9 @@ use ash::{Entry, Instance};
 use std::default::Default;
 use std::ffi::CStr;
 
+use renderer_common::*;
+use std::cell::{Ref, RefCell};
+
 /// from Ash example,
 #[cfg(all(unix, not(target_os = "android"), not(target_os = "macos")))]
 pub fn get_ext_names() -> Vec<*const i8> {
@@ -247,5 +250,33 @@ fn test_device_name() {
             .device_name
             .copy_from_slice(&[10i8; vkt::VK_MAX_PHYSICAL_DEVICE_NAME_SIZE]);
         assert_eq!(get_device_name(&dev_properties), "invalid name");
+    }
+}
+
+pub struct VkRenderer {
+    camera: RefCell<Camera>
+}
+
+impl VkRenderer {
+
+    pub fn new() -> VkRenderer {
+        let camera = Camera::new(default_perspective());
+        VkRenderer {
+            camera: RefCell::new(camera)
+        }
+    }
+}
+
+
+impl Renderer for VkRenderer {
+    fn clear(&self) {
+    }
+
+    fn camera(&self) -> Ref<Camera> {
+        self.camera.borrow()
+    }
+
+    fn set_clear_color(&mut self, color: Color) {
+        unimplemented!()
     }
 }
