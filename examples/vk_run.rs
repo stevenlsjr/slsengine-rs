@@ -9,7 +9,8 @@ use ash::version::*;
 use ash::vk::PhysicalDevice;
 use ash::Entry;
 use ash::*;
-use sdl2::video::Window;
+use sdl2::video::*;
+use sdl2::*;
 use slsengine::renderer_vk::*;
 use slsengine::sdl_platform::*;
 
@@ -39,6 +40,7 @@ fn main() {
     let phys_dev = pick_physical_device(&instance)
         .expect("Couldn't create physical device");
     let device = create_logical_device(&instance, &phys_dev);
+    let renderer = VkRenderer::new();
 
     let mut main_loop = slsengine::MainLoopState::new();
     main_loop.is_running = true;
@@ -46,6 +48,7 @@ fn main() {
         main_loop.handle_events(
             &platform.window,
             platform.event_pump.borrow_mut().poll_iter(),
+            &renderer
         );
         thread::sleep(Duration::from_millis(16));
     }
