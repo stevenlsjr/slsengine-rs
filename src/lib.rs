@@ -95,6 +95,19 @@ pub enum AppError {
     #[fail(display = "vulkan error: {}", _0)]
     VkError(ash::vk::Result),
 
-    #[fail(display = "misc error: '{}'", _0)]
-    Misc(String),
+    #[fail(display = "App error: '{}'", _0)]
+    Other(failure::Error),
 }
+
+use std::fmt::{Display, Debug};
+use std::marker::{Send, Sync};
+use std::clone::Clone;
+
+
+impl AppError {
+
+    pub fn from_message<D: Display + Debug + Send + Sync + Sized + 'static>(message: D) -> AppError {
+        AppError::Other(failure::err_msg(message))
+    }
+}
+
