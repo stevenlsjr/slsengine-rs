@@ -193,7 +193,6 @@ impl Drop for MeshBuffers {
 #[derive(Clone, Debug)]
 pub struct TextureName(u32);
 
-
 #[derive(Debug)]
 pub struct TextureObjects {
     ids: Vec<TextureName>,
@@ -202,21 +201,24 @@ pub struct TextureObjects {
 impl TextureObjects {
     pub fn new(len: usize) -> Result<TextureObjects, ObjectError> {
         let mut ids: Vec<u32> = vec![0; len];
-        
+
         unsafe {
             gl::GenTextures(len as i32, ids.as_mut_ptr());
         }
 
-        Ok(TextureObjects { ids: ids.iter().map(|id| TextureName(*id)).collect() })
+        Ok(TextureObjects {
+            ids: ids.iter().map(|id| TextureName(*id)).collect(),
+        })
     }
 
     pub fn ids(&self) -> &[TextureName] {
         &self.ids
     }
 
-    pub fn len(&self) -> usize {self.ids.len()}
+    pub fn len(&self) -> usize {
+        self.ids.len()
+    }
 }
-
 
 impl Drop for TextureObjects {
     fn drop(&mut self) {
@@ -224,7 +226,7 @@ impl Drop for TextureObjects {
         unsafe {
             gl::DeleteTextures(self.ids.len() as i32, ids.as_mut_ptr());
         }
-        
+
         self.ids.clear();
     }
 }

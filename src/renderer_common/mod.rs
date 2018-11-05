@@ -165,7 +165,7 @@ pub trait Resizable {
  *  Camera
  **/
 
-pub fn default_perspective() -> PerspectiveFov<f32>{
+pub fn default_perspective() -> PerspectiveFov<f32> {
     PerspectiveFov {
         fovy: Deg(45.0).into(),
         aspect: 1.0,

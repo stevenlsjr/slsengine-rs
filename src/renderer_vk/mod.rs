@@ -50,17 +50,19 @@ pub fn get_ext_names() -> Vec<*const i8> {
         DebugReport::name().as_ptr() as *const i8,
     ]
 }
+use std::ffi::CString;
 
 /// provides app defaults for vkInstance creation
-pub fn make_instance(entry: &Entry<V1_0>) -> Result<Instance<V1_0>, String> {
-    use std::ffi::CString;
+pub fn make_instance(
+    entry: &Entry<V1_0>,
+    validation_layers: &[CString],
+) -> Result<Instance<V1_0>, String> {
     use std::ptr;
 
     let app_name = CString::new("Hello vulkan").unwrap();
-    let layer_names =
-        [CString::new("VK_LAYER_LUNARG_standard_validation").unwrap()];
+    
     let layer_name_ptrs: Vec<*const i8> =
-        layer_names.iter().map(|name| name.as_ptr()).collect();
+        validation_layers.iter().map(|name| name.as_ptr()).collect();
     let ext_names = get_ext_names();
 
     let app_info = vk::ApplicationInfo {
@@ -130,7 +132,9 @@ pub fn pick_physical_device(
         .enumerate_physical_devices()
         .map_err(AppError::VkError)?;
     if physical_devices.len() == 0 {
-        return Err(AppError::Misc("No physical devices found".to_string()));
+        return Err(AppError::from_message(
+            "No physical devices found".to_string(),
+        ));
     }
 
     let mut top_device = (0, None);
@@ -148,10 +152,11 @@ pub fn pick_physical_device(
     }
     let chosen_device =
         top_device.1.expect("If no devices availible, pick_physical_device should have already returned");
-    let _queue_family =
-        find_queue_family(instance, &chosen_device).ok_or(AppError::Misc(
-            format!("could not find suitible queue family for device"),
-        ))?;
+    let _queue_family = find_queue_family(instance, &chosen_device).ok_or(
+        AppError::from_message(format!(
+            "could not find suitible queue family for device"
+        )),
+    )?;
 
     Ok(chosen_device)
 }
@@ -195,10 +200,11 @@ pub struct QueueFamilyIndex {
 pub fn create_logical_device(
     instance: &Instance<V1_0>,
     physical_device: &PhysicalDevice,
-) -> Result<(), AppError> {
+) -> Result<vkt::Device, AppError> {
     // use std::ptr;
-    let _queue_index = find_queue_family(instance, physical_device)
-        .ok_or(AppError::Misc("could not find graphics family".to_string()))?;
+    let _queue_index = find_queue_family(instance, physical_device).ok_or(
+        AppError::from_message("could not find graphics family".to_string()),
+    )?;
     // let queue_create_info: vk::DeviceQueueCreateInfo = vk::DeviceQueueCreateInfo {
     //     s_type: vk::StructureType::DeviceCreateInfo,
     //     p_next: ptr::null(),
@@ -212,7 +218,7 @@ pub fn create_logical_device(
     //     p_enabled_features: ptr::null(),
     // };
 
-    Ok(())
+    Err(AppError::from_message("not implemented!"))
 }
 
 #[cfg(test)]
@@ -254,23 +260,20 @@ fn test_device_name() {
 }
 
 pub struct VkRenderer {
-    camera: RefCell<Camera>
+    camera: RefCell<Camera>,
 }
 
 impl VkRenderer {
-
     pub fn new() -> VkRenderer {
         let camera = Camera::new(default_perspective());
         VkRenderer {
-            camera: RefCell::new(camera)
+            camera: RefCell::new(camera),
         }
     }
 }
 
-
 impl Renderer for VkRenderer {
-    fn clear(&self) {
-    }
+    fn clear(&self) {}
 
     fn camera(&self) -> Ref<Camera> {
         self.camera.borrow()
