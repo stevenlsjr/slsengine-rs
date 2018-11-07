@@ -1,6 +1,9 @@
 // use super::ash;
 
+pub mod sdl_vulkan;
+
 use ash::extensions::{DebugReport, Surface};
+use sdl2::video::Window;
 
 #[cfg(target_os = "macos")]
 use ash::extensions::MacOSSurface;
@@ -19,51 +22,58 @@ use ash::vk::types::{
 use ash::{Entry, Instance};
 use std::default::Default;
 use std::ffi::CStr;
+use failure::{Fail, Error};
 
 use renderer_common::*;
 use std::cell::{Ref, RefCell};
 
 /// from Ash example,
-#[cfg(all(unix, not(target_os = "android"), not(target_os = "macos")))]
-pub fn get_ext_names() -> Vec<*const i8> {
-    vec![
-        Surface::name().as_ptr() as *const i8,
-        XlibSurface::name().as_ptr() as *const i8,
-        DebugReport::name().as_ptr() as *const i8,
-    ]
-}
+// #[cfg(all(unix, not(target_os = "android"), not(target_os = "macos")))]
+// pub fn get_ext_names() -> Vec<*const i8> {
+//     vec![
+//         Surface::name().as_ptr() as *const i8,
+//         XlibSurface::name().as_ptr() as *const i8,
+//         DebugReport::name().as_ptr() as *const i8,
+//     ]
+// }
 
-#[cfg(target_os = "macos")]
-pub fn get_ext_names() -> Vec<*const i8> {
-    vec![
-        Surface::name().as_ptr() as *const i8,
-        MacOSSurface::name().as_ptr() as *const i8,
-        DebugReport::name().as_ptr() as *const i8,
-    ]
-}
+// #[cfg(target_os = "macos")]
+// pub fn get_ext_names() -> Vec<*const i8> {
+//     vec![
+//         Surface::name().as_ptr() as *const i8,
+//         MacOSSurface::name().as_ptr() as *const i8,
+//         DebugReport::name().as_ptr() as *const i8,
+//     ]
+// }
 
-#[cfg(all(windows))]
-pub fn get_ext_names() -> Vec<*const i8> {
-    vec![
-        Surface::name().as_ptr() as *const i8,
-        Win32Surface::name().as_ptr() as *const i8,
-        DebugReport::name().as_ptr() as *const i8,
-    ]
-}
+// #[cfg(all(windows))]
+// pub fn get_ext_names() -> Vec<*const i8> {
+//     vec![
+//         Surface::name().as_ptr() as *const i8,
+//         Win32Surface::name().as_ptr() as *const i8,
+//         DebugReport::name().as_ptr() as *const i8,
+//     ]
+// }
+
+
 use std::ffi::CString;
 
 /// provides app defaults for vkInstance creation
 pub fn make_instance(
     entry: &Entry<V1_0>,
     validation_layers: &[CString],
-) -> Result<Instance<V1_0>, String> {
+    window: &sdl2::video::Window
+) -> Result<Instance<V1_0>, failure::Error> {
     use std::ptr;
+    use self::sdl_vulkan::prelude::*;
 
     let app_name = CString::new("Hello vulkan").unwrap();
     
     let layer_name_ptrs: Vec<*const i8> =
         validation_layers.iter().map(|name| name.as_ptr()).collect();
-    let ext_names = get_ext_names();
+    let mut ext_names = window.vk_instance_extensions()?;
+    ext_names.push(DebugReport::name().as_ptr());
+
 
     let app_info = vk::ApplicationInfo {
         s_type: vk::StructureType::ApplicationInfo,
@@ -86,7 +96,7 @@ pub fn make_instance(
     };
 
     let instance = unsafe { entry.create_instance(&create_info, None) }
-        .map_err(get_error_desc);
+        .map_err(|e| failure::err_msg(get_error_desc(e)));
     instance
 }
 

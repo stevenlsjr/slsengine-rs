@@ -43,46 +43,17 @@ use std::ptr;
 
 static MAIN_QUEUE_PRIORITY: f32 = 1.0;
 
-extern "C" {
-    fn SDL_Vulkan_GetInstanceExtensions(
-        window: *mut sdl_sys::SDL_Window,
-        pCount: *mut u32,
-        pNames: *mut *const c_char,
-    ) -> sdl_sys::SDL_bool;
-}
 
 fn print_sdl_extensions(
     window: &sdl2::video::Window,
 ) -> Result<Vec<CString>, failure::Error> {
+    use slsengine::renderer_vk::sdl_vulkan::*;
     use sdl_sys::SDL_bool;
     let mut n_extensions: u32 = 0;
     let p_window = window.raw();
-    unsafe {
-        if SDL_Vulkan_GetInstanceExtensions(
-            p_window,
-            &mut n_extensions,
-            ptr::null_mut(),
-        ) != SDL_bool::SDL_TRUE
-        {
-            bail!("SDL_Vulkan_GetInstanceExtensions");
-        };
-    }
-    if n_extensions <= 0 {
-        bail!("no extensions found for creating surface!");
-    }
-    let mut names: Vec<*const c_char> = vec![ptr::null(); n_extensions as usize];
-    unsafe {
-        if SDL_Vulkan_GetInstanceExtensions(
-            p_window,
-            &mut n_extensions,
-            names.as_mut_ptr(),
-        ) != SDL_bool::SDL_TRUE
-        {
-            bail!("SDL_Vulkan_GetInstanceExtensions");
-        }
-    }
+    
     let mut cstrings: Vec<CString> = Vec::new();
-
+    let mut names: Vec<*const i8> = window.vk_instance_extensions().unwrap();
     for p_ext_name in names  {
         let name = unsafe { CStr::from_ptr(p_ext_name)};
         let owned = CString::new(name.to_bytes()).unwrap();
@@ -107,7 +78,7 @@ fn main() {
 
     let entry = Entry::new().unwrap();
     let instance: Instance<V1_0> =
-        make_instance(&entry, &validation_layers).unwrap();
+        make_instance(&entry, &validation_layers, &platform.window).unwrap();
     let phys_dev = pick_physical_device(&instance)
         .expect("Couldn't create physical device");
 

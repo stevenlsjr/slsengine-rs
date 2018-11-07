@@ -204,13 +204,7 @@ impl TextureObjects {
             gl::GenTextures(len as i32, ids.as_mut_ptr());
         }
 
-<<<<<<< HEAD
         Ok(TextureObjects { ids})
-=======
-        Ok(TextureObjects {
-            ids: ids.iter().map(|id| TextureName(*id)).collect(),
-        })
->>>>>>> 5b7652386f87dd4ef9f6be2896faeb24ed74a6d7
     }
 
     pub fn ids(&self) -> &[u32] {

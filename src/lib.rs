@@ -95,8 +95,11 @@ pub enum AppError {
     #[fail(display = "vulkan error: {}", _0)]
     VkError(ash::vk::Result),
 
+    #[fail(display = "Ash instance error: '{}'", _0)]
+    AshInstanceError(#[fail(cause)] ash::InstanceError),
+
     #[fail(display = "App error: '{}'", _0)]
-    Other(failure::Error),
+    Other(failure::Error)
 }
 
 use std::fmt::{Display, Debug};
