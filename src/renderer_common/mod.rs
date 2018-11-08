@@ -1,4 +1,3 @@
-use cgmath::prelude::*;
 use cgmath::*;
 use sdl2::video::Window;
 use std::cell;

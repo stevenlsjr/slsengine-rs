@@ -5,7 +5,6 @@ extern crate failure;
 
 use gl;
 use gl::types::*;
-use image;
 use renderer_common::Mesh;
 use std::ops::*;
 
@@ -190,7 +189,6 @@ impl Drop for MeshBuffers {
     }
 }
 
-
 #[derive(Debug)]
 pub struct TextureObjects {
     ids: Vec<u32>,
@@ -204,7 +202,7 @@ impl TextureObjects {
             gl::GenTextures(len as i32, ids.as_mut_ptr());
         }
 
-        Ok(TextureObjects { ids})
+        Ok(TextureObjects { ids })
     }
 
     pub fn ids(&self) -> &[u32] {

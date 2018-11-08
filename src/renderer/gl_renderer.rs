@@ -1,11 +1,8 @@
-use cgmath;
 use cgmath::prelude::*;
 use cgmath::*;
 use core;
-use failure;
 use gl;
 pub use renderer_common::*;
-use sdl2;
 use sdl2::video::Window;
 use std::cell::Ref;
 use std::cell::RefCell;

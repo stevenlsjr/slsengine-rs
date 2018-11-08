@@ -1,5 +1,3 @@
-use cgmath;
-use cgmath::prelude::*;
 use std::time::{Duration, Instant};
 
 /*--------------------------------------
@@ -17,7 +15,6 @@ pub fn duration_as_f64(dur: Duration) -> f64 {
 
 #[test]
 fn test_duration_as_f64() {
-    use std::u64;
     let dur = Duration::from_secs(10);
     assert_eq!(duration_as_f64(dur), 10.0);
 }

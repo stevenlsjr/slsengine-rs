@@ -16,7 +16,7 @@ use std::ptr::null;
 fn uv_for_unit_sphere(pos: Vector3<f32>) -> [f32; 2] {
     use std::f32::consts::PI;
     let normal: Vector3<f32> = pos.normalize();
-    let mut u = normal.x.atan2(normal.z) / (2.0 * PI) + 0.5;
+    let u = normal.x.atan2(normal.z) / (2.0 * PI) + 0.5;
     let v = normal.y * 0.5 + 0.5;
     [u, v]
 }
@@ -39,8 +39,7 @@ fn make_mesh() -> Mesh {
                 vert.position[2],
             ));
             vert
-        })
-        .triangulate()
+        }).triangulate()
     };
 
     let verts: Vec<SlsVertex> = generator().vertices().collect();
@@ -63,15 +62,14 @@ fn make_texture() -> objects::TextureObjects {
         _ => panic!("unsupported image format!"),
     };
 
-    
     let textures =
         objects::TextureObjects::new(1).expect("could not create texture");
 
     let id = textures.ids()[0];
-    let in_format = if img.depth == 3 {gl::RGB} else {gl::RGBA};
+    let in_format = if img.depth == 3 { gl::RGB } else { gl::RGBA };
     unsafe {
         gl::BindTexture(gl::TEXTURE_2D, id);
-           gl::TexParameteri(
+        gl::TexParameteri(
             gl::TEXTURE_2D,
             gl::TEXTURE_MIN_FILTER,
             gl::LINEAR_MIPMAP_LINEAR as i32,
@@ -130,7 +128,7 @@ fn main() {
         .expect("could not bind mesh to buffers");
     let program = renderer.scene_program();
 
-    let texture = make_texture();
+    let _texture = make_texture();
 
     let modelview_id = program.uniform_location("modelview").unwrap();
 
