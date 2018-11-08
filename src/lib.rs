@@ -99,18 +99,16 @@ pub enum AppError {
     AshInstanceError(#[fail(cause)] ash::InstanceError),
 
     #[fail(display = "App error: '{}'", _0)]
-    Other(failure::Error)
+    Other(failure::Error),
 }
 
-use std::fmt::{Display, Debug};
+use std::fmt::{Debug, Display};
 use std::marker::{Send, Sync};
-use std::clone::Clone;
-
 
 impl AppError {
-
-    pub fn from_message<D: Display + Debug + Send + Sync + Sized + 'static>(message: D) -> AppError {
+    pub fn from_message<D: Display + Debug + Send + Sync + Sized + 'static>(
+        message: D,
+    ) -> AppError {
         AppError::Other(failure::err_msg(message))
     }
 }
-

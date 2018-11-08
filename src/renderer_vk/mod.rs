@@ -1,18 +1,8 @@
 // use super::ash;
 
-pub mod sdl_vulkan;
-
+use ash;
 use ash::extensions::{DebugReport, Surface};
-use sdl2::video::Window;
-
-#[cfg(target_os = "macos")]
-use ash::extensions::MacOSSurface;
-#[cfg(target_os = "windows")]
-use ash::extensions::Win32Surface;
-#[cfg(all(unix, not(target_os = "android"), not(target_os = "macos")))]
-use ash::extensions::XlibSurface;
-
-use super::{get_error_desc, AppError};
+use ash::version::*;
 use ash::version::{EntryV1_0, InstanceV1_0, V1_0};
 use ash::vk;
 use ash::vk::types as vkt;
@@ -20,43 +10,23 @@ use ash::vk::types::{
     PhysicalDevice, PhysicalDeviceFeatures, PhysicalDeviceProperties,
 };
 use ash::{Entry, Instance};
-use failure::{Error, Fail};
+use failure;
+use renderer_common::*;
+use sdl2;
+use sdl2::video::Window as SdlWindow;
+// enable sdl_vulkan extension traits
+pub use self::sdl_vulkan::prelude::*;
+use super::{get_error_desc, AppError};
+use std::cell::{Ref, RefCell};
 use std::default::Default;
 use std::ffi::CStr;
-
-use renderer_common::*;
-use std::cell::{Ref, RefCell};
-
-/// from Ash example,
-// #[cfg(all(unix, not(target_os = "android"), not(target_os = "macos")))]
-// pub fn get_ext_names() -> Vec<*const i8> {
-//     vec![
-//         Surface::name().as_ptr() as *const i8,
-//         XlibSurface::name().as_ptr() as *const i8,
-//         DebugReport::name().as_ptr() as *const i8,
-//     ]
-// }
-
-// #[cfg(target_os = "macos")]
-// pub fn get_ext_names() -> Vec<*const i8> {
-//     vec![
-//         Surface::name().as_ptr() as *const i8,
-//         MacOSSurface::name().as_ptr() as *const i8,
-//         DebugReport::name().as_ptr() as *const i8,
-//     ]
-// }
-
-// #[cfg(all(windows))]
-// pub fn get_ext_names() -> Vec<*const i8> {
-//     vec![
-//         Surface::name().as_ptr() as *const i8,
-//         Win32Surface::name().as_ptr() as *const i8,
-//         DebugReport::name().as_ptr() as *const i8,
-//     ]
-// }
 use std::ffi::CString;
+use std::{mem, ptr};
 
-/// provides app defaults for vkInstance creation
+pub mod sdl_vulkan;
+
+static MAIN_QUEUE_PRIORITY: f32 = 1.0;
+
 pub fn make_instance(
     entry: &Entry<V1_0>,
     validation_layers: &[CString],
@@ -70,7 +40,7 @@ pub fn make_instance(
     let layer_name_ptrs: Vec<*const i8> =
         validation_layers.iter().map(|name| name.as_ptr()).collect();
     let mut ext_names = window.vk_instance_extensions()?;
-    ext_names.push(DebugReport::name().as_ptr());
+    ext_names.push(DebugReport::name().as_ptr() as *const _);
 
     let app_info = vk::ApplicationInfo {
         s_type: vk::StructureType::ApplicationInfo,
@@ -97,8 +67,33 @@ pub fn make_instance(
     instance
 }
 
+pub fn make_device(
+    instance: &Instance<V1_0>,
+    phys_dev: vk::PhysicalDevice,
+    queue_create_info: &[vk::DeviceQueueCreateInfo],
+    validation_layers: &[CString],
+) -> Result<ash::Device<V1_0>, ()> {
+    let validation_layer_ptrs: Vec<*const i8> =
+        validation_layers.iter().map(|name| name.as_ptr()).collect();
+    let dev_features: vk::PhysicalDeviceFeatures = unsafe { mem::zeroed() };
+    let mut create_info: vk::DeviceCreateInfo = unsafe { mem::zeroed() };
+    create_info.s_type = vk::StructureType::DeviceCreateInfo;
+    create_info.enabled_extension_count = 0;
+
+    create_info.p_queue_create_infos = queue_create_info.as_ptr();
+    create_info.queue_create_info_count = queue_create_info.len() as u32;
+    create_info.enabled_layer_count = validation_layers.len() as u32;
+    create_info.pp_enabled_layer_names = validation_layer_ptrs.as_ptr();
+
+    unsafe {
+        Ok(instance
+            .create_device(phys_dev, &create_info, None)
+            .unwrap())
+    }
+}
+
 /// rates device suitibility. Ported from
-/// https://vulkan-tutorial.com/Drawing_a_triangle/Setup/Physical_devices_and_queue_families#page_Base_device_suitability_checks
+/// https://vulkan-tutorial.com/Drawing_a_triangle
 fn rate_device(
     properties: &PhysicalDeviceProperties,
     _features: &PhysicalDeviceFeatures,
@@ -134,14 +129,12 @@ fn get_device_name(props: &PhysicalDeviceProperties) -> &str {
 
 pub fn pick_physical_device(
     instance: &Instance<V1_0>,
-) -> Result<vkt::PhysicalDevice, AppError> {
+) -> Result<vkt::PhysicalDevice, failure::Error> {
     let physical_devices = instance
         .enumerate_physical_devices()
-        .map_err(AppError::VkError)?;
+        .map_err(|e| format_err!("could not fetch physical devices"))?;
     if physical_devices.len() == 0 {
-        return Err(AppError::from_message(
-            "No physical devices found".to_string(),
-        ));
+        bail!("No physical devices found")
     }
 
     let mut top_device = (0, None);
@@ -180,35 +173,83 @@ impl QueueFamilies {
     pub fn new(
         instance: &Instance<V1_0>,
         device: &PhysicalDevice,
+        surface_ext: &ash::extensions::Surface,
+        surface: vkt::SurfaceKHR,
     ) -> Result<QueueFamilies, failure::Error> {
+        use ash::extensions::Surface;
+
         let mut graphics_family: Option<QueueFamilyIndex> = None;
-        let present_family: Option<QueueFamilyIndex> = None;
-        let mut index = 0;
+        let mut present_family: Option<QueueFamilyIndex> = None;
         let queue_families =
             instance.get_physical_device_queue_family_properties(*device);
-        for queue_family in queue_families {
-            let mask = vk::QUEUE_GRAPHICS_BIT & vk::QUEUE_COMPUTE_BIT;
-            let has_queue_count = queue_family.queue_count > 0;
-            let is_graphics_queue =
-                has_queue_count && (queue_family.queue_flags & mask) == mask;
 
+        for index in 0..queue_families.len() {
+            let queue_family = queue_families[index].clone();
+            if queue_family.queue_count <= 0 {
+                continue;
+            }
+
+            let mask = vk::QUEUE_GRAPHICS_BIT & vk::QUEUE_COMPUTE_BIT;
+            let is_graphics_queue = (queue_family.queue_flags & mask) == mask;
+
+            let is_present_queue = surface_ext
+                .get_physical_device_surface_support_khr(
+                    *device,
+                    index as u32,
+                    surface,
+                );
             if is_graphics_queue {
                 graphics_family = Some(QueueFamilyIndex {
-                    properties: queue_family,
-                    index,
+                    properties: queue_family.clone(),
+                    index: index as u32,
                 });
             }
 
-            if graphics_family.is_some() && present_family.is_some() {
+            if is_present_queue {
+                present_family = Some(QueueFamilyIndex {
+                    properties: queue_family,
+                    index: index as u32,
+                });
+            }
+
+            let is_complete =
+                graphics_family.is_some() & &present_family.is_some();
+
+            if is_complete {
                 return Ok(QueueFamilies {
                     graphics_family: graphics_family.unwrap(),
                     present_family: present_family.unwrap(),
                 });
             }
-            index += 1;
         }
         bail!("Required queue families not found")
     }
+
+    pub fn make_create_info_vec(&self) -> Vec<vk::DeviceQueueCreateInfo> {
+        use std::collections::HashSet;
+        use std::iter::FromIterator;
+        let mut infos: Vec<vk::DeviceQueueCreateInfo> = Vec::new();
+        let mut unique_ids: HashSet<u32, _> = HashSet::new();
+        unique_ids.insert(self.graphics_family.index);
+        unique_ids.insert(self.present_family.index);
+
+
+        for index in unique_ids.iter().map(|i|*i) {
+            let create_info = vk::DeviceQueueCreateInfo {
+                s_type: vk::StructureType::DeviceQueueCreateInfo,
+                p_next: ptr::null(),
+                flags: Default::default(),
+                queue_family_index: index,
+                queue_count: 1,
+                p_queue_priorities: &MAIN_QUEUE_PRIORITY,
+            };
+            infos.push(create_info);
+
+        }
+
+        infos
+    }
+
 }
 
 #[cfg(test)]
@@ -230,6 +271,7 @@ fn stub_physical_device() -> PhysicalDeviceProperties {
         }
     }
 }
+
 #[test]
 fn test_device_name() {
     let mut dev_properties = stub_physical_device();
@@ -269,7 +311,7 @@ impl Renderer for VkRenderer {
         self.camera.borrow()
     }
 
-    fn set_clear_color(&mut self, color: Color) {
+    fn set_clear_color(&mut self, _color: Color) {
         unimplemented!()
     }
 }
