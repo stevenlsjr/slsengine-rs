@@ -53,12 +53,12 @@ fn print_sdl_extensions(
     let p_window = window.raw();
     
     let mut cstrings: Vec<CString> = Vec::new();
-    let mut names: Vec<*const i8> = window.vk_instance_extensions().unwrap();
+    let names: Vec<*const i8> = window.vk_instance_extensions().unwrap();
     for p_ext_name in names  {
         let name = unsafe { CStr::from_ptr(p_ext_name)};
         let owned = CString::new(name.to_bytes()).unwrap();
         cstrings.push(owned);
-        println!("exension {}, {:#?}", name.to_str().unwrap_or("!invalid name"), p_ext_name);
+        println!("exension {}, {:#?}", name.to_str().unwrap_or("!invalid name"), name);
     }
     Ok(cstrings)
 }
@@ -82,10 +82,10 @@ fn main() {
     let phys_dev = pick_physical_device(&instance)
         .expect("Couldn't create physical device");
 
-    let queue_indices = find_queue_family(&instance, &phys_dev).unwrap();
+    let QueueFamilies{graphics_family, present_family} = QueueFamilies::new(&instance, &phys_dev).unwrap();
     let queue_create_info = vk::DeviceQueueCreateInfo {
         s_type: vk::StructureType::DeviceQueueCreateInfo,
-        queue_family_index: queue_indices.index,
+        queue_family_index: graphics_family.index,
         queue_count: 1,
         p_queue_priorities: &MAIN_QUEUE_PRIORITY as *const _,
         p_next: ptr::null(),
@@ -115,7 +115,7 @@ fn main() {
     };
 
     let graphics_queue: vkt::Queue =
-        unsafe { device.get_device_queue(queue_indices.index, 0) };
+        unsafe { device.get_device_queue(graphics_family.index, 0) };
 
     println!(
         "created device {:?}, graphics queue {:?}",

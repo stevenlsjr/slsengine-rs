@@ -20,9 +20,9 @@ use ash::vk::types::{
     PhysicalDevice, PhysicalDeviceFeatures, PhysicalDeviceProperties,
 };
 use ash::{Entry, Instance};
+use failure::{Error, Fail};
 use std::default::Default;
 use std::ffi::CStr;
-use failure::{Fail, Error};
 
 use renderer_common::*;
 use std::cell::{Ref, RefCell};
@@ -54,26 +54,23 @@ use std::cell::{Ref, RefCell};
 //         DebugReport::name().as_ptr() as *const i8,
 //     ]
 // }
-
-
 use std::ffi::CString;
 
 /// provides app defaults for vkInstance creation
 pub fn make_instance(
     entry: &Entry<V1_0>,
     validation_layers: &[CString],
-    window: &sdl2::video::Window
+    window: &sdl2::video::Window,
 ) -> Result<Instance<V1_0>, failure::Error> {
-    use std::ptr;
     use self::sdl_vulkan::prelude::*;
+    use std::ptr;
 
     let app_name = CString::new("Hello vulkan").unwrap();
-    
+
     let layer_name_ptrs: Vec<*const i8> =
         validation_layers.iter().map(|name| name.as_ptr()).collect();
     let mut ext_names = window.vk_instance_extensions()?;
     ext_names.push(DebugReport::name().as_ptr());
-
 
     let app_info = vk::ApplicationInfo {
         s_type: vk::StructureType::ApplicationInfo,
@@ -162,73 +159,56 @@ pub fn pick_physical_device(
     }
     let chosen_device =
         top_device.1.expect("If no devices availible, pick_physical_device should have already returned");
-    let _queue_family = find_queue_family(instance, &chosen_device).ok_or(
-        AppError::from_message(format!(
-            "could not find suitible queue family for device"
-        )),
-    )?;
 
     Ok(chosen_device)
 }
 
-pub fn find_queue_family(
-    instance: &Instance<V1_0>,
-    device: &PhysicalDevice,
-) -> Option<QueueFamilyIndex> {
-    let queue_families =
-        instance.get_physical_device_queue_family_properties(*device);
-    let mut index = 0;
-
-    for queue_family in queue_families {
-        let mask = vk::QUEUE_GRAPHICS_BIT & vk::QUEUE_COMPUTE_BIT;
-        let has_queue_count = queue_family.queue_count > 0;
-        let is_valid =
-            has_queue_count && (queue_family.queue_flags & mask) == mask;
-        println!(
-            "mask:0x{:x}, has_queue_count:{}, is_valid:{}",
-            mask.flags(),
-            has_queue_count,
-            is_valid
-        );
-        if is_valid {
-            return Some(QueueFamilyIndex {
-                properties: queue_family,
-                index,
-            });
-        }
-        index += 1;
-    }
-    None
-}
-
+/// Stores vulkan queue family index along with family properties.
 #[derive(Debug, Clone)]
 pub struct QueueFamilyIndex {
     pub index: u32,
     pub properties: vkt::QueueFamilyProperties,
 }
 
-pub fn create_logical_device(
-    instance: &Instance<V1_0>,
-    physical_device: &PhysicalDevice,
-) -> Result<vkt::Device, AppError> {
-    // use std::ptr;
-    let _queue_index = find_queue_family(instance, physical_device).ok_or(
-        AppError::from_message("could not find graphics family".to_string()),
-    )?;
-    // let queue_create_info: vk::DeviceQueueCreateInfo = vk::DeviceQueueCreateInfo {
-    //     s_type: vk::StructureType::DeviceCreateInfo,
-    //     p_next: ptr::null(),
-    //     flags: Default::default(),
-    //     queue_create_info_count: 0,
-    //     p_queue_create_infos: ptr::null(),
-    //     enabled_layer_count: 0,
-    //     pp_enabled_layer_names: ptr::null(),
-    //     enabled_extension_count: 0,
-    //     pp_enabled_extension_names: ptr::null(),
-    //     p_enabled_features: ptr::null(),
-    // };
+#[derive(Debug, Clone)]
+pub struct QueueFamilies {
+    pub graphics_family: QueueFamilyIndex,
+    pub present_family: QueueFamilyIndex,
+}
 
-    Err(AppError::from_message("not implemented!"))
+impl QueueFamilies {
+    pub fn new(
+        instance: &Instance<V1_0>,
+        device: &PhysicalDevice,
+    ) -> Result<QueueFamilies, failure::Error> {
+        let mut graphics_family: Option<QueueFamilyIndex> = None;
+        let present_family: Option<QueueFamilyIndex> = None;
+        let mut index = 0;
+        let queue_families =
+            instance.get_physical_device_queue_family_properties(*device);
+        for queue_family in queue_families {
+            let mask = vk::QUEUE_GRAPHICS_BIT & vk::QUEUE_COMPUTE_BIT;
+            let has_queue_count = queue_family.queue_count > 0;
+            let is_graphics_queue =
+                has_queue_count && (queue_family.queue_flags & mask) == mask;
+
+            if is_graphics_queue {
+                graphics_family = Some(QueueFamilyIndex {
+                    properties: queue_family,
+                    index,
+                });
+            }
+
+            if graphics_family.is_some() && present_family.is_some() {
+                return Ok(QueueFamilies {
+                    graphics_family: graphics_family.unwrap(),
+                    present_family: present_family.unwrap(),
+                });
+            }
+            index += 1;
+        }
+        bail!("Required queue families not found")
+    }
 }
 
 #[cfg(test)]
