@@ -40,61 +40,14 @@ impl PlatformBuilderHooks for VulkanPlatformHooks {
     }
 }
 
-pub struct VkContext {
-    pub instance: Instance<V1_0>,
-    pub entry: Entry<V1_0>,
-    pub surface_ext: extensions::Surface,
-    pub queue_families: QueueFamilies,
-    pub surface: vk::SurfaceKHR
-}
-
-
-
-static MAIN_QUEUE_PRIORITY: f32 = 1.0;
-
 fn main() {
     use std::mem;
     use std::thread;
     use std::time::Duration;
     let platform = platform().build(&VulkanPlatformHooks).unwrap();
 
-    let enable_validation_layers = true;
-    let validation_layers: Vec<CString> =
-        vec![CString::new("VK_LAYER_LUNARG_standard_validation").unwrap()];
-    let validation_layer_ptrs: Vec<*const i8> =
-        validation_layers.iter().map(|name| name.as_ptr()).collect();
-
-    let entry = Entry::new().unwrap();
-    let instance: Instance<V1_0> =
-        make_instance(&entry, &validation_layers, &platform.window).unwrap();
-
-    let surface = platform.window.create_vk_surface(&instance).unwrap();
-    let phys_dev = pick_physical_device(&instance)
-        .expect("Couldn't create physical device");
-
-    let surface_ext = extensions::Surface::new(&entry, &instance).unwrap();
-
-    let surface_capabilities = surface_ext
-        .get_physical_device_surface_capabilities_khr(phys_dev, surface)
-        .unwrap();
-
-    let queue_families = QueueFamilies::new(&instance, &phys_dev, &surface_ext, surface)
-        .unwrap();
-
-
-
-    let device = make_device(&instance, phys_dev, &queue_families.make_create_info_vec(), &validation_layers).unwrap();
-    {
-        let ctx = VkContext{
-            instance,
-            entry,
-            surface_ext,
-            queue_families,
-            surface,
-        };
-    }
-
-
+    let context =
+        VkContext::new(&platform.window).expect("could not create context");
 
     // let renderer = VkRenderer::new();
 }

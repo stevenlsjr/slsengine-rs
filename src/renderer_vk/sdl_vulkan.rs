@@ -13,12 +13,12 @@ use ash;
 use ash::version::*;
 use ash::vk::types as vkt;
 
-#[cfg(target_os = "macos")]
-use ash::extensions::MacOSSurface;
-#[cfg(target_os = "windows")]
-use ash::extensions::Win32Surface;
-#[cfg(all(unix, not(target_os = "android"), not(target_os = "macos")))]
-use ash::extensions::XlibSurface;
+// #[cfg(target_os = "macos")]
+// use ash::extensions::MacOSSurface;
+// #[cfg(target_os = "windows")]
+// use ash::extensions::Win32Surface;
+// #[cfg(all(unix, not(target_os = "android"), not(target_os = "macos")))]
+// use ash::extensions::XlibSurface;
 
 extern "C" {
     pub fn SDL_Vulkan_GetInstanceExtensions(
@@ -92,7 +92,6 @@ impl GetInstanceExtensions for Window {
         &self,
         instance: &ash::Instance<V1_0>,
     ) -> Result<vkt::SurfaceKHR, failure::Error> {
-        let version = version();
         let handle = instance.handle();
         let mut surface: vkt::SurfaceKHR = vkt::SurfaceKHR::null();
 
@@ -106,4 +105,11 @@ impl GetInstanceExtensions for Window {
             Ok(surface)
         }
     }
+}
+
+pub fn sdl_supports_vulkan() -> bool {
+    let sdl_version = version();
+    let version_num =
+        sdl_version.major * 100 + sdl_version.minor * 10 + sdl_version.patch;
+    version_num >= 208
 }

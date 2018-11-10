@@ -1,7 +1,11 @@
 // use super::ash;
 
+pub use self::sdl_vulkan::prelude::*;
+use super::{get_error_desc, AppError};
 use ash;
-use ash::extensions::{DebugReport, Surface};
+use ash::extensions::{
+    DebugReport, Surface as SurfaceExt, Swapchain as SwapchainExt,
+};
 use ash::version::*;
 use ash::version::{EntryV1_0, InstanceV1_0, V1_0};
 use ash::vk;
@@ -9,23 +13,170 @@ use ash::vk::types as vkt;
 use ash::vk::types::{
     PhysicalDevice, PhysicalDeviceFeatures, PhysicalDeviceProperties,
 };
+use ash::*;
 use ash::{Entry, Instance};
 use failure;
 use renderer_common::*;
 use sdl2;
 use sdl2::video::Window as SdlWindow;
-// enable sdl_vulkan extension traits
-pub use self::sdl_vulkan::prelude::*;
-use super::{get_error_desc, AppError};
 use std::cell::{Ref, RefCell};
 use std::default::Default;
-use std::ffi::CStr;
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
+use std::os::raw::c_char;
 use std::{mem, ptr};
 
 pub mod sdl_vulkan;
 
 static MAIN_QUEUE_PRIORITY: f32 = 1.0;
+
+/// Error Record for VkContext creation
+#[derive(Fail, Clone, Debug)]
+pub enum VkContextError {
+    #[fail(display = "could not create entry")]
+    Entry,
+    #[fail(display = "could not create instance")]
+    Instance,
+    #[fail(display = "could not load {} extensions", _0)]
+    Extensions(String),
+    #[fail(display = "could not load Vulkan SurfaceKHR functions")]
+    SurfaceLoader,
+    #[fail(display = "could not find Queue Families")]
+    QueueFamilies,
+    #[fail(display = "could not create surfaceKHR")]
+    Surface,
+    #[fail(display = "could not create device")]
+    Device,
+
+    #[fail(
+        display = "Could not create vulkan rendering context: {:#?}",
+        _0
+    )]
+    Other(String),
+}
+
+unsafe extern "system" fn vulkan_debug_callback(
+    _: vk::DebugReportFlagsEXT,
+    _: vk::DebugReportObjectTypeEXT,
+    _: vk::uint64_t,
+    _: vk::size_t,
+    _: vk::int32_t,
+    _: *const vk::c_char,
+    p_message: *const vk::c_char,
+    _: *mut vk::c_void,
+) -> u32 {
+    println!("{:?}", CStr::from_ptr(p_message));
+    vk::VK_FALSE
+}
+
+///
+/// Borrows Vulkan handles necessary for
+/// setting up renderer
+pub struct VkContext {
+    pub instance: Instance<V1_0>,
+    pub entry: Entry<V1_0>,
+    pub surface_loader: SurfaceExt,
+    pub debug_loader: DebugReport,
+    debug_callback: Option<vkt::DebugReportCallbackEXT>,
+    pub swapchain_loader: SwapchainExt,
+    pub queue_families: QueueFamilies,
+
+    pub surface: vk::SurfaceKHR,
+    pub device: ash::Device<V1_0>
+}
+
+impl VkContext {
+    pub fn new(window: &SdlWindow) -> Result<Self, VkContextError> {
+        let sdl_version = sdl2::version::version();
+        if !sdl_vulkan::sdl_supports_vulkan() {
+            return Err(VkContextError::Other(format!(
+                "SDL version 2.0.8 or higher required. Version is {}",
+                sdl_version
+            )));
+        }
+        let validation_layers: Vec<CString> =
+            vec![CString::new("VK_LAYER_LUNARG_standard_validation").unwrap()];
+
+        let entry = Entry::new().map_err(|_| VkContextError::Entry)?;
+        let instance: Instance<V1_0> =
+            make_instance(&entry, &validation_layers, window)
+                .map_err(|_| VkContextError::Instance)?;
+
+        let surface = window
+            .create_vk_surface(&instance)
+            .map_err(|_| VkContextError::Surface)?;
+
+        let debug_loader =
+            DebugReport::new(&entry, &instance).map_err(|_| {
+                VkContextError::Extensions("DebugReport".to_owned())
+            })?;
+
+        let debug_flags = vkt::DEBUG_REPORT_INFORMATION_BIT_EXT
+            | vkt::DEBUG_REPORT_DEBUG_BIT_EXT
+            | vkt::DEBUG_REPORT_ERROR_BIT_EXT;
+
+        // let debug_callback = unsafe {
+        //     debug_loader.create_debug_report_callback_ext(
+        //         &vkt::DebugReportCallbackCreateInfoEXT {
+        //             s_type: vk::StructureType::DebugReportCallbackCreateInfoExt,
+
+        //             pfn_callback: vulkan_debug_callback,
+        //             p_user_data: ptr::null_mut(),
+        //             p_next: ptr::null(),
+        //             flags: debug_flags,
+        //         },
+        //         None,
+        //     )
+        // }.map(|o| Some(o))
+        // .unwrap_or(None);
+        let debug_callback = None;
+
+        let phys_dev = pick_physical_device(&instance)
+            .expect("Couldn't create physical device");
+
+        let surface_ext = SurfaceExt::new(&entry, &instance)
+            .map_err(|_| VkContextError::SurfaceLoader)?;
+
+        let queue_families =
+            QueueFamilies::new(&instance, &phys_dev, &surface_ext, surface)
+                .map_err(|_| VkContextError::QueueFamilies)?;
+
+        let device = make_device(
+            &instance,
+            phys_dev,
+            &queue_families.make_create_info_vec(),
+            &validation_layers,
+        ).map_err(|_| VkContextError::Device)?;
+
+        let swapchain_loader =
+            SwapchainExt::new(&instance, &device).map_err(|err| {
+                VkContextError::Extensions(format!(
+                    "missing extensions: {:#?}",
+                    err
+                ))
+            })?;
+
+        Ok(VkContext {
+            entry,
+            instance,
+            surface_loader: surface_ext,
+            swapchain_loader,
+            debug_loader,
+            debug_callback,
+            surface,
+            queue_families,
+            device,
+        })
+    }
+}
+
+impl Drop for VkContext {
+    fn drop(&mut self) {
+        unsafe {
+            self.device.device_wait_idle().unwrap();
+            eprintln!("destroying Vulkan context!");
+        }
+    }
+}
 
 pub fn make_instance(
     entry: &Entry<V1_0>,
@@ -75,15 +226,27 @@ pub fn make_device(
 ) -> Result<ash::Device<V1_0>, ()> {
     let validation_layer_ptrs: Vec<*const i8> =
         validation_layers.iter().map(|name| name.as_ptr()).collect();
-    let dev_features: vk::PhysicalDeviceFeatures = unsafe { mem::zeroed() };
-    let mut create_info: vk::DeviceCreateInfo = unsafe { mem::zeroed() };
-    create_info.s_type = vk::StructureType::DeviceCreateInfo;
-    create_info.enabled_extension_count = 0;
 
-    create_info.p_queue_create_infos = queue_create_info.as_ptr();
-    create_info.queue_create_info_count = queue_create_info.len() as u32;
-    create_info.enabled_layer_count = validation_layers.len() as u32;
-    create_info.pp_enabled_layer_names = validation_layer_ptrs.as_ptr();
+    let device_extension_ptrs =
+        [SurfaceExt::name().as_ptr(), SwapchainExt::name().as_ptr()];
+    let features = vk::PhysicalDeviceFeatures {
+        shader_clip_distance: 1,
+        ..Default::default()
+    };
+    let mut create_info = vk::DeviceCreateInfo {
+        s_type: vk::StructureType::DeviceCreateInfo,
+        flags: Default::default(),
+        p_next: ptr::null(),
+
+        p_enabled_features: &features,
+        enabled_extension_count: device_extension_ptrs.len() as u32,
+        pp_enabled_extension_names: device_extension_ptrs.as_ptr(),
+
+        queue_create_info_count: queue_create_info.len() as u32,
+        p_queue_create_infos: queue_create_info.as_ptr(),
+        enabled_layer_count: validation_layers.len() as u32,
+        pp_enabled_layer_names: validation_layer_ptrs.as_ptr(),
+    };
 
     unsafe {
         Ok(instance
@@ -132,7 +295,7 @@ pub fn pick_physical_device(
 ) -> Result<vkt::PhysicalDevice, failure::Error> {
     let physical_devices = instance
         .enumerate_physical_devices()
-        .map_err(|e| format_err!("could not fetch physical devices"))?;
+        .map_err(|_| format_err!("could not fetch physical devices"))?;
     if physical_devices.len() == 0 {
         bail!("No physical devices found")
     }
@@ -173,11 +336,9 @@ impl QueueFamilies {
     pub fn new(
         instance: &Instance<V1_0>,
         device: &PhysicalDevice,
-        surface_ext: &ash::extensions::Surface,
+        surface_loader: &ash::extensions::Surface,
         surface: vkt::SurfaceKHR,
     ) -> Result<QueueFamilies, failure::Error> {
-        use ash::extensions::Surface;
-
         let mut graphics_family: Option<QueueFamilyIndex> = None;
         let mut present_family: Option<QueueFamilyIndex> = None;
         let queue_families =
@@ -192,7 +353,7 @@ impl QueueFamilies {
             let mask = vk::QUEUE_GRAPHICS_BIT & vk::QUEUE_COMPUTE_BIT;
             let is_graphics_queue = (queue_family.queue_flags & mask) == mask;
 
-            let is_present_queue = surface_ext
+            let is_present_queue = surface_loader
                 .get_physical_device_surface_support_khr(
                     *device,
                     index as u32,
@@ -227,14 +388,12 @@ impl QueueFamilies {
 
     pub fn make_create_info_vec(&self) -> Vec<vk::DeviceQueueCreateInfo> {
         use std::collections::HashSet;
-        use std::iter::FromIterator;
         let mut infos: Vec<vk::DeviceQueueCreateInfo> = Vec::new();
         let mut unique_ids: HashSet<u32, _> = HashSet::new();
         unique_ids.insert(self.graphics_family.index);
         unique_ids.insert(self.present_family.index);
 
-
-        for index in unique_ids.iter().map(|i|*i) {
+        for index in unique_ids.iter().map(|i| *i) {
             let create_info = vk::DeviceQueueCreateInfo {
                 s_type: vk::StructureType::DeviceQueueCreateInfo,
                 p_next: ptr::null(),
@@ -244,12 +403,10 @@ impl QueueFamilies {
                 p_queue_priorities: &MAIN_QUEUE_PRIORITY,
             };
             infos.push(create_info);
-
         }
 
         infos
     }
-
 }
 
 #[cfg(test)]
