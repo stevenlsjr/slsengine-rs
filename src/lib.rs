@@ -13,6 +13,8 @@ pub extern crate image;
 extern crate memoffset;
 pub extern crate sdl2;
 
+extern crate vulkano;
+
 // vulkan feature
 
 use sdl2::event::{Event, WindowEvent};
@@ -51,21 +53,12 @@ impl MainLoopState {
         }
     }
 
-    pub fn on_resize(
-        &mut self,
-        window: &Window,
-        width: i32,
-        height: i32,
-        renderer: &renderer::Renderer,
-    ) {
-        eprintln!("Hello world!!! {}, {}", width, height);
-        renderer.on_resize(window, (width as u32, height as u32));
-    }
-    pub fn handle_events(
+    
+    pub fn handle_events<R: renderer::Renderer>(
         &mut self,
         window: &Window,
         events: sdl2::event::EventPollIterator,
-        renderer: &renderer::Renderer,
+        renderer: &mut R,
     ) {
         for event in events {
             match event {
@@ -78,7 +71,7 @@ impl MainLoopState {
                 }
                 Event::Window { win_event, .. } => match win_event {
                     WindowEvent::Resized(width, height) => {
-                        self.on_resize(window, width, height, renderer);
+                        renderer.on_resize((width as _, height as _));
                     }
                     _ => {}
                 },

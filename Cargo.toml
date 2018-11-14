@@ -5,7 +5,7 @@ authors = ["Steve Shea <stevenlsjr@gmail.com>"]
 
 [features]
 default=["with-vulkan"]
-with-vulkan = ["ash"]
+with-vulkan = ["ash", "vulkano", "vulkano-shaders"]
 gl-debug-output = []
 
 [dependencies]
@@ -18,6 +18,8 @@ memoffset = "0.2.1"
 genmesh = "0.6.2"
 image = "0.20.0"
 stb_image = "0.2.2"
+vulkano = {version= "0.11.0", optional= true}
+vulkano-shaders = {version= "0.11.0", optional= true}
 
 [dependencies.sdl2]
 git = "https://github.com/AngryLawyer/rust-sdl2.git"

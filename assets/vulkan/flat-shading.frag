@@ -1,3 +1,4 @@
+#version 410
 out vec4 out_color;
 
 in vec2 frag_uv;

@@ -421,13 +421,13 @@ impl GlRenderer {
             scene_program.uniform_location("modelview").unwrap_or(-1);
         scene_uniforms.projection =
             scene_program.uniform_location("projection").unwrap_or(-1);
-        let renderer = GlRenderer {
+        let mut renderer = GlRenderer {
             scene_program,
             scene_uniforms,
             camera: RefCell::new(Camera::new(perspective)),
         };
 
-        renderer.on_resize(window, (width, height));
+        renderer.on_resize( (width, height));
 
         Ok(renderer)
     }
@@ -454,7 +454,7 @@ impl Renderer for GlRenderer {
         }
     }
 
-    fn on_resize(&self, _window: &Window, size: (u32, u32)) {
+    fn on_resize(&mut self, size: (u32, u32)) {
         self.camera.borrow_mut().on_resize(size);
         let (width, height) = size;
         self.scene_program.use_program();

@@ -150,15 +150,16 @@ pub trait ShaderProgram<T: Renderer> {
 }
 
 pub trait Renderer {
-    fn clear(&self);
+    fn clear(&self) {}
     fn camera(&self) -> cell::Ref<Camera>;
-    fn set_clear_color(&mut self, color: Color);
-    fn on_resize(&self, _window: &Window, _size: (u32, u32)) {}
+    fn set_clear_color(&mut self, color: Color) {}
+    fn on_resize(&mut self, _size: (u32, u32)) {}
 }
 
 pub trait Resizable {
     fn on_resize(&mut self, size: (u32, u32));
 }
+
 
 /*
  *  Camera
