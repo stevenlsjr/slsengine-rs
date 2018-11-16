@@ -1,27 +1,34 @@
 // use super::ash;
 
 use super::{get_error_desc, AppError};
-
+use cgmath;
 use failure;
 use renderer_common::*;
 use sdl2;
+use sdl2::video::Window;
 use sdl2::video::{Window as SdlWindow, WindowContext};
-
 use std::cell::{Ref, RefCell};
 use std::default::Default;
 use std::ffi::{CStr, CString};
+use std::rc::Rc;
 use std::sync::Arc;
 use std::{mem, ptr};
-
 use vulkano;
 use vulkano::device::{Device, Queue};
+use vulkano::image::SwapchainImage;
 use vulkano::instance::{Instance, PhysicalDevice};
-use vulkano::swapchain::Surface;
-use std::rc::Rc;
+use vulkano::swapchain::{
+    Capabilities, ColorSpace, CompositeAlpha, PresentMode,
+    SupportedPresentModes, Surface, Swapchain,
+};
+
+use std::fmt;
+
 
 pub mod sdl_vulkan;
 
-pub type SdlSurface = Surface<Rc<WindowContext>>;
+pub type VulkanWinType = Rc<WindowContext>;
+pub type SdlSurface = Surface<VulkanWinType>;
 
 static MAIN_QUEUE_PRIORITY: f32 = 1.0;
 
@@ -146,15 +153,15 @@ impl QueueFamilies {
 
 #[derive(Clone, Debug)]
 pub struct VulkanQueues {
-    present_queue: Arc<Queue>,
-    graphics_queue: Arc<Queue>,
+    pub present_queue: Arc<Queue>,
+    pub graphics_queue: Arc<Queue>,
 }
 
 pub fn create_device<W>(
     physical_device: &PhysicalDevice,
     surface: &Surface<W>,
 ) -> Result<(Arc<Device>, VulkanQueues), failure::Error> {
-    use vulkano::device::{Features, DeviceExtensions};
+    use vulkano::device::{DeviceExtensions, Features};
     use vulkano::instance::QueueFamily;
     let instance = physical_device.instance();
     let queue_families = QueueFamilies::new(instance, physical_device, surface)
@@ -166,23 +173,126 @@ pub fn create_device<W>(
             queue_families.graphics_family,
             queue_families.present_family,
         ]
-            .iter().cloned(),
+            .iter()
+            .cloned(),
     );
 
     let default_queue_priority = 1.0;
-    let queue_families= unique_queue_families.iter().filter_map(|&i| {
-        physical_device.queue_family_by_id(i).map(|fam| (fam, default_queue_priority as f32))
+    let queue_families = unique_queue_families.iter().filter_map(|&i| {
+        physical_device
+            .queue_family_by_id(i)
+            .map(|fam| (fam, default_queue_priority as f32))
     });
     let device_extensions = DeviceExtensions {
         khr_swapchain: true,
-//        khr_display_swapchain: true,
+        //        khr_display_swapchain: true,
         ..DeviceExtensions::none()
     };
 
-    let (device, mut queues) = Device::new(*physical_device, &Features::none(), &device_extensions, queue_families).map_err(&failure::Error::from)?;
+    let (device, mut queues) = Device::new(
+        *physical_device,
+        &Features::none(),
+        &device_extensions,
+        queue_families,
+    ).map_err(&failure::Error::from)?;
 
     let graphics_queue = queues.next().unwrap();
     let present_queue = queues.next().unwrap_or_else(|| graphics_queue.clone());
-    Ok((device, VulkanQueues {graphics_queue, present_queue}))
+    Ok((
+        device,
+        VulkanQueues {
+            graphics_queue,
+            present_queue,
+        },
+    ))
+}
 
+fn create_swap_chain(
+    instance: &Arc<Instance>,
+    surface: &Arc<Surface<Window>>,
+    physical_device: &PhysicalDevice,
+    device: &Arc<Device>,
+    queues: &VulkanQueues,
+) -> Result<(), failure::Error> {
+    let capabilities = surface.capabilities(*physical_device).map_err(&failure::Error::from)?;
+
+    unimplemented!()
+}
+
+/// Renderer object for vulkan context
+pub struct VulkanRenderer {
+    pub camera: RefCell<Camera>,
+    pub instance: Arc<Instance>,
+    pub device: Arc<Device>,
+    pub queues: VulkanQueues,
+    pub surface: Arc<Surface<VulkanWinType>>,
+    pub swapchain: Arc<Swapchain<VulkanWinType>>,
+    pub swapchain_image: Arc<SwapchainImage<VulkanWinType>>,
+}
+impl fmt::Debug for VulkanRenderer {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "VulkanRenderer {:?}", self.device)
+    }
+}
+
+impl VulkanRenderer {
+    /// Creates a new Renderer from an SDL window
+    pub fn new(window: &Window) -> Result<Self, VkContextError> {
+        use vulkano::instance::{
+            Instance, PhysicalDevice, RawInstanceExtensions,
+        };
+        use vulkano::swapchain::Surface;
+        use vulkano::VulkanObject;
+        let instance_extensions = window.vulkan_instance_extensions().unwrap();
+        let raw_instance_extensions = RawInstanceExtensions::new(
+            instance_extensions
+                .iter()
+                .map(|&v| CString::new(v).unwrap()),
+        );
+        let layers = vec!["VK_LAYER_LUNARG_standard_validation"];
+        let instance = Instance::new(None, raw_instance_extensions, layers)
+            .expect("failed to create vulkan instance");
+        let surface: Arc<SdlSurface> = {
+            let handle = window
+                .vulkan_create_surface(instance.internal_object())
+                .map_err(|_| VkContextError::Surface)?;
+            unsafe {
+                Arc::new(Surface::from_raw_surface(
+                    instance.clone(),
+                    handle,
+                    window.context().clone(),
+                ))
+            }
+        };
+        let physical_device = pick_physical_device(&instance)
+            .map_err(|_| VkContextError::Device)?;
+        let (device, queues) = create_device(&physical_device, &surface)
+            .map_err(|_| VkContextError::Device)?;
+        let swapchain = create_swapchain(
+            &instance,
+            &surface,
+            &physical_device,
+            &device,
+            &queues,
+        ).map_err(|e| VkContextError::Other(e.to_string()));
+        unimplemented!();
+        //        Ok(VulkanRenderer {
+        //            camera: RefCell::new(Camera::new(cgmath::PerspectiveFov {
+        //                fovy: cgmath::Deg(40.0).into(),
+        //                aspect: 1.0,
+        //                near: 0.1,
+        //                far: 100.0,
+        //            })),
+        //            instance: instance.clone(),
+        //            device,
+        //            queues,
+        //            surface,
+        //        })
+    }
+}
+
+impl Renderer for VulkanRenderer {
+    fn camera(&self) -> Ref<Camera> {
+        self.camera.borrow()
+    }
 }

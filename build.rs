@@ -5,7 +5,6 @@ fn main() {
     use std::process::Command;
     let sdl_path = env::var("SDL_LIB_PATH");
 
-    
     let vk_path = if cfg!(target_os = "macos") {
         env::var("VULKAN_SDK").map(|path_str| {
             let mut path = PathBuf::from(&path_str);

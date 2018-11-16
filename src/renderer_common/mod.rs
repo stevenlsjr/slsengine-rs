@@ -160,7 +160,6 @@ pub trait Resizable {
     fn on_resize(&mut self, size: (u32, u32));
 }
 
-
 /*
  *  Camera
  **/

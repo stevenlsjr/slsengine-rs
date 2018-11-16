@@ -53,7 +53,6 @@ impl MainLoopState {
         }
     }
 
-    
     pub fn handle_events<R: renderer::Renderer>(
         &mut self,
         window: &Window,
