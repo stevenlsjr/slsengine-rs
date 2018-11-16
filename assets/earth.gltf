@@ -1,0 +1,214 @@
+{
+  "accessors": [
+    {
+      "bufferView": 0,
+      "componentType": 5123,
+      "count": 11904,
+      "max": [
+        2127
+      ],
+      "min": [
+        0
+      ],
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 2128,
+      "max": [
+        1.0000005960464478,
+        1,
+        1.000001072883606
+      ],
+      "min": [
+        -1.000000238418579,
+        -1,
+        -1
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "componentType": 5126,
+      "count": 2128,
+      "max": [
+        0.999969482421875,
+        1,
+        1
+      ],
+      "min": [
+        -1,
+        -1,
+        -1
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 3,
+      "componentType": 5126,
+      "count": 2128,
+      "max": [
+        1,
+        0.024547191336750984,
+        1,
+        1
+      ],
+      "min": [
+        -1,
+        -0.024548469111323357,
+        -1,
+        1
+      ],
+      "type": "VEC4"
+    },
+    {
+      "bufferView": 4,
+      "componentType": 5126,
+      "count": 2128,
+      "max": [
+        1.0247507095336914,
+        1
+      ],
+      "min": [
+        -0.0005390968872234225,
+        -0.019098401069641113
+      ],
+      "type": "VEC2"
+    }
+  ],
+  "asset": {
+    "generator": "Khronos Blender glTF 2.0 exporter",
+    "version": "2.0"
+  },
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteLength": 23808,
+      "byteOffset": 0,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteLength": 25536,
+      "byteOffset": 23808,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 25536,
+      "byteOffset": 49344,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 34048,
+      "byteOffset": 74880,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 17024,
+      "byteOffset": 108928,
+      "target": 34962
+    }
+  ],
+  "buffers": [
+    {
+      "uri": "earth_data.bin",
+      "byteLength": 125952
+    }
+  ],
+  "images": [
+    {
+      "name": "earf",
+      "uri": "earth_img0.jpg"
+    }
+  ],
+  "materials": [
+    {
+      "name": "Material.003",
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 0
+        },
+        "metallicFactor": 0,
+        "roughnessFactor": 0
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "name": "Sphere.001",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 2,
+            "POSITION": 1,
+            "TANGENT": 3,
+            "TEXCOORD_0": 4
+          },
+          "indices": 0,
+          "material": 0
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "name": "Camera",
+      "rotation": [
+        0.483536034822464,
+        0.33687159419059753,
+        -0.20870360732078552,
+        0.7804827094078064
+      ],
+      "translation": [
+        7.481131553649902,
+        5.34366512298584,
+        6.5076398849487305
+      ]
+    },
+    {
+      "name": "Point",
+      "translation": [
+        -4.753735542297363,
+        0.9118454456329346,
+        -1.9286623001098633
+      ]
+    },
+    {
+      "mesh": 0,
+      "name": "Sphere"
+    },
+    {
+      "name": "Sun",
+      "translation": [
+        4.835274696350098,
+        4.060264587402344,
+        0.9495713710784912
+      ]
+    }
+  ],
+  "samplers": [
+    {}
+  ],
+  "scene": 0,
+  "scenes": [
+    {
+      "name": "Scene",
+      "nodes": [
+        3,
+        1,
+        2,
+        0
+      ]
+    }
+  ],
+  "textures": [
+    {
+      "sampler": 0,
+      "source": 0
+    }
+  ]
+}
