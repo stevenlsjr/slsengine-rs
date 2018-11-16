@@ -207,9 +207,9 @@ pub fn create_device<W>(
     ))
 }
 
-fn create_swap_chain(
+fn create_swapchain(
     instance: &Arc<Instance>,
-    surface: &Arc<Surface<Window>>,
+    surface: &Arc<Surface<VulkanWinType>>,
     physical_device: &PhysicalDevice,
     device: &Arc<Device>,
     queues: &VulkanQueues,
