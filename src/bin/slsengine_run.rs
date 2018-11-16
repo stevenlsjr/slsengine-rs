@@ -115,7 +115,7 @@ fn main() {
     } = plt;
     let mut loop_state = MainLoopState::new();
 
-    let renderer = GlRenderer::new(&window, Deg(45.0).into()).unwrap();
+    let mut renderer = GlRenderer::new(&window, Deg(45.0).into()).unwrap();
 
     let camera_view: Matrix4<f32> =
         Matrix4::<f32>::from_translation(Vector3::new(0.0, 0.0, -10.0));

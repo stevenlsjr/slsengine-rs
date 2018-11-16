@@ -454,7 +454,7 @@ impl Renderer for GlRenderer {
         }
     }
 
-    fn on_resize(&mut self, size: (u32, u32)) {
+    fn on_resize(&self, size: (u32, u32)) {
         self.camera.borrow_mut().on_resize(size);
         let (width, height) = size;
         self.scene_program.use_program();

@@ -24,6 +24,9 @@ use std::cell::{Ref, RefCell};
 
 struct VulkanPlatformHooks;
 
+static FRAG_SPIRV: &[u8] = include_bytes!("../assets/vulkan/flat-shading.frag.spv");
+static VERT_SPIRV: &[u8] = include_bytes!("../assets/vulkan/flat-shading.vert.spv");
+
 impl PlatformBuilderHooks for VulkanPlatformHooks {
     fn build_window(
         &self,
@@ -55,7 +58,7 @@ pub struct VulkanRenderer {
 
 }
 impl VulkanRenderer {
-    fn new(window: &Window) -> Result<Self, VkContextError> {
+    pub fn new(window: &Window) -> Result<Self, VkContextError> {
         use vulkano::instance::{Instance, PhysicalDevice, RawInstanceExtensions};
         use vulkano::swapchain::Surface;
         use vulkano::VulkanObject;

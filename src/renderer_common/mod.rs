@@ -153,7 +153,7 @@ pub trait Renderer {
     fn clear(&self) {}
     fn camera(&self) -> cell::Ref<Camera>;
     fn set_clear_color(&mut self, color: Color) {}
-    fn on_resize(&mut self, _size: (u32, u32)) {}
+    fn on_resize(&self, _size: (u32, u32)) {}
 }
 
 pub trait Resizable {
@@ -177,6 +177,13 @@ pub fn default_perspective() -> PerspectiveFov<f32> {
 pub struct Camera {
     pub projection: Matrix4<f32>,
     perspective: PerspectiveFov<f32>,
+}
+
+use std::fmt;
+impl fmt::Debug for Camera {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Camera")
+    }
 }
 
 impl Camera {

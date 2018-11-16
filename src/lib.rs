@@ -58,7 +58,7 @@ impl MainLoopState {
         &mut self,
         window: &Window,
         events: sdl2::event::EventPollIterator,
-        renderer: &mut R,
+        renderer: &R,
     ) {
         for event in events {
             match event {
