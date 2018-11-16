@@ -17,7 +17,7 @@ SPIRV_OUT=$(FRAG_SPV) $(VERT_SPV) $(COMP_SPV)
 
 .PHONY: all clean
 
-all: $(FRAG_SPV) $(VERT_SPV)
+all: $(SPIRV_OUT)
 
 clean:
 	rm -f $(SPIRV_OUT)
@@ -27,4 +27,8 @@ clean:
 
 %.vert.spv: %.vert
 	$(GLSLANG) $(GLSLFLAGS) -o $@  $^
+
+%.comp.spv: %.comp
+	$(GLSLANG) $(GLSLFLAGS) -o $@  $^
+
 
