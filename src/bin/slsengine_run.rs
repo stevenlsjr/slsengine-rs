@@ -1,9 +1,13 @@
 extern crate cgmath;
 extern crate genmesh;
 extern crate gl;
+extern crate gltf;
 extern crate sdl2;
 extern crate slsengine;
 extern crate stb_image;
+
+#[macro_use]
+extern crate failure;
 
 use cgmath::prelude::*;
 use cgmath::*;
@@ -16,15 +20,19 @@ use std::ptr::null;
 fn uv_for_unit_sphere(pos: Vector3<f32>) -> [f32; 2] {
     use std::f32::consts::PI;
     let normal: Vector3<f32> = pos.normalize();
-    let u = normal.x.atan2(normal.z) / (2.0 * PI) + 0.5;
-    let v = normal.y * 0.5 + 0.5;
+    let u = (normal.x.atan2(normal.z) / (2.0 * PI) + 0.5)
+        .min(1.0)
+        .max(0.0);
+    let v = (normal.y * 0.5 + 0.5).min(1.0).max(0.0);
+
     [u, v]
 }
 
-fn make_mesh() -> Mesh {
+fn make_mesh() -> Result<Mesh, failure::Error> {
     use genmesh::generators::*;
     use genmesh::*;
     use slsengine::renderer::Vertex as SlsVertex;
+
     let generator = || {
         MapToVertices::vertex(SphereUv::new(32, 32), |v: Vertex| {
             use std::default::Default;
@@ -39,7 +47,8 @@ fn make_mesh() -> Mesh {
                 vert.position[2],
             ));
             vert
-        }).triangulate()
+        })
+        .triangulate()
     };
 
     let verts: Vec<SlsVertex> = generator().vertices().collect();
@@ -49,10 +58,10 @@ fn make_mesh() -> Mesh {
         verts.len(),
         indices.len()
     );
-    Mesh {
+    Ok(Mesh {
         vertices: verts,
         indices,
-    }
+    })
 }
 
 fn make_texture() -> objects::TextureObjects {
@@ -96,6 +105,7 @@ fn make_texture() -> objects::TextureObjects {
     textures
 }
 
+
 fn main() {
     use renderer::objects::MeshBuffers;
     use renderer::BindUniform;
@@ -114,18 +124,13 @@ fn main() {
         window, event_pump, ..
     } = plt;
     let mut loop_state = MainLoopState::new();
-
-    let mut renderer = GlRenderer::new(&window, Deg(45.0).into()).unwrap();
+    let mesh = make_mesh().unwrap();
+    let renderer = GlRenderer::new(&window, mesh.clone()).unwrap();
 
     let camera_view: Matrix4<f32> =
         Matrix4::<f32>::from_translation(Vector3::new(0.0, 0.0, -10.0));
 
-    let mesh = make_mesh();
-    let buffers =
-        MeshBuffers::new().expect("could not build gl objects for mesh");
-    buffers
-        .bind_mesh(&mesh)
-        .expect("could not bind mesh to buffers");
+    
     let program = renderer.scene_program();
 
     let _texture = make_texture();
@@ -133,6 +138,7 @@ fn main() {
     let modelview_id = program.uniform_location("modelview").unwrap();
 
     let mut timer = game::Timer::new(Duration::from_millis(1000 / 50));
+    let mut world = game::EntityWorld::new();
 
     loop_state.is_running = true;
     while loop_state.is_running {
@@ -141,30 +147,17 @@ fn main() {
             event_pump.borrow_mut().poll_iter(),
             &renderer,
         );
-        let game::Tick { delta: _delta, .. } = timer.tick();
+        let game::Tick { delta, .. } = timer.tick();
 
         let ticks = Instant::now().duration_since(timer.start_instant());
         let theta = game::duration_as_f64(ticks);
 
         let modelview = camera_view * Matrix4::from_angle_x(Rad(theta as f32));
-
-        unsafe {
-            gl::ClearColor(0.6, 0.0, 0.8, 1.0);
-            gl::Enable(gl::DEPTH_TEST);
-            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
+        {
+            world.update(&window, delta);
         }
-
-        program.use_program();
-        program.bind_uniform(modelview_id, &modelview);
-        unsafe {
-            gl::BindVertexArray(buffers.vertex_array.id());
-            gl::DrawElements(
-                gl::TRIANGLES,
-                mesh.indices.len() as i32,
-                gl::UNSIGNED_INT,
-                null(),
-            );
-        }
+        renderer.clear();
+        renderer.render_scene(&world);
 
         window.gl_swap_window();
     }

@@ -1,5 +1,13 @@
+use cgmath;
+use sdl2::video::Window;
 use std::time::{Duration, Instant};
 
+type Vec2 = cgmath::Vector2<f32>;
+type Vec3 = cgmath::Vector3<f32>;
+type Vec4 = cgmath::Vector4<f32>;
+
+type Mat3 = cgmath::Matrix3<f32>;
+type Mat4 = cgmath::Matrix4<f32>;
 /*--------------------------------------
  * Game timer: handles delta time, time since start, etc
  */
@@ -68,3 +76,56 @@ impl Timer {
 /*--------------------------------------
  * Scene
  */
+
+pub struct FpsCameraComponent {
+    pos: Vec3,
+    target: Vec3,
+    direction: Vec3,
+    up: Vec3,
+    right: Vec3,
+    transform: Mat4,
+}
+
+impl FpsCameraComponent {
+    pub fn new() -> Self {
+        use cgmath::{prelude::*, *};
+        let direction = vec3(0.0, 0.0, 0.0);
+        let right = vec3(0.0, 1.0, 0.0);
+        let up = direction.cross(right);
+        let transform = Mat4::identity();
+        let mut cmp = FpsCameraComponent {
+            pos: vec3(0.0, 0.0, -5.0),
+            target: vec3(0.0, 0.0, 0.0),
+            direction,
+            up,
+            right,
+            transform,
+        };
+
+        cmp.build_transform();
+
+        cmp
+    }
+
+    fn build_transform(&mut self) {
+        use cgmath::*;
+        self.transform =  Matrix4::from_translation(self.pos);
+    }
+
+    pub fn transform(&self)-> &Mat4 {
+        &self.transform
+    }
+}
+
+pub struct EntityWorld {
+    pub main_camera: FpsCameraComponent,
+}
+
+impl EntityWorld {
+    pub fn new() -> Self {
+        let main_camera = FpsCameraComponent::new();
+        EntityWorld { main_camera }
+    }
+
+    pub fn update(&mut self, window: &Window, delta: Duration) {}
+}

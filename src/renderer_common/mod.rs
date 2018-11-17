@@ -1,6 +1,6 @@
 use cgmath::*;
 use sdl2::video::Window;
-use std::cell;
+use std::{cell, time::Duration};
 
 /// A cffi and GPU-friendly vertex representaion
 #[derive(Debug, Copy, Clone)]
@@ -36,7 +36,7 @@ impl PartialEq for Vertex {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Mesh {
     pub vertices: Vec<Vertex>,
     pub indices: Vec<u32>,
@@ -117,6 +117,7 @@ impl MeshBuilder {
     }
 }
 
+#[derive(Clone, Copy, Debug)]
 pub struct Color {
     pub r: f32,
     pub g: f32,
@@ -148,6 +149,7 @@ impl From<Vector4<f32>> for Color {
 pub trait ShaderProgram<T: Renderer> {
     fn use_program(&self, renderer: &T);
 }
+
 
 pub trait Renderer {
     fn clear(&self) {}

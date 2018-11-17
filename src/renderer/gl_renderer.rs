@@ -9,6 +9,8 @@ use std::cell::RefCell;
 
 #[derive(Fail, Debug)]
 pub enum RendererError {
+    #[fail(display = "Renderer lifecycle failed: {}", reason)]
+    Lifecycle { reason: String },
     #[fail(display = "Failed to construct Geometry: {}", reason)]
     GeometryFailure { reason: String },
     #[fail(display = "ShaderError: {}", _0)]
@@ -383,9 +385,10 @@ fn create_scene_shaders() -> Result<Program, ShaderError> {
 ///
 /// Stores uniform ids for the main
 /// scene shader
-struct SceneUniforms {
-    modelview: i32,
-    projection: i32,
+#[derive(Clone, Debug)]
+pub struct SceneUniforms {
+    pub modelview: i32,
+    pub projection: i32,
 }
 
 /// the renderer backend for openGL
@@ -393,6 +396,8 @@ pub struct GlRenderer {
     camera: RefCell<Camera>,
     scene_program: Program,
     scene_uniforms: SceneUniforms,
+    sample_mesh: Mesh,
+    buffers: super::objects::MeshBuffers,
 }
 
 impl GlRenderer {
@@ -402,11 +407,12 @@ impl GlRenderer {
 
     pub fn new(
         window: &Window,
-        fovy: Rad<f32>,
+        mesh: Mesh,
     ) -> Result<GlRenderer, RendererError> {
+        use super::objects::*;
         let (width, height) = window.size();
         let perspective = PerspectiveFov {
-            fovy: fovy,
+            fovy: Deg(40.0).into(),
             aspect: width as f32 / height as f32,
             near: 0.1,
             far: 1000.0,
@@ -421,25 +427,46 @@ impl GlRenderer {
             scene_program.uniform_location("modelview").unwrap_or(-1);
         scene_uniforms.projection =
             scene_program.uniform_location("projection").unwrap_or(-1);
+
+        let buffers =
+            MeshBuffers::new().map_err(|_| RendererError::Lifecycle {
+                reason: format!("could not build gl objects for mesh"),
+            })?;
+        buffers
+            .bind_mesh(&mesh)
+            .map_err(|_| RendererError::Lifecycle {
+                reason: format!("could not bind buffers to mesh"),
+            })?;
+
         let mut renderer = GlRenderer {
             scene_program,
             scene_uniforms,
+            sample_mesh: mesh,
+            buffers,
             camera: RefCell::new(Camera::new(perspective)),
         };
 
-        renderer.on_resize( (width, height));
+        renderer.on_resize((width, height));
 
         Ok(renderer)
     }
 
+    #[inline]
     pub fn scene_program(&self) -> &Program {
         &self.scene_program
+    }
+
+    #[inline]
+    pub fn scene_uniforms(&self) -> &SceneUniforms {
+        &self.scene_uniforms
     }
 }
 
 impl Renderer for GlRenderer {
     fn clear(&self) {
         unsafe {
+            gl::ClearColor(0.6, 0.0, 0.8, 1.0);
+            gl::Enable(gl::DEPTH_TEST);
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
         }
     }
@@ -465,6 +492,38 @@ impl Renderer for GlRenderer {
 
         unsafe {
             gl::Viewport(0, 0, width as i32, height as i32);
+        }
+    }
+}
+
+pub trait RenderScene<S> {
+    fn render_scene(&self, mesh: &S);
+}
+
+use super::super::game;
+impl RenderScene<game::EntityWorld> for GlRenderer {
+    fn render_scene(&self, scene: &game::EntityWorld) {
+        use std::ptr;
+
+        let program = self.scene_program();
+        let modelview = scene.main_camera.transform();
+        let SceneUniforms {
+            modelview: modelview_id,
+            ..
+        } = self.scene_uniforms().clone();
+
+        let buffers = &self.buffers;
+        let mesh = &self.sample_mesh;
+        program.use_program();
+        program.bind_uniform(modelview_id, modelview);
+        unsafe {
+            gl::BindVertexArray(buffers.vertex_array.id());
+            gl::DrawElements(
+                gl::TRIANGLES,
+                mesh.indices.len() as i32,
+                gl::UNSIGNED_INT,
+                ptr::null(),
+            );
         }
     }
 }
