@@ -150,7 +150,6 @@ pub trait ShaderProgram<T: Renderer> {
     fn use_program(&self, renderer: &T);
 }
 
-
 pub trait Renderer {
     fn clear(&self) {}
     fn camera(&self) -> cell::Ref<Camera>;

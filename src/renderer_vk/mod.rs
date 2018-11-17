@@ -24,7 +24,6 @@ use vulkano::swapchain::{
 
 use std::fmt;
 
-
 pub mod sdl_vulkan;
 
 pub type VulkanWinType = Rc<WindowContext>;
@@ -194,7 +193,8 @@ pub fn create_device<W>(
         &Features::none(),
         &device_extensions,
         queue_families,
-    ).map_err(&failure::Error::from)?;
+    )
+    .map_err(&failure::Error::from)?;
 
     let graphics_queue = queues.next().unwrap();
     let present_queue = queues.next().unwrap_or_else(|| graphics_queue.clone());
@@ -214,7 +214,9 @@ fn create_swapchain(
     device: &Arc<Device>,
     queues: &VulkanQueues,
 ) -> Result<(), failure::Error> {
-    let capabilities = surface.capabilities(*physical_device).map_err(&failure::Error::from)?;
+    let capabilities = surface
+        .capabilities(*physical_device)
+        .map_err(&failure::Error::from)?;
 
     unimplemented!()
 }
@@ -274,7 +276,8 @@ impl VulkanRenderer {
             &physical_device,
             &device,
             &queues,
-        ).map_err(|e| VkContextError::Other(e.to_string()));
+        )
+        .map_err(|e| VkContextError::Other(e.to_string()));
         unimplemented!();
         //        Ok(VulkanRenderer {
         //            camera: RefCell::new(Camera::new(cgmath::PerspectiveFov {

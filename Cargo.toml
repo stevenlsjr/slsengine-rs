@@ -10,7 +10,7 @@ gl-debug-output = []
 
 [dependencies]
 gl = {path ="lib/gl"}
-cgmath = "0.16.1"
+cgmath = {version="0.16.1", features=["swizzle"]}
 failure = "0.1.2"
 serde = "1.0.79"
 serde_derive = "1.0.79"

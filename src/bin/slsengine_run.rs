@@ -14,7 +14,6 @@ use cgmath::*;
 use slsengine::renderer::gl_renderer::*;
 use slsengine::renderer::objects;
 use slsengine::*;
-use std::ptr::null;
 
 // returns the [u, v] surface coordinates for a unit sphere.
 fn uv_for_unit_sphere(pos: Vector3<f32>) -> [f32; 2] {
@@ -105,10 +104,7 @@ fn make_texture() -> objects::TextureObjects {
     textures
 }
 
-
 fn main() {
-    use renderer::objects::MeshBuffers;
-    use renderer::BindUniform;
     use sdl_platform::{platform, OpenGLVersion, Platform};
     use std::time::*;
 
@@ -127,34 +123,30 @@ fn main() {
     let mesh = make_mesh().unwrap();
     let renderer = GlRenderer::new(&window, mesh.clone()).unwrap();
 
-    let camera_view: Matrix4<f32> =
-        Matrix4::<f32>::from_translation(Vector3::new(0.0, 0.0, -10.0));
-
-    
-    let program = renderer.scene_program();
+   
 
     let _texture = make_texture();
 
-    let modelview_id = program.uniform_location("modelview").unwrap();
 
     let mut timer = game::Timer::new(Duration::from_millis(1000 / 50));
     let mut world = game::EntityWorld::new();
 
     loop_state.is_running = true;
     while loop_state.is_running {
-        loop_state.handle_events(
-            &window,
-            event_pump.borrow_mut().poll_iter(),
-            &renderer,
-        );
+        {
+            loop_state.handle_events(
+                &window,
+                event_pump.borrow_mut().poll_iter(),
+                &renderer,
+            );
+        }
         let game::Tick { delta, .. } = timer.tick();
 
-        let ticks = Instant::now().duration_since(timer.start_instant());
-        let theta = game::duration_as_f64(ticks);
+        let _ticks = Instant::now().duration_since(timer.start_instant());
 
-        let modelview = camera_view * Matrix4::from_angle_x(Rad(theta as f32));
         {
-            world.update(&window, delta);
+            
+            world.update(delta, game::InputState {keyboard_state: event_pump.borrow().keyboard_state()});
         }
         renderer.clear();
         renderer.render_scene(&world);

@@ -1,13 +1,8 @@
-use cgmath;
-use sdl2::video::Window;
+use super::math::*;
+use cgmath::*;
+use sdl2::{keyboard::KeyboardState, video::Window};
 use std::time::{Duration, Instant};
 
-type Vec2 = cgmath::Vector2<f32>;
-type Vec3 = cgmath::Vector3<f32>;
-type Vec4 = cgmath::Vector4<f32>;
-
-type Mat3 = cgmath::Matrix3<f32>;
-type Mat4 = cgmath::Matrix4<f32>;
 /*--------------------------------------
  * Game timer: handles delta time, time since start, etc
  */
@@ -78,28 +73,30 @@ impl Timer {
  */
 
 pub struct FpsCameraComponent {
-    pos: Vec3,
+    pos: Point3<f32>,
     target: Vec3,
     direction: Vec3,
     up: Vec3,
     right: Vec3,
     transform: Mat4,
+    speed: f32,
 }
 
 impl FpsCameraComponent {
     pub fn new() -> Self {
         use cgmath::{prelude::*, *};
-        let direction = vec3(0.0, 0.0, 0.0);
+        let direction = vec3(0.0, 0.0, -1.0);
         let right = vec3(0.0, 1.0, 0.0);
         let up = direction.cross(right);
         let transform = Mat4::identity();
         let mut cmp = FpsCameraComponent {
-            pos: vec3(0.0, 0.0, -5.0),
+            pos: Point3::new(0.0, 0.0, -5.0),
             target: vec3(0.0, 0.0, 0.0),
             direction,
             up,
             right,
             transform,
+            speed: 3.0,
         };
 
         cmp.build_transform();
@@ -109,10 +106,10 @@ impl FpsCameraComponent {
 
     fn build_transform(&mut self) {
         use cgmath::*;
-        self.transform =  Matrix4::from_translation(self.pos);
+        self.transform = Matrix4::look_at(self.pos, Point3::new(0.0, 0.0, 0.0), self.right);
     }
 
-    pub fn transform(&self)-> &Mat4 {
+    pub fn transform(&self) -> &Mat4 {
         &self.transform
     }
 }
@@ -121,11 +118,49 @@ pub struct EntityWorld {
     pub main_camera: FpsCameraComponent,
 }
 
+pub struct InputState<'a> {
+    pub keyboard_state: KeyboardState<'a>,
+}
+
 impl EntityWorld {
     pub fn new() -> Self {
         let main_camera = FpsCameraComponent::new();
         EntityWorld { main_camera }
     }
 
-    pub fn update(&mut self, window: &Window, delta: Duration) {}
+    pub fn update(&mut self, delta: Duration, input: InputState) {
+        use sdl2::keyboard::Scancode;
+        let mut wasd_axis = Vec2::new(0.0, 0.0);
+        {
+            let InputState { keyboard_state } = &input;
+
+            if keyboard_state.is_scancode_pressed(Scancode::W) {
+                wasd_axis.y += 1.0;
+            }
+            if keyboard_state.is_scancode_pressed(Scancode::S) {
+                wasd_axis.y -= 1.0;
+            }
+            if keyboard_state.is_scancode_pressed(Scancode::D) {
+                wasd_axis.x += 1.0;
+            }
+            if keyboard_state.is_scancode_pressed(Scancode::A) {
+                wasd_axis.x -= 1.0;
+            }
+        }
+        // println!("wasd_axis: {:?} {}", wasd_axis, wasd_axis.magnitude());
+        if wasd_axis.magnitude() > 0.0 {
+            self.move_camera(wasd_axis, delta.as_float_secs(), input);
+            self.main_camera.build_transform();
+        }
+    }
+
+    pub fn move_camera(&mut self, move_axis: Vec2, dt: f64, input: InputState) {
+        use cgmath::prelude::*;
+        let delta_pos = {
+            let v2 = self.main_camera.speed * dt as f32 * move_axis;
+            Vec3 { y: 0.0, ..v2.xyy() }
+        };
+        self.main_camera.pos += delta_pos;
+
+    }
 }
