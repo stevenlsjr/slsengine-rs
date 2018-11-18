@@ -72,45 +72,79 @@ impl Timer {
  * Scene
  */
 
+///
+/// Constructs the camera view matrix for the scene.
+#[derive(Debug)]
 pub struct FpsCameraComponent {
     pos: Point3<f32>,
-    target: Vec3,
-    direction: Vec3,
+    front: Vec3,
     up: Vec3,
     right: Vec3,
-    transform: Mat4,
+    world_up: Vec3,
+    yaw: Rad<f32>,
+    pitch: Rad<f32>,
     speed: f32,
+    mouse_sensitivity: f32,
+    transform: Mat4,
+
 }
 
 impl FpsCameraComponent {
-    pub fn new() -> Self {
+    pub fn new(position: Point3<f32>, up: Vec3, yaw: Rad<f32>, pitch: Rad<f32>) -> Self {
         use cgmath::{prelude::*, *};
-        let direction = vec3(0.0, 0.0, -1.0);
-        let right = vec3(0.0, 1.0, 0.0);
-        let up = direction.cross(right);
-        let transform = Mat4::identity();
+        let world_up = up.clone();
+        let zero = vec3(0.0, 0.0, 0.0);
         let mut cmp = FpsCameraComponent {
-            pos: Point3::new(0.0, 0.0, -5.0),
-            target: vec3(0.0, 0.0, 0.0),
-            direction,
+            pos: position,
             up,
-            right,
-            transform,
+            world_up,
+            yaw, 
+            pitch,
             speed: 3.0,
+            mouse_sensitivity: 1.0,
+            // other fields given default values
+            transform: Mat4::identity(),
+            front: zero.clone(),
+            right: zero.clone()
         };
 
+        cmp.update_vectors();
         cmp.build_transform();
 
         cmp
     }
 
+    /// Set front, up, and right vectors to appropriate values
+    fn update_vectors(&mut self){
+        let Rad(yaw) = self.yaw;
+        let Rad(pitch) = self.pitch;
+        let front = vec3(
+            yaw.cos() * pitch.cos(),
+            pitch.sin(),
+            yaw.sin() * pitch.cos()
+        ).normalize();
+        self.front = front;
+        self.right = front.cross(self.world_up).normalize();
+        self.up = self.right.cross(self.front).normalize();
+    }
+
     fn build_transform(&mut self) {
         use cgmath::*;
-        self.transform = Matrix4::look_at(self.pos, Point3::new(0.0, 0.0, 0.0), self.right);
+        self.transform = Mat4::look_at_dir(self.pos, self.front, self.up);
     }
 
     pub fn transform(&self) -> &Mat4 {
         &self.transform
+    }
+
+    pub fn input_move(&mut self, wasd_axis: Vec2, dt: f64, input: &InputState){
+        use cgmath::prelude::*;
+        let move_direction = (wasd_axis.x * self.right + wasd_axis.y * self.front).normalize();
+        let delta_position = move_direction * self.speed * dt as f32;
+        self.pos += delta_position;
+        self.update_vectors();
+        self.build_transform();
+
     }
 }
 
@@ -124,7 +158,8 @@ pub struct InputState<'a> {
 
 impl EntityWorld {
     pub fn new() -> Self {
-        let main_camera = FpsCameraComponent::new();
+        use std::f32::consts::PI;
+        let main_camera = FpsCameraComponent::new(Point3::new(0.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0), Rad(PI/2.0), Rad(0.0));
         EntityWorld { main_camera }
     }
 
@@ -146,21 +181,17 @@ impl EntityWorld {
             if keyboard_state.is_scancode_pressed(Scancode::A) {
                 wasd_axis.x -= 1.0;
             }
+
+            if keyboard_state.is_scancode_pressed(Scancode::Y){
+                println!("Camera: {:?}", self.main_camera);
+            }
         }
         // println!("wasd_axis: {:?} {}", wasd_axis, wasd_axis.magnitude());
         if wasd_axis.magnitude() > 0.0 {
-            self.move_camera(wasd_axis, delta.as_float_secs(), input);
-            self.main_camera.build_transform();
+
+            self.main_camera.input_move(wasd_axis, delta.as_float_secs(), &input);
         }
     }
 
-    pub fn move_camera(&mut self, move_axis: Vec2, dt: f64, input: InputState) {
-        use cgmath::prelude::*;
-        let delta_pos = {
-            let v2 = self.main_camera.speed * dt as f32 * move_axis;
-            Vec3 { y: 0.0, ..v2.xyy() }
-        };
-        self.main_camera.pos += delta_pos;
 
-    }
 }

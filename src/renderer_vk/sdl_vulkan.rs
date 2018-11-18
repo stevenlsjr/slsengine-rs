@@ -9,9 +9,6 @@ use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::{mem, ptr};
 
-use ash;
-use ash::version::*;
-use ash::vk::types as vkt;
 
 pub fn sdl_supports_vulkan() -> bool {
     let sdl_version = version();

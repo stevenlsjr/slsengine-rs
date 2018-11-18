@@ -161,7 +161,6 @@ pub fn create_device<W>(
     surface: &Surface<W>,
 ) -> Result<(Arc<Device>, VulkanQueues), failure::Error> {
     use vulkano::device::{DeviceExtensions, Features};
-    use vulkano::instance::QueueFamily;
     let instance = physical_device.instance();
     let queue_families = QueueFamilies::new(instance, physical_device, surface)
         .map_err(|e| format_err!("could not find queue families: {:#?}", e))?;
