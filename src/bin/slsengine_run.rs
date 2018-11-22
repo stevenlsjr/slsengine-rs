@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 extern crate cgmath;
 extern crate genmesh;
 extern crate gl;
@@ -31,34 +33,41 @@ fn make_mesh() -> Result<Mesh, failure::Error> {
     use genmesh::generators::*;
     use genmesh::*;
     use slsengine::renderer::Vertex as SlsVertex;
+    let gltf_file = gltf::Gltf::open("assets/earth.glb").unwrap();
+    let blob = gltf_file.blob.unwrap();
+    let doc = gltf_file.document;
+    let mesh = doc.meshes().next().unwrap();
+    let primitive = mesh.primitives().next().unwrap();
+    let reader = primitive.reader(|buffer| Some(&blob));
+    let positions = reader
+        .read_positions()
+        .expect("primitive doesn't have POSITION attribute")
+        .collect::<Vec<_>>();
 
-    let generator = || {
-        MapToVertices::vertex(SphereUv::new(32, 32), |v: Vertex| {
-            use std::default::Default;
-            let mut vert: SlsVertex = Default::default();
-            vert.position = v.pos.into();
-            vert.normal = v.pos.into();
-            // approximate texture coordinates by taking long/lat on unit sphere.
-            // obvs doesn't work great for non-spheres
-            vert.uv = uv_for_unit_sphere(vec3(
-                vert.position[0],
-                vert.position[1],
-                vert.position[2],
-            ));
-            vert
-        }).triangulate()
+    let mut vertices: Vec<SlsVertex> = positions
+        .iter()
+        .map(|pos| SlsVertex {
+            position: pos.clone(),
+            ..SlsVertex::default()
+        }).collect();
+
+    if let Some(normals) = reader.read_normals() {
+        for (i, normal) in normals.enumerate() {
+            vertices[i].normal = normal.clone();
+        }
+    }
+    if let Some(uvs) = reader.read_tex_coords(0){
+        for (i, uv) in uvs.into_f32().enumerate(){
+            vertices[i].uv = uv.clone();
+        }
+    }
+    let indices: Vec<u32> = if let Some(index_enum) = reader.read_indices() {
+        index_enum.into_u32().collect()
+    } else {
+        panic!("model doesn't have indices");
     };
-
-    let verts: Vec<SlsVertex> = generator().vertices().collect();
-    let indices: Vec<_> = verts.iter().zip(0..).map(|(_, b)| b).collect();
-    println!(
-        "vertices: len {}, indices: len {}",
-        verts.len(),
-        indices.len()
-    );
     Ok(Mesh {
-        vertices: verts,
-        indices,
+        vertices, indices
     })
 }
 
@@ -104,7 +113,6 @@ fn make_texture() -> objects::TextureObjects {
 }
 
 fn main() {
-   
     use sdl_platform::{platform, OpenGLVersion, Platform};
     use std::time::*;
 
@@ -153,11 +161,9 @@ fn main() {
             );
         }
         renderer.clear();
-        
+
         renderer.render_scene(&world);
 
         window.gl_swap_window();
     }
-
-
 }

@@ -341,18 +341,16 @@ fn create_scene_shaders() -> Result<Program, ShaderError> {
     let mut fs_source = String::new();
 
     {
-        let mut vsf =
-            File::open("./assets/flat-shading.vert").map_err(|e| {
-                ShaderError::CompileFailure {
-                    info_log: format!("Error opening source {}", e),
-                }
-            })?;
-        let mut fsf =
-            File::open("./assets/flat-shading.frag").map_err(|e| {
-                ShaderError::CompileFailure {
-                    info_log: format!("Error opening source {}", e),
-                }
-            })?;
+        let mut vsf = File::open("./assets/blinn-phong.vert").map_err(|e| {
+            ShaderError::CompileFailure {
+                info_log: format!("Error opening source {}", e),
+            }
+        })?;
+        let mut fsf = File::open("./assets/blinn-phong.frag").map_err(|e| {
+            ShaderError::CompileFailure {
+                info_log: format!("Error opening source {}", e),
+            }
+        })?;
 
         vsf.read_to_string(&mut vs_source).map_err(|_| {
             ShaderError::CompileFailure {
@@ -389,6 +387,7 @@ fn create_scene_shaders() -> Result<Program, ShaderError> {
 pub struct SceneUniforms {
     pub modelview: i32,
     pub projection: i32,
+    pub normal_matrix: i32,
 }
 
 /// the renderer backend for openGL
@@ -422,11 +421,15 @@ impl GlRenderer {
         let mut scene_uniforms = SceneUniforms {
             modelview: -1,
             projection: -1,
+            normal_matrix: -1,
         };
         scene_uniforms.modelview =
             scene_program.uniform_location("modelview").unwrap_or(-1);
         scene_uniforms.projection =
             scene_program.uniform_location("projection").unwrap_or(-1);
+        scene_uniforms.normal_matrix = scene_program
+            .uniform_location("normal_matrix")
+            .unwrap_or(-1);
 
         let buffers =
             MeshBuffers::new().map_err(|_| RendererError::Lifecycle {
@@ -438,7 +441,7 @@ impl GlRenderer {
                 reason: format!("could not bind buffers to mesh"),
             })?;
 
-        let mut renderer = GlRenderer {
+        let renderer = GlRenderer {
             scene_program,
             scene_uniforms,
             sample_mesh: mesh,
@@ -507,8 +510,11 @@ impl RenderScene<game::EntityWorld> for GlRenderer {
 
         let program = self.scene_program();
         let modelview = scene.main_camera.transform();
+        let normal_matrix = modelview.invert().unwrap().transpose();
+
         let SceneUniforms {
             modelview: modelview_id,
+            normal_matrix: normal_matrix_id,
             ..
         } = self.scene_uniforms().clone();
 
@@ -516,6 +522,7 @@ impl RenderScene<game::EntityWorld> for GlRenderer {
         let mesh = &self.sample_mesh;
         program.use_program();
         program.bind_uniform(modelview_id, modelview);
+        program.bind_uniform(normal_matrix_id, &normal_matrix);
         unsafe {
             gl::BindVertexArray(buffers.vertex_array.id());
             gl::DrawElements(

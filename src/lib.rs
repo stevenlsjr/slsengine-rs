@@ -18,7 +18,7 @@ pub extern crate image;
 extern crate memoffset;
 pub extern crate sdl2;
 
-extern crate vulkano;
+// extern crate vulkano;
 
 // vulkan feature
 
@@ -34,8 +34,8 @@ pub mod renderer_common;
 pub mod game;
 pub mod sdl_platform;
 
-#[cfg(feature = "with-vulkan")]
-pub mod renderer_vk;
+// #[cfg(feature = "with-vulkan")]
+// pub mod renderer_vk;
 
 pub fn get_error_desc<E: Error>(e: E) -> String {
     e.description().to_string()

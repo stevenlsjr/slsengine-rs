@@ -16,7 +16,8 @@ out vec3 frag_eye_normal;
 void main(){
     frag_uv = v_uv;
     frag_normal = v_normal;
-    frag_eye_normal =  (normal_matrix * vec4(v_normal, 0.0)).xyz;
-    gl_Position = projection * modelview * vec4(v_pos, 1.0);
-    frag_pos = gl_Position.xyz;
+    frag_eye_normal =  normalize((normal_matrix * vec4(v_normal, 0.0)).xyz);
+    vec4 eye = modelview * vec4(v_pos, 1.0);
+    gl_Position = projection * eye;
+    frag_pos = eye.xyz;
 }
