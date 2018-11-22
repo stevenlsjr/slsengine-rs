@@ -4,15 +4,19 @@ layout (location = 1) in vec3 v_normal;
 layout (location = 2) in vec2 v_uv;
 
 uniform mat4 projection;
+
 uniform mat4 modelview;
+uniform mat4 normal_matrix;
 
 out vec2 frag_uv;
 out vec3 frag_normal;
 out vec3 frag_pos;
+out vec3 frag_eye_normal;
 
 void main(){
     frag_uv = v_uv;
     frag_normal = v_normal;
+    frag_eye_normal =  (normal_matrix * vec4(v_normal, 0.0)).xyz;
     gl_Position = projection * modelview * vec4(v_pos, 1.0);
     frag_pos = gl_Position.xyz;
 }
