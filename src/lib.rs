@@ -1,4 +1,4 @@
-#![feature(duration_float)] 
+#![feature(duration_float)]
 
 #[cfg(feature = "with-vulkan")]
 #[allow(unused_imports)]
@@ -8,7 +8,10 @@ pub extern crate cgmath;
 extern crate core;
 #[macro_use]
 extern crate failure;
+
+
 pub extern crate gl;
+
 pub extern crate image;
 #[allow(unused_imports)]
 #[macro_use]

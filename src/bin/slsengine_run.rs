@@ -46,8 +46,7 @@ fn make_mesh() -> Result<Mesh, failure::Error> {
                 vert.position[2],
             ));
             vert
-        })
-        .triangulate()
+        }).triangulate()
     };
 
     let verts: Vec<SlsVertex> = generator().vertices().collect();
@@ -105,6 +104,7 @@ fn make_texture() -> objects::TextureObjects {
 }
 
 fn main() {
+   
     use sdl_platform::{platform, OpenGLVersion, Platform};
     use std::time::*;
 
@@ -123,10 +123,7 @@ fn main() {
     let mesh = make_mesh().unwrap();
     let renderer = GlRenderer::new(&window, mesh.clone()).unwrap();
 
-   
-
     let _texture = make_texture();
-
 
     let mut timer = game::Timer::new(Duration::from_millis(1000 / 50));
     let mut world = game::EntityWorld::new();
@@ -145,12 +142,22 @@ fn main() {
         let _ticks = Instant::now().duration_since(timer.start_instant());
 
         {
-            
-            world.update(delta, game::InputState {keyboard_state: event_pump.borrow().keyboard_state()});
+            let ep = event_pump.borrow();
+
+            world.update(
+                delta,
+                game::InputState {
+                    keyboard_state: ep.keyboard_state(),
+                    mouse_state: ep.mouse_state(),
+                },
+            );
         }
         renderer.clear();
+        
         renderer.render_scene(&world);
 
         window.gl_swap_window();
     }
+
+
 }

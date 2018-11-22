@@ -1,6 +1,6 @@
 use super::math::*;
 use cgmath::*;
-use sdl2::{keyboard::KeyboardState, video::Window};
+use sdl2::{keyboard::KeyboardState, mouse::MouseState, video::Window};
 use std::time::{Duration, Instant};
 
 /*--------------------------------------
@@ -86,11 +86,15 @@ pub struct FpsCameraComponent {
     speed: f32,
     mouse_sensitivity: f32,
     transform: Mat4,
-
 }
 
 impl FpsCameraComponent {
-    pub fn new(position: Point3<f32>, up: Vec3, yaw: Rad<f32>, pitch: Rad<f32>) -> Self {
+    pub fn new(
+        position: Point3<f32>,
+        up: Vec3,
+        yaw: Rad<f32>,
+        pitch: Rad<f32>,
+    ) -> Self {
         use cgmath::{prelude::*, *};
         let world_up = up.clone();
         let zero = vec3(0.0, 0.0, 0.0);
@@ -98,14 +102,14 @@ impl FpsCameraComponent {
             pos: position,
             up,
             world_up,
-            yaw, 
+            yaw,
             pitch,
             speed: 3.0,
             mouse_sensitivity: 1.0,
             // other fields given default values
             transform: Mat4::identity(),
             front: zero.clone(),
-            right: zero.clone()
+            right: zero.clone(),
         };
 
         cmp.update_vectors();
@@ -115,13 +119,13 @@ impl FpsCameraComponent {
     }
 
     /// Set front, up, and right vectors to appropriate values
-    fn update_vectors(&mut self){
+    fn update_vectors(&mut self) {
         let Rad(yaw) = self.yaw;
         let Rad(pitch) = self.pitch;
         let front = vec3(
             yaw.cos() * pitch.cos(),
             pitch.sin(),
-            yaw.sin() * pitch.cos()
+            yaw.sin() * pitch.cos(),
         ).normalize();
         self.front = front;
         self.right = front.cross(self.world_up).normalize();
@@ -137,14 +141,14 @@ impl FpsCameraComponent {
         &self.transform
     }
 
-    pub fn input_move(&mut self, wasd_axis: Vec2, dt: f64, input: &InputState){
+    pub fn input_move(&mut self, wasd_axis: Vec2, dt: f64, input: &InputState) {
         use cgmath::prelude::*;
-        let move_direction = (wasd_axis.x * self.right + wasd_axis.y * self.front).normalize();
+        let move_direction =
+            (wasd_axis.x * self.right + wasd_axis.y * self.front).normalize();
         let delta_position = move_direction * self.speed * dt as f32;
         self.pos += delta_position;
         self.update_vectors();
         self.build_transform();
-
     }
 }
 
@@ -154,12 +158,18 @@ pub struct EntityWorld {
 
 pub struct InputState<'a> {
     pub keyboard_state: KeyboardState<'a>,
+    pub mouse_state: MouseState,
 }
 
 impl EntityWorld {
     pub fn new() -> Self {
         use std::f32::consts::PI;
-        let main_camera = FpsCameraComponent::new(Point3::new(0.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0), Rad(PI/2.0), Rad(0.0));
+        let main_camera = FpsCameraComponent::new(
+            Point3::new(0.0, 0.0, -2.0),
+            vec3(0.0, 1.0, 0.0),
+            Rad(PI / 2.0),
+            Rad(0.0),
+        );
         EntityWorld { main_camera }
     }
 
@@ -167,7 +177,10 @@ impl EntityWorld {
         use sdl2::keyboard::Scancode;
         let mut wasd_axis = Vec2::new(0.0, 0.0);
         {
-            let InputState { keyboard_state } = &input;
+            let InputState {
+                keyboard_state,
+                mouse_state,
+            } = &input;
 
             if keyboard_state.is_scancode_pressed(Scancode::W) {
                 wasd_axis.y += 1.0;
@@ -182,16 +195,17 @@ impl EntityWorld {
                 wasd_axis.x -= 1.0;
             }
 
-            if keyboard_state.is_scancode_pressed(Scancode::Y){
+            if keyboard_state.is_scancode_pressed(Scancode::Y) {
                 println!("Camera: {:?}", self.main_camera);
             }
         }
         // println!("wasd_axis: {:?} {}", wasd_axis, wasd_axis.magnitude());
         if wasd_axis.magnitude() > 0.0 {
-
-            self.main_camera.input_move(wasd_axis, delta.as_float_secs(), &input);
+            self.main_camera.input_move(
+                wasd_axis,
+                delta.as_float_secs(),
+                &input,
+            );
         }
     }
-
-
 }
