@@ -5,7 +5,6 @@ use failure;
 use sdl2::sys::{SDL_Window, SDL_bool};
 use sdl2::version::version;
 
-
 pub fn sdl_supports_vulkan() -> bool {
     let sdl_version = version();
     let version_num =

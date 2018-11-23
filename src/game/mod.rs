@@ -126,7 +126,8 @@ impl FpsCameraComponent {
             yaw.cos() * pitch.cos(),
             pitch.sin(),
             yaw.sin() * pitch.cos(),
-        ).normalize();
+        )
+        .normalize();
         self.front = front;
         self.right = front.cross(self.world_up).normalize();
         self.up = self.right.cross(self.front).normalize();
@@ -141,7 +142,12 @@ impl FpsCameraComponent {
         &self.transform
     }
 
-    pub fn input_move(&mut self, wasd_axis: Vec2, dt: f64, _input: &InputState) {
+    pub fn input_move(
+        &mut self,
+        wasd_axis: Vec2,
+        dt: f64,
+        _input: &InputSources,
+    ) {
         use cgmath::prelude::*;
         let move_direction =
             (wasd_axis.x * self.right + wasd_axis.y * self.front).normalize();
@@ -150,16 +156,49 @@ impl FpsCameraComponent {
         self.update_vectors();
         self.build_transform();
     }
+
+    pub fn mouselook(&mut self, mouse_offset: Vec2, dt: f64) {
+        use cgmath::*;
+        let mut mouse_offset = mouse_offset;
+        mouse_offset *= self.mouse_sensitivity * dt as f32;
+        self.yaw += Rad(mouse_offset.x);
+        self.pitch += Rad(mouse_offset.y);
+        self.pitch = if self.pitch < Deg(-89.0).into() {
+            Deg(-89.0).into()
+        } else if self.pitch > Deg(89.0).into() {
+            Deg(89.0).into()
+        } else {
+            self.pitch
+        };
+        self.update_vectors();
+        self.build_transform();
+    }
 }
 
 pub struct EntityWorld {
     pub main_camera: FpsCameraComponent,
     pub sphere_positions: Vec<Point3<f32>>,
+    pub input_state: Option<InputState>,
 }
 
-pub struct InputState<'a> {
+#[derive(Clone, Debug, PartialEq)]
+pub struct InputState {
+    pub last_mousepos: Point2<f32>,
+    pub mousepos: Point2<f32>,
+}
+
+pub struct InputSources<'a> {
     pub keyboard_state: KeyboardState<'a>,
     pub mouse_state: MouseState,
+}
+
+impl<'a> InputSources<'a> {
+    pub fn from_event_pump(event_pump: &'a sdl2::EventPump) -> Self {
+        InputSources {
+            keyboard_state: event_pump.keyboard_state(),
+            mouse_state: event_pump.mouse_state(),
+        }
+    }
 }
 
 impl EntityWorld {
@@ -176,26 +215,36 @@ impl EntityWorld {
         let mut sphere_positions = Vec::with_capacity(11);
         sphere_positions.push(Point3::new(0.0, 0.0, 0.0));
         for _i in 0..10 {
-            let v =
-                10.0 * (Point3::new(random::<f32>(), random::<f32>(), random::<f32>()) - vec3(0.5, 0.5, 0.5));
+            let v = 10.0
+                * (Point3::new(
+                    random::<f32>(),
+                    random::<f32>(),
+                    random::<f32>(),
+                ) - vec3(0.5, 0.5, 0.5));
             sphere_positions.push(v);
         }
-        println!("{:#?}", sphere_positions);
 
         EntityWorld {
             main_camera,
             sphere_positions,
+            input_state: None,
         }
     }
 
-    pub fn update(&mut self, delta: Duration, input: InputState) {
+    pub fn update(&mut self, delta: Duration, input: InputSources) {
         use sdl2::keyboard::Scancode;
+        let input_state = self
+            .input_state
+            .clone()
+            .expect("Event loop should have already populated input_state");
+        let mouse_offset = {
+            let mut m = input_state.mousepos - input_state.last_mousepos;
+            m.y *= -1.0;
+            m
+        };
         let mut wasd_axis = Vec2::new(0.0, 0.0);
         {
-            let InputState {
-                keyboard_state,
-                _mouse_state,
-            } = &input;
+            let InputSources { keyboard_state, .. } = &input;
 
             if keyboard_state.is_scancode_pressed(Scancode::W) {
                 wasd_axis.y += 1.0;
@@ -221,6 +270,15 @@ impl EntityWorld {
                 delta.as_float_secs(),
                 &input,
             );
+        }
+
+        if mouse_offset.magnitude() > 0.0 && input.mouse_state.left() {
+            self.main_camera
+                .mouselook(mouse_offset, delta.as_float_secs());
+        }
+        if let Some(mut input_state) = self.input_state.clone() {
+            input_state.last_mousepos = input_state.mousepos;
+            self.input_state = Some(input_state);
         }
     }
 }

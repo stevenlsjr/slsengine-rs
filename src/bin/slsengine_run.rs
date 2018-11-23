@@ -49,15 +49,16 @@ fn make_mesh() -> Result<Mesh, failure::Error> {
         .map(|pos| SlsVertex {
             position: pos.clone(),
             ..SlsVertex::default()
-        }).collect();
+        })
+        .collect();
 
     if let Some(normals) = reader.read_normals() {
         for (i, normal) in normals.enumerate() {
             vertices[i].normal = normal.clone();
         }
     }
-    if let Some(uvs) = reader.read_tex_coords(0){
-        for (i, uv) in uvs.into_f32().enumerate(){
+    if let Some(uvs) = reader.read_tex_coords(0) {
+        for (i, uv) in uvs.into_f32().enumerate() {
             vertices[i].uv = uv.clone();
         }
     }
@@ -66,9 +67,7 @@ fn make_mesh() -> Result<Mesh, failure::Error> {
     } else {
         panic!("model doesn't have indices");
     };
-    Ok(Mesh {
-        vertices, indices
-    })
+    Ok(Mesh { vertices, indices })
 }
 
 fn make_texture() -> objects::TextureObjects {
@@ -142,8 +141,9 @@ fn main() {
         {
             loop_state.handle_events(
                 &window,
-                event_pump.borrow_mut().poll_iter(),
+                &event_pump,
                 &renderer,
+                &mut world,
             );
         }
         let game::Tick { delta, .. } = timer.tick();
@@ -153,13 +153,7 @@ fn main() {
         {
             let ep = event_pump.borrow();
 
-            world.update(
-                delta,
-                game::InputState {
-                    keyboard_state: ep.keyboard_state(),
-                    mouse_state: ep.mouse_state(),
-                },
-            );
+            world.update(delta, game::InputSources::from_event_pump(&ep));
         }
         renderer.clear();
 

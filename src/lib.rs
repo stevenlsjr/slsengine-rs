@@ -1,11 +1,10 @@
 #![feature(duration_float)]
 
 pub extern crate cgmath;
-extern crate rand;
 extern crate core;
+extern crate rand;
 #[macro_use]
 extern crate failure;
-
 
 pub extern crate gl;
 
@@ -15,15 +14,15 @@ pub extern crate image;
 extern crate memoffset;
 pub extern crate sdl2;
 
-// extern crate vulkano;
+#[cfg(feature = "with-vulkan")]
+extern crate vulkano;
 
 // vulkan feature
 
 use sdl2::event::{Event, WindowEvent};
 use sdl2::keyboard::Keycode;
 use sdl2::video::Window;
-use std::error::Error;
-use std::time::Instant;
+use std::{cell::RefCell, error::Error, time::Instant};
 
 pub mod renderer;
 pub mod renderer_common;
@@ -31,8 +30,8 @@ pub mod renderer_common;
 pub mod game;
 pub mod sdl_platform;
 
-// #[cfg(feature = "with-vulkan")]
-// pub mod renderer_vk;
+#[cfg(feature = "with-vulkan")]
+pub mod renderer_vk;
 
 pub fn get_error_desc<E: Error>(e: E) -> String {
     e.description().to_string()
@@ -58,10 +57,22 @@ impl MainLoopState {
     pub fn handle_events<R: renderer::Renderer>(
         &mut self,
         window: &Window,
-        events: sdl2::event::EventPollIterator,
+        event_pump: &RefCell<sdl2::EventPump>,
         renderer: &R,
+        world: &mut game::EntityWorld,
     ) {
-        for event in events {
+        use cgmath::*;
+        if let None = world.input_state {
+            let ep = event_pump.borrow();
+            let mouse_state = ep.mouse_state();
+            let mousepos =
+                Point2::new(mouse_state.x() as f32, mouse_state.y() as f32);
+            world.input_state = Some(game::InputState {
+                mousepos,
+                last_mousepos: mousepos.clone(),
+            });
+        }
+        for event in event_pump.borrow_mut().poll_iter() {
             match event {
                 Event::Quit { .. }
                 | Event::KeyDown {
@@ -76,6 +87,13 @@ impl MainLoopState {
                     }
                     _ => {}
                 },
+                Event::MouseMotion { x, y, .. } => {
+                    if let Some(mut input_state) = world.input_state.clone() {
+                        input_state.last_mousepos = input_state.mousepos;
+                        input_state.mousepos = Point2::new(x as f32, y as f32);
+                        world.input_state = Some(input_state);
+                    }
+                }
                 _ => {}
             }
         }
@@ -85,7 +103,6 @@ impl MainLoopState {
 /// application error handling
 #[derive(Fail, Debug)]
 pub enum AppError {
-
     #[fail(display = "App error: '{}'", _0)]
     Other(failure::Error),
 }
