@@ -141,7 +141,7 @@ impl FpsCameraComponent {
         &self.transform
     }
 
-    pub fn input_move(&mut self, wasd_axis: Vec2, dt: f64, input: &InputState) {
+    pub fn input_move(&mut self, wasd_axis: Vec2, dt: f64, _input: &InputState) {
         use cgmath::prelude::*;
         let move_direction =
             (wasd_axis.x * self.right + wasd_axis.y * self.front).normalize();
@@ -154,6 +154,7 @@ impl FpsCameraComponent {
 
 pub struct EntityWorld {
     pub main_camera: FpsCameraComponent,
+    pub sphere_positions: Vec<Point3<f32>>,
 }
 
 pub struct InputState<'a> {
@@ -163,6 +164,7 @@ pub struct InputState<'a> {
 
 impl EntityWorld {
     pub fn new() -> Self {
+        use rand::random;
         use std::f32::consts::PI;
         let main_camera = FpsCameraComponent::new(
             Point3::new(0.0, 0.0, -2.0),
@@ -170,7 +172,20 @@ impl EntityWorld {
             Rad(PI / 2.0),
             Rad(0.0),
         );
-        EntityWorld { main_camera }
+
+        let mut sphere_positions = Vec::with_capacity(11);
+        sphere_positions.push(Point3::new(0.0, 0.0, 0.0));
+        for _i in 0..10 {
+            let v =
+                10.0 * (Point3::new(random::<f32>(), random::<f32>(), random::<f32>()) - vec3(0.5, 0.5, 0.5));
+            sphere_positions.push(v);
+        }
+        println!("{:#?}", sphere_positions);
+
+        EntityWorld {
+            main_camera,
+            sphere_positions,
+        }
     }
 
     pub fn update(&mut self, delta: Duration, input: InputState) {
@@ -179,7 +194,7 @@ impl EntityWorld {
         {
             let InputState {
                 keyboard_state,
-                mouse_state,
+                _mouse_state,
             } = &input;
 
             if keyboard_state.is_scancode_pressed(Scancode::W) {

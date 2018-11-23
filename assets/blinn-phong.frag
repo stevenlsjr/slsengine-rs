@@ -6,12 +6,15 @@ in vec3 frag_normal;
 in vec3 frag_eye_normal;
 
 uniform sampler2D u_texture;
-const vec3 light_dir = vec3(0.1, 1.0, -0.5);
-const float ambient_factor = 0.1;
-const float specular_factor = 0.3;
-const float diffuse_factor = 1.0  - ambient_factor;
 
-const int shininess = 255;
+
+
+const vec3 light_dir = vec3(0.1, 4.0, -0.5);
+const float ambient_factor = 0.1;
+const float specular_factor = 0.1;
+const float diffuse_factor = 1.0 - specular_factor  - ambient_factor;
+
+const int shininess = 32;
 
 const vec3 specular_color = vec3(1.0, 1.0, 1.0) * specular_factor;
 

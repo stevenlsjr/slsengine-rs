@@ -1,10 +1,7 @@
 #![feature(duration_float)]
 
-#[cfg(feature = "with-vulkan")]
-#[allow(unused_imports)]
-#[macro_use]
-pub extern crate ash;
 pub extern crate cgmath;
+extern crate rand;
 extern crate core;
 #[macro_use]
 extern crate failure;
@@ -88,12 +85,6 @@ impl MainLoopState {
 /// application error handling
 #[derive(Fail, Debug)]
 pub enum AppError {
-    #[cfg(feature = "with-vulkan")]
-    #[fail(display = "vulkan error: {}", _0)]
-    VkError(ash::vk::Result),
-
-    #[fail(display = "Ash instance error: '{}'", _0)]
-    AshInstanceError(#[fail(cause)] ash::InstanceError),
 
     #[fail(display = "App error: '{}'", _0)]
     Other(failure::Error),

@@ -508,9 +508,9 @@ impl RenderScene<game::EntityWorld> for GlRenderer {
     fn render_scene(&self, scene: &game::EntityWorld) {
         use std::ptr;
 
+        use math::*;
         let program = self.scene_program();
-        let modelview = scene.main_camera.transform();
-        let normal_matrix = modelview.invert().unwrap().transpose();
+        let cam_view = scene.main_camera.transform();
 
         let SceneUniforms {
             modelview: modelview_id,
@@ -521,16 +521,20 @@ impl RenderScene<game::EntityWorld> for GlRenderer {
         let buffers = &self.buffers;
         let mesh = &self.sample_mesh;
         program.use_program();
-        program.bind_uniform(modelview_id, modelview);
-        program.bind_uniform(normal_matrix_id, &normal_matrix);
-        unsafe {
-            gl::BindVertexArray(buffers.vertex_array.id());
-            gl::DrawElements(
-                gl::TRIANGLES,
-                mesh.indices.len() as i32,
-                gl::UNSIGNED_INT,
-                ptr::null(),
-            );
+        for pos in &scene.sphere_positions {
+            let modelview = cam_view * Mat4::from_translation(pos.to_vec());
+            let normal_matrix = modelview.invert().unwrap().transpose();
+            program.bind_uniform(modelview_id, &modelview);
+            program.bind_uniform(normal_matrix_id, &normal_matrix);
+            unsafe {
+                gl::BindVertexArray(buffers.vertex_array.id());
+                gl::DrawElements(
+                    gl::TRIANGLES,
+                    mesh.indices.len() as i32,
+                    gl::UNSIGNED_INT,
+                    ptr::null(),
+                );
+            }
         }
     }
 }

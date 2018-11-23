@@ -38,7 +38,7 @@ fn make_mesh() -> Result<Mesh, failure::Error> {
     let doc = gltf_file.document;
     let mesh = doc.meshes().next().unwrap();
     let primitive = mesh.primitives().next().unwrap();
-    let reader = primitive.reader(|buffer| Some(&blob));
+    let reader = primitive.reader(|_buffer| Some(&blob));
     let positions = reader
         .read_positions()
         .expect("primitive doesn't have POSITION attribute")
@@ -106,7 +106,8 @@ fn make_texture() -> objects::TextureObjects {
             gl::UNSIGNED_BYTE,
             img.data.as_ptr() as *const _,
         );
-        gl::GenerateMipmap(gl::TEXTURE_2D)
+        gl::GenerateMipmap(gl::TEXTURE_2D);
+        gl::Enable(gl::CULL_FACE);
     }
 
     textures

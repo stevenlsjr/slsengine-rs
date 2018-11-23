@@ -18,4 +18,4 @@ minimum-version = "0.6.0"
 
 # These will only take effect on *-emscripten targets.
 [target.emscripten]
-link-args = ["-s", "USE_SDL=2"]
+link-args = ["-s", "USE_SDL=2", "-s", "FULL_ES2=1"]
