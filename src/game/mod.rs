@@ -1,7 +1,8 @@
 use super::math::*;
 use cgmath::*;
-use sdl2::{keyboard::KeyboardState, mouse::MouseState, video::Window,
-EventPump};
+use sdl2::{
+    keyboard::KeyboardState, mouse::MouseState, video::Window, EventPump,
+};
 use std::time::{Duration, Instant};
 
 /*--------------------------------------
@@ -207,9 +208,9 @@ impl EntityWorld {
         use rand::random;
         use std::f32::consts::PI;
         let main_camera = FpsCameraComponent::new(
-            Point3::new(0.0, 0.0, -2.0),
+            Point3::new(0.0, 0.0, 5.0),
             vec3(0.0, 1.0, 0.0),
-            Rad(PI / 2.0),
+            Rad(-PI / 2.0),
             Rad(0.0),
         );
 

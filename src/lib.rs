@@ -1,21 +1,28 @@
 #![feature(duration_float)]
 
-pub extern crate cgmath;
+extern crate cgmath;
 extern crate core;
 extern crate rand;
 #[macro_use]
 extern crate failure;
 
-pub extern crate gl;
+extern crate gl;
 
-pub extern crate image;
+extern crate image;
 #[allow(unused_imports)]
 #[macro_use]
 extern crate memoffset;
-pub extern crate sdl2;
+extern crate sdl2;
 
 #[cfg(feature = "with-vulkan")]
 extern crate vulkano;
+
+extern crate gltf;
+
+pub mod renderer;
+pub mod renderer_common;
+pub mod game;
+pub mod sdl_platform;
 
 // vulkan feature
 
@@ -24,11 +31,7 @@ use sdl2::keyboard::Keycode;
 use sdl2::video::Window;
 use std::{cell::RefCell, error::Error, time::Instant};
 
-pub mod renderer;
-pub mod renderer_common;
 
-pub mod game;
-pub mod sdl_platform;
 
 #[cfg(feature = "with-vulkan")]
 pub mod renderer_vk;
