@@ -33,7 +33,7 @@ fn make_mesh() -> Result<Mesh, failure::Error> {
     use genmesh::generators::*;
     use genmesh::*;
     use slsengine::renderer::Vertex as SlsVertex;
-    let gltf_file = gltf::Gltf::open("assets/earth.glb").unwrap();
+    let gltf_file = gltf::Gltf::open("assets/stickman.glb").unwrap();
     let blob = gltf_file.blob.unwrap();
     let doc = gltf_file.document;
     let mesh = doc.meshes().next().unwrap();

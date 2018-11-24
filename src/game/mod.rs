@@ -104,7 +104,7 @@ impl FpsCameraComponent {
             world_up,
             yaw,
             pitch,
-            speed: 3.0,
+            speed: 9.0,
             mouse_sensitivity: 1.0,
             // other fields given default values
             transform: Mat4::identity(),
@@ -215,7 +215,7 @@ impl EntityWorld {
         let mut sphere_positions = Vec::with_capacity(11);
         sphere_positions.push(Point3::new(0.0, 0.0, 0.0));
         for _i in 0..10 {
-            let v = 10.0
+            let v = 50.0
                 * (Point3::new(
                     random::<f32>(),
                     random::<f32>(),
