@@ -1,6 +1,7 @@
 use super::math::*;
 use cgmath::*;
-use sdl2::{keyboard::KeyboardState, mouse::MouseState, video::Window};
+use sdl2::{keyboard::KeyboardState, mouse::MouseState, video::Window,
+EventPump};
 use std::time::{Duration, Instant};
 
 /*--------------------------------------
@@ -193,7 +194,7 @@ pub struct InputSources<'a> {
 }
 
 impl<'a> InputSources<'a> {
-    pub fn from_event_pump(event_pump: &'a sdl2::EventPump) -> Self {
+    pub fn from_event_pump(event_pump: &'a EventPump) -> Self {
         InputSources {
             keyboard_state: event_pump.keyboard_state(),
             mouse_state: event_pump.mouse_state(),

@@ -7,12 +7,10 @@ in vec3 frag_eye_normal;
 
 uniform sampler2D u_texture;
 
-
-
 const vec3 light_dir = vec3(0.1, 4.0, -0.5);
 const float ambient_factor = 0.1;
 const float specular_factor = 0.1;
-const float diffuse_factor = 1.0 - specular_factor  - ambient_factor;
+const float diffuse_factor = 1.0 - specular_factor - ambient_factor;
 
 const int shininess = 32;
 
@@ -33,8 +31,6 @@ main()
   vec4 albedo = texture(u_texture, frag_uv);
   float d = diffuse();
 
-
-
   vec3 view_dir = normalize(-frag_pos);
   vec3 reflect_dir = reflect(-light_dir, normalize(frag_eye_normal));
 
@@ -42,7 +38,7 @@ main()
   vec3 e = normalize(vec3(frag_pos));
   vec3 specular = vec3(0.0);
   float intensity = max(dot(n, light_dir), 0.0);
-  if (intensity > 0.0){
+  if (intensity > 0.0) {
     vec3 half_vector = normalize(light_dir - e);
     float spec_factor = max(dot(half_vector, n), 0.0);
     specular = specular_color * pow(spec_factor, shininess);

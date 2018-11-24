@@ -56,7 +56,7 @@ impl MainLoopState {
 
     pub fn handle_events<R: renderer::Renderer>(
         &mut self,
-        window: &Window,
+        _window: &Window,
         event_pump: &RefCell<sdl2::EventPump>,
         renderer: &R,
         world: &mut game::EntityWorld,
