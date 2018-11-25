@@ -7,7 +7,7 @@ in vec3 frag_eye_normal;
 
 uniform sampler2D u_texture;
 
-const vec3 light_dir = vec3(0.1, 4.0, -0.5);
+const vec3 light_dir = normalize(vec3(0.1, 4.0, 10.0));
 const float ambient_factor = 0.1;
 const float specular_factor = 0.1;
 const float diffuse_factor = 1.0 - specular_factor - ambient_factor;
