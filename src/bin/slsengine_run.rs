@@ -29,46 +29,7 @@ fn uv_for_unit_sphere(pos: Vector3<f32>) -> [f32; 2] {
     [u, v]
 }
 
-fn make_mesh() -> Result<Mesh, failure::Error> {
-    use genmesh::generators::*;
-    use genmesh::*;
-    use slsengine::renderer::Vertex as SlsVertex;
-    let gltf_file = gltf::Gltf::open("assets/stickman.glb").unwrap();
-    let blob = gltf_file.blob.unwrap();
-    let doc = gltf_file.document;
-    let mesh = doc.meshes().next().unwrap();
-    let primitive = mesh.primitives().next().unwrap();
-    let reader = primitive.reader(|_buffer| Some(&blob));
-    let positions = reader
-        .read_positions()
-        .expect("primitive doesn't have POSITION attribute")
-        .collect::<Vec<_>>();
 
-    let mut vertices: Vec<SlsVertex> = positions
-        .iter()
-        .map(|pos| SlsVertex {
-            position: pos.clone(),
-            ..SlsVertex::default()
-        })
-        .collect();
-
-    if let Some(normals) = reader.read_normals() {
-        for (i, normal) in normals.enumerate() {
-            vertices[i].normal = normal.clone();
-        }
-    }
-    if let Some(uvs) = reader.read_tex_coords(0) {
-        for (i, uv) in uvs.into_f32().enumerate() {
-            vertices[i].uv = uv.clone();
-        }
-    }
-    let indices: Vec<u32> = if let Some(index_enum) = reader.read_indices() {
-        index_enum.into_u32().collect()
-    } else {
-        panic!("model doesn't have indices");
-    };
-    Ok(Mesh { vertices, indices })
-}
 
 fn make_texture() -> objects::TextureObjects {
     use stb_image::image;
@@ -128,7 +89,13 @@ fn main() {
         window, event_pump, ..
     } = plt;
     let mut loop_state = MainLoopState::new();
-    let mesh = make_mesh().unwrap();
+
+    let model = {
+        let file = gltf::Gltf::open("assets/stickman.glb").expect("could not load gltf model");
+        renderer::model::Model::from_gltf(&file).unwrap()
+    };
+
+    let mesh = &model.meshes[0];
     let renderer = GlRenderer::new(&window, mesh.clone()).unwrap();
 
     let _texture = make_texture();
