@@ -1,6 +1,6 @@
 use cgmath::*;
 use math::*;
-use sdl2::video::Window;
+// use sdl2::video::Window;
 use std::{cell, time::Duration};
 pub mod model;
 
@@ -157,6 +157,10 @@ pub trait Renderer {
     fn camera(&self) -> cell::Ref<Camera>;
     fn set_clear_color(&mut self, color: Color) {}
     fn on_resize(&self, _size: (u32, u32)) {}
+    fn on_update(&mut self, _delta_time: Duration, _world: &super::game::EntityWorld){}
+
+    /// Hints the renderer to recompile shaders, when convenient
+    fn flag_shader_recompile(&self){}
 }
 
 pub trait Resizable {

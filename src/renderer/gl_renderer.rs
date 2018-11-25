@@ -4,8 +4,8 @@ use core;
 use gl;
 pub use renderer_common::*;
 use sdl2::video::Window;
-use std::cell::Ref;
-use std::cell::RefCell;
+use std::cell::{Ref, RefCell, Cell};
+use std::time::{Instant, Duration};
 
 #[derive(Fail, Debug)]
 pub enum RendererError {
@@ -174,6 +174,7 @@ pub fn get_program_info_log(program: u32) -> String {
     String::from_utf8_lossy(&buffer).to_string()
 }
 
+#[derive(Debug, PartialEq)]
 pub struct Program {
     pub id: u32,
 }
@@ -397,6 +398,9 @@ pub struct GlRenderer {
     scene_uniforms: SceneUniforms,
     sample_mesh: Mesh,
     buffers: super::objects::MeshBuffers,
+
+
+    recompile_flag: Cell<Option<Instant>>,
 }
 
 impl GlRenderer {
@@ -418,18 +422,11 @@ impl GlRenderer {
         };
         let scene_program =
             create_scene_shaders().map_err(RendererError::ShaderError)?;
-        let mut scene_uniforms = SceneUniforms {
+        let scene_uniforms = SceneUniforms {
             modelview: -1,
             projection: -1,
             normal_matrix: -1,
         };
-        scene_uniforms.modelview =
-            scene_program.uniform_location("modelview").unwrap_or(-1);
-        scene_uniforms.projection =
-            scene_program.uniform_location("projection").unwrap_or(-1);
-        scene_uniforms.normal_matrix = scene_program
-            .uniform_location("normal_matrix")
-            .unwrap_or(-1);
 
         let buffers =
             MeshBuffers::new().map_err(|_| RendererError::Lifecycle {
@@ -441,17 +438,56 @@ impl GlRenderer {
                 reason: format!("could not bind buffers to mesh"),
             })?;
 
-        let renderer = GlRenderer {
+        let mut renderer = GlRenderer {
             scene_program,
             scene_uniforms,
             sample_mesh: mesh,
             buffers,
             camera: RefCell::new(Camera::new(perspective)),
+            recompile_flag: Cell::new(None)
         };
+        renderer.bind_uniforms();
 
         renderer.on_resize((width, height));
 
         Ok(renderer)
+    }
+
+    fn bind_uniforms(&mut self) {
+        self.scene_uniforms.modelview = self
+            .scene_program
+            .uniform_location("modelview")
+            .unwrap_or(-1);
+        self.scene_uniforms.projection = self
+            .scene_program
+            .uniform_location("projection")
+            .unwrap_or(-1);
+        self.scene_uniforms.normal_matrix = self
+            .scene_program
+            .uniform_location("normal_matrix")
+            .unwrap_or(-1);
+    }
+
+    pub fn rebuild_program(&mut self) {
+        println!("old shader program {:#?} with uniforms {:#?}", self.scene_program, self.scene_uniforms);
+
+        let program = match create_scene_shaders() {
+            Ok(mut program) => program,
+            Err(e) => {
+                eprintln!("could not rebuild shaders: {}", e);
+                return;
+            }
+        };
+
+        self.scene_program = program;
+        self.scene_program.use_program();
+        
+        self.bind_uniforms();
+        self.scene_program.bind_uniform(
+            self.scene_uniforms.projection,
+            &self.camera.borrow().projection,
+        );
+        println!("build new shader program {:#?} with uniforms {:#?}", self.scene_program, self.scene_uniforms);
     }
 
     #[inline]
@@ -495,6 +531,20 @@ impl Renderer for GlRenderer {
 
         unsafe {
             gl::Viewport(0, 0, width as i32, height as i32);
+        }
+    }
+
+    fn on_update(&mut self, _delta_time: ::std::time::Duration, world: &game::EntityWorld){
+        if let Some(t) = self.recompile_flag.get(){
+            self.rebuild_program();
+            self.recompile_flag.set(None);
+        }
+       
+    }
+
+    fn flag_shader_recompile(&self){
+        if self.recompile_flag.get().is_none(){
+            self.recompile_flag.set(Some(Instant::now()))
         }
     }
 }

@@ -1,7 +1,7 @@
 use super::math::*;
 use cgmath::*;
 use sdl2::{
-    keyboard::KeyboardState, mouse::MouseState, video::Window, EventPump,
+    keyboard::KeyboardState, mouse::MouseState, EventPump,
 };
 use std::time::{Duration, Instant};
 
@@ -208,11 +208,7 @@ impl EntityWorld {
         use rand::random;
         use std::f32::consts::PI;
         let main_camera = FpsCameraComponent::new(
-<<<<<<< HEAD
-            Point3::new(0.0, 0.0, 2.0),
-=======
             Point3::new(0.0, 0.0, 5.0),
->>>>>>> origin/vulkano-migration
             vec3(0.0, 1.0, 0.0),
             Rad(-PI / 2.0),
             Rad(0.0),
@@ -236,6 +232,7 @@ impl EntityWorld {
             input_state: None,
         }
     }
+
 
     pub fn update(&mut self, delta: Duration, input: InputSources) {
         use sdl2::keyboard::Scancode;

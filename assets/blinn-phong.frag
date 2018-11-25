@@ -7,16 +7,12 @@ in vec3 frag_eye_normal;
 
 uniform sampler2D u_texture;
 
-<<<<<<< HEAD
 const vec3 light_dir = normalize(vec3(0.1, 4.0, 10.0));
-=======
-const vec3 light_dir = normalize(vec3(0.1, 4.0, -0.5));
->>>>>>> origin/vulkano-migration
 const float ambient_factor = 0.1;
-const float specular_factor = 0.1;
+const float specular_factor = 0.4;
 const float diffuse_factor = 1.0 - specular_factor - ambient_factor;
 
-const int shininess = 32;
+const int shininess = 100;
 
 const vec3 specular_color = vec3(1.0, 1.0, 1.0) * specular_factor;
 

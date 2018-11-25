@@ -29,8 +29,6 @@ fn uv_for_unit_sphere(pos: Vector3<f32>) -> [f32; 2] {
     [u, v]
 }
 
-
-
 fn make_texture() -> objects::TextureObjects {
     use stb_image::image;
     let img: image::Image<u8> = match image::load("assets/checker-map.png") {
@@ -91,12 +89,13 @@ fn main() {
     let mut loop_state = MainLoopState::new();
 
     let model = {
-        let file = gltf::Gltf::open("assets/stickman.glb").expect("could not load gltf model");
+        let file = gltf::Gltf::open("assets/stickman.glb")
+            .expect("could not load gltf model");
         renderer::model::Model::from_gltf(&file).unwrap()
     };
 
     let mesh = &model.meshes[0];
-    let renderer = GlRenderer::new(&window, mesh.clone()).unwrap();
+    let mut renderer = GlRenderer::new(&window, mesh.clone()).unwrap();
 
     let _texture = make_texture();
 
@@ -121,6 +120,9 @@ fn main() {
             let ep = event_pump.borrow();
 
             world.update(delta, game::InputSources::from_event_pump(&ep));
+        }
+        {
+            renderer.on_update(delta, &world);
         }
         renderer.clear();
 

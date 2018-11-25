@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["Steve Shea <stevenlsjr@gmail.com>"]
 
 [features]
-default=["with-vulkan"]
+default=["with-vulkan", "gl-debug-output"]
 with-vulkan = ["ash", "vulkano", "vulkano-shaders"]
 gl-debug-output = []
 

@@ -96,6 +96,15 @@ impl MainLoopState {
                         input_state.mousepos = Point2::new(x as f32, y as f32);
                         world.input_state = Some(input_state);
                     }
+                },
+                Event::KeyDown {keycode, repeat, keymod, ..}=>{
+                    if let Some(code)= keycode {
+                        use sdl2::keyboard::{Keycode, LALTMOD};
+                        if code == Keycode::R && !repeat && keymod.contains(LALTMOD) {
+                            renderer.flag_shader_recompile();
+                        }
+
+                    }
                 }
                 _ => {}
             }
