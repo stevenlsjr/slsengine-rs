@@ -68,15 +68,4 @@ fn main() {
     let device = renderer.device.clone();
 
     loop_state.is_running = true;
-    while loop_state.is_running {
-        loop_state.handle_events(
-            &platform.window,
-            platform.event_pump.borrow_mut().poll_iter(),
-            &renderer,
-        );
-        let game::Tick { delta: _delta, .. } = timer.tick();
-
-        let ticks = Instant::now().duration_since(timer.start_instant());
-        let theta = game::duration_as_f64(ticks);
-    }
 }

@@ -157,10 +157,15 @@ pub trait Renderer {
     fn camera(&self) -> cell::Ref<Camera>;
     fn set_clear_color(&mut self, color: Color) {}
     fn on_resize(&self, _size: (u32, u32)) {}
-    fn on_update(&mut self, _delta_time: Duration, _world: &super::game::EntityWorld){}
+    fn on_update(
+        &mut self,
+        _delta_time: Duration,
+        _world: &super::game::EntityWorld,
+    ) {
+    }
 
     /// Hints the renderer to recompile shaders, when convenient
-    fn flag_shader_recompile(&self){}
+    fn flag_shader_recompile(&self) {}
 }
 
 pub trait Resizable {

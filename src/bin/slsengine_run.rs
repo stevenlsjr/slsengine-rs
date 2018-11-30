@@ -94,7 +94,7 @@ fn main() {
         renderer::model::Model::from_gltf(&file).unwrap()
     };
 
-    let mesh = &model.meshes[0];
+    let mesh = &model.meshes[0].mesh;
     let mut renderer = GlRenderer::new(&window, mesh.clone()).unwrap();
 
     let _texture = make_texture();

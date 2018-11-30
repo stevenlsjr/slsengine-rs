@@ -4,8 +4,8 @@ use core;
 use gl;
 pub use renderer_common::*;
 use sdl2::video::Window;
-use std::cell::{Ref, RefCell, Cell};
-use std::time::{Instant, Duration};
+use std::cell::{Cell, Ref, RefCell};
+use std::time::{Duration, Instant};
 
 #[derive(Fail, Debug)]
 pub enum RendererError {
@@ -399,7 +399,6 @@ pub struct GlRenderer {
     sample_mesh: Mesh,
     buffers: super::objects::MeshBuffers,
 
-
     recompile_flag: Cell<Option<Instant>>,
 }
 
@@ -444,7 +443,7 @@ impl GlRenderer {
             sample_mesh: mesh,
             buffers,
             camera: RefCell::new(Camera::new(perspective)),
-            recompile_flag: Cell::new(None)
+            recompile_flag: Cell::new(None),
         };
         renderer.bind_uniforms();
 
@@ -469,7 +468,10 @@ impl GlRenderer {
     }
 
     pub fn rebuild_program(&mut self) {
-        println!("old shader program {:#?} with uniforms {:#?}", self.scene_program, self.scene_uniforms);
+        println!(
+            "old shader program {:#?} with uniforms {:#?}",
+            self.scene_program, self.scene_uniforms
+        );
 
         let program = match create_scene_shaders() {
             Ok(mut program) => program,
@@ -481,13 +483,16 @@ impl GlRenderer {
 
         self.scene_program = program;
         self.scene_program.use_program();
-        
+
         self.bind_uniforms();
         self.scene_program.bind_uniform(
             self.scene_uniforms.projection,
             &self.camera.borrow().projection,
         );
-        println!("build new shader program {:#?} with uniforms {:#?}", self.scene_program, self.scene_uniforms);
+        println!(
+            "build new shader program {:#?} with uniforms {:#?}",
+            self.scene_program, self.scene_uniforms
+        );
     }
 
     #[inline]
@@ -534,16 +539,19 @@ impl Renderer for GlRenderer {
         }
     }
 
-    fn on_update(&mut self, _delta_time: ::std::time::Duration, world: &game::EntityWorld){
-        if let Some(t) = self.recompile_flag.get(){
+    fn on_update(
+        &mut self,
+        _delta_time: ::std::time::Duration,
+        world: &game::EntityWorld,
+    ) {
+        if let Some(t) = self.recompile_flag.get() {
             self.rebuild_program();
             self.recompile_flag.set(None);
         }
-       
     }
 
-    fn flag_shader_recompile(&self){
-        if self.recompile_flag.get().is_none(){
+    fn flag_shader_recompile(&self) {
+        if self.recompile_flag.get().is_none() {
             self.recompile_flag.set(Some(Instant::now()))
         }
     }

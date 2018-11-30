@@ -15,7 +15,7 @@
         }
       },
       "args": [],
-      "cwd": "${workspaceFolder}"
+      "cwd": "${workspaceFolder}",
     },
     {
       "type": "cppvsdbg",
@@ -24,9 +24,8 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": true,
-      "windows": {
-        "program": "${workspaceRoot}/target/debug/slsengine_run.exe"
-      },
+      "program": "${workspaceRoot}/target/debug/slsengine_run.exe",
+
       "cwd": "${workspaceRoot}",
       "environment": [
           {"name": "RUST_BACKTRACE", "value": "1"}

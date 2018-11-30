@@ -19,9 +19,9 @@ extern crate vulkano;
 
 extern crate gltf;
 
+pub mod game;
 pub mod renderer;
 pub mod renderer_common;
-pub mod game;
 pub mod sdl_platform;
 
 // vulkan feature
@@ -30,8 +30,6 @@ use sdl2::event::{Event, WindowEvent};
 use sdl2::keyboard::Keycode;
 use sdl2::video::Window;
 use std::{cell::RefCell, error::Error, time::Instant};
-
-
 
 #[cfg(feature = "with-vulkan")]
 pub mod renderer_vk;
@@ -96,14 +94,21 @@ impl MainLoopState {
                         input_state.mousepos = Point2::new(x as f32, y as f32);
                         world.input_state = Some(input_state);
                     }
-                },
-                Event::KeyDown {keycode, repeat, keymod, ..}=>{
-                    if let Some(code)= keycode {
+                }
+                Event::KeyDown {
+                    keycode,
+                    repeat,
+                    keymod,
+                    ..
+                } => {
+                    if let Some(code) = keycode {
                         use sdl2::keyboard::{Keycode, LALTMOD};
-                        if code == Keycode::R && !repeat && keymod.contains(LALTMOD) {
+                        if code == Keycode::R
+                            && !repeat
+                            && keymod.contains(LALTMOD)
+                        {
                             renderer.flag_shader_recompile();
                         }
-
                     }
                 }
                 _ => {}

@@ -1,8 +1,6 @@
 use super::math::*;
 use cgmath::*;
-use sdl2::{
-    keyboard::KeyboardState, mouse::MouseState, EventPump,
-};
+use sdl2::{keyboard::KeyboardState, mouse::MouseState, EventPump};
 use std::time::{Duration, Instant};
 
 /*--------------------------------------
@@ -232,7 +230,6 @@ impl EntityWorld {
             input_state: None,
         }
     }
-
 
     pub fn update(&mut self, delta: Duration, input: InputSources) {
         use sdl2::keyboard::Scancode;
