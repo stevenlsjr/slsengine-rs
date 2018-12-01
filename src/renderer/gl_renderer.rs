@@ -1,11 +1,12 @@
 use cgmath::prelude::*;
 use cgmath::*;
 use core;
+use failure;
 use gl;
 pub use renderer_common::*;
 use sdl2::video::Window;
 use std::cell::{Cell, Ref, RefCell};
-use std::time::{ Instant};
+use std::time::Instant;
 
 #[derive(Fail, Debug)]
 pub enum RendererError {
@@ -389,11 +390,22 @@ pub struct SceneUniforms {
     pub modelview: i32,
     pub projection: i32,
     pub normal_matrix: i32,
+    pub light_positions: i32,
+}
+impl Default for SceneUniforms {
+    fn default() -> Self {
+        SceneUniforms {
+            modelview: -1,
+            projection: -1,
+            normal_matrix: -1,
+            light_positions: -1,
+        }
+    }
 }
 
 struct Materials {
     base_material: material::UntexturedMat,
-    base_material_ubo: super::objects::MaterialUbo
+    base_material_ubo: super::objects::MaterialUbo,
 }
 
 /// the renderer backend for openGL
@@ -413,6 +425,16 @@ impl GlRenderer {
         self.camera.borrow().projection
     }
 
+    fn initialize(&mut self) -> Result<(), failure::Error> {
+        self.bind_uniforms();
+        self.materials.base_material_ubo.bind_to_material(
+            &self.scene_program,
+            &self.materials.base_material,
+        );
+
+        Ok(())
+    }
+
     pub fn new(
         window: &Window,
         mesh: Mesh,
@@ -427,11 +449,7 @@ impl GlRenderer {
         };
         let scene_program =
             create_scene_shaders().map_err(RendererError::ShaderError)?;
-        let scene_uniforms = SceneUniforms {
-            modelview: -1,
-            projection: -1,
-            normal_matrix: -1,
-        };
+        let scene_uniforms = SceneUniforms::default();
 
         let buffers =
             MeshBuffers::new().map_err(|_| RendererError::Lifecycle {
@@ -443,28 +461,47 @@ impl GlRenderer {
                 reason: format!("could not bind buffers to mesh"),
             })?;
 
-        let material_ubo = MaterialUbo::new().map_err(|_|RendererError::Lifecycle {
+        let materials = GlRenderer::get_materials().map_err(|_| {
+            RendererError::Lifecycle {
                 reason: format!("could create material_obo"),
-            })?;
+            }
+        })?;
 
         let mut renderer = GlRenderer {
             scene_program,
             scene_uniforms,
             sample_mesh: mesh,
             buffers,
-            materials: GlRenderer::get_materials(),
+            materials,
             camera: RefCell::new(Camera::new(perspective)),
             recompile_flag: Cell::new(None),
         };
-        renderer.bind_uniforms();
+        if let Err(e) = renderer.initialize() {
+            return Err(RendererError::Lifecycle {
+                reason: format!("could not initialize renderer: {:?}", e),
+            });
+        }
 
         renderer.on_resize((width, height));
 
         Ok(renderer)
     }
 
-    fn get_materials()-> Materials {
-        unimplemented!();
+    fn get_materials() -> Result<Materials, ::failure::Error> {
+        use super::objects::*;
+        use failure::Error;
+        let base_material: material::UntexturedMat =
+            material::UntexturedMat::new(
+                vec4(1.0, 1.0, 0.0, 1.0),
+                1.0,
+                1.0,
+                vec3(0.0, 0.0, 0.0),
+            );
+        let base_material_ubo = MaterialUbo::new().map_err(&Error::from)?;
+        Ok(Materials {
+            base_material,
+            base_material_ubo,
+        })
     }
 
     fn bind_uniforms(&mut self) {
@@ -479,6 +516,11 @@ impl GlRenderer {
         self.scene_uniforms.normal_matrix = self
             .scene_program
             .uniform_location("normal_matrix")
+            .unwrap_or(-1);
+
+        self.scene_uniforms.light_positions = self
+            .scene_program
+            .uniform_location("light_positions")
             .unwrap_or(-1);
     }
 
@@ -584,16 +626,26 @@ impl RenderScene<game::EntityWorld> for GlRenderer {
         use math::*;
         let program = self.scene_program();
         let cam_view = scene.main_camera.transform();
-
+        let light_positions: &[Vec3] = &[vec3(0.0, 1.0, -1.0)];
+        let xformed_light_positions: Vec<Vec3> = light_positions
+            .iter()
+            .map(|v| (cam_view * v.extend(1.0)).xyz())
+            .collect();
         let SceneUniforms {
             modelview: modelview_id,
             normal_matrix: normal_matrix_id,
+            light_positions: light_positions_id,
             ..
         } = self.scene_uniforms().clone();
 
         let buffers = &self.buffers;
         let mesh = &self.sample_mesh;
         program.use_program();
+        unsafe {
+            let light_pos_ptr = xformed_light_positions.as_ptr();
+            gl::Uniform4fv(light_positions_id, 1, light_pos_ptr as *const _);
+        }
+
         for pos in &scene.sphere_positions {
             let modelview = cam_view * Mat4::from_translation(pos.to_vec());
             let normal_matrix = modelview.invert().unwrap().transpose();

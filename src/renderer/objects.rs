@@ -34,8 +34,10 @@ pub enum BufferObjectTarget {
     UniformBuffer = gl::UNIFORM_BUFFER as isize,
 }
 
-///
-/// Representation of a single Buffer object Handle
+/// Representation of a single Buffer object Handle.
+/// Because Buffer Object's lifetime is not tied
+/// to a given resource, its methods operating with the OpenGL
+/// api are unsafe.
 #[derive(Debug, Copy, Clone)]
 pub struct BufferObject {
     id: u32,
@@ -51,10 +53,35 @@ impl BufferObject {
         self.id
     }
 
+    /// runs a function block with buffer object bound
+    /// to given buffer target.
+    pub unsafe fn with_binding<F>(&self, target: GLenum, block: F)
+    where
+        F: (FnOnce() -> ()),
+    {
+        struct Binding<'a>(&'a BufferObject, GLenum);
+        impl<'a> Drop for Binding<'a> {
+            fn drop(&mut self) {
+                unsafe { self.0.unbind(self.1) };
+            }
+        }
+
+        let _ = Binding(self, target);
+        self.bind(target);
+        block();
+    }
+
     /// binds buffer to `target` in openGL context
     pub unsafe fn bind(&self, target: GLenum) {
         gl::BindBuffer(target, self.id);
     }
+
+    #[cfg(not(any(target_arch = "wasm32", target_arch = "asmjs")))]
+    pub unsafe fn unbind(&self, target: GLenum) {
+        gl::BindBuffer(target, 0);
+    }
+    #[cfg(any(target_arch = "wasm32", target_arch = "asmjs"))]
+    pub unsafe fn unbind(&self, target: GLenum) {}
 }
 
 /// A managed object buffer with a singl instance
@@ -221,6 +248,12 @@ impl Drop for MeshBuffers {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum UboBindings {
+    Material = 0,
+    Lights = 1,
+}
+
 #[derive(Debug)]
 pub struct MaterialUbo {
     ubo: SingleBuffer,
@@ -235,7 +268,12 @@ impl MaterialUbo {
         unsafe {
             ubo.buffer().bind(gl::UNIFORM_BUFFER);
             let id = ubo.0;
-            gl::BufferData(gl::UNIFORM_BUFFER, MATERIAL_UBO_SIZE as isize, ptr::null(), gl::STATIC_DRAW);
+            gl::BufferData(
+                gl::UNIFORM_BUFFER,
+                MATERIAL_UBO_SIZE as isize,
+                ptr::null(),
+                gl::STATIC_DRAW,
+            );
         }
         Ok(MaterialUbo { ubo })
     }
@@ -245,10 +283,54 @@ impl MaterialUbo {
         self.ubo.buffer()
     }
 
-    pub fn bind_to_material<T>(&self, material: &renderer::material::Material<T>) {
+    pub fn setup_binding(&self, program: &super::gl_renderer::Program) {
+        use std::ffi::CStr;
+        let block_name = CStr::from_bytes_with_nul(b"Material\0").unwrap();
+
+        unsafe {
+            let index =
+                gl::GetUniformBlockIndex(program.id(), block_name.as_ptr());
+            gl::UniformBlockBinding(
+                program.id(),
+                index,
+                UboBindings::Material as u32,
+            );
+            gl::BindBufferBase(
+                gl::UNIFORM_BUFFER,
+                UboBindings::Material as u32,
+                self.buffer().id,
+            );
+        }
+    }
+
+    pub fn bind_to_material<T>(
+        &self,
+        program: &super::gl_renderer::Program,
+        material: &renderer::material::Material<T>,
+    ) {
+        use cgmath::*;
+        self.setup_binding(program);
+        let albedo = material.albedo_factor.as_ptr();
+        let roughness: *const f32 = &material.roughness_factor;
+        let metallic: *const f32 = &material.metallic_factor;
+        let emissive = material.emissive_factor.as_ptr();
+
         unsafe {
             self.buffer().bind(gl::UNIFORM_BUFFER);
+            //layout(std140) uniform Material
+            // {
+            //   vec4 albedo_factor; // size 16
+            //   float roughness_factor; // 4
+            //   float metallic_factor; // 4
+            //   vec3 emissive; // 16
+            // }; // min size=48
+            gl::BufferSubData(gl::UNIFORM_BUFFER, 0, 16, albedo as *const _);
 
+            gl::BufferSubData(gl::UNIFORM_BUFFER, 16, 4, roughness as *const _);
+            gl::BufferSubData(gl::UNIFORM_BUFFER, 20, 4, metallic as *const _);
+            gl::BufferSubData(gl::UNIFORM_BUFFER, 24, 16, emissive as *const _);
+
+            self.buffer().unbind(gl::UNIFORM_BUFFER);
         }
     }
 }
