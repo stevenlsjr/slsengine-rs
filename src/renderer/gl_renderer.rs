@@ -7,7 +7,7 @@ pub use renderer_common::*;
 use sdl2::video::Window;
 use std::cell::{Cell, Ref, RefCell};
 use std::time::Instant;
-use super::super::game;
+use ::game;
 
 
 #[derive(Fail, Debug)]
@@ -345,12 +345,12 @@ fn create_scene_shaders() -> Result<Program, ShaderError> {
     let mut fs_source = String::new();
 
     {
-        let mut vsf = File::open("./assets/blinn-phong.vert").map_err(|e| {
+        let mut vsf = File::open("./assets/shaders/brdf.vert").map_err(|e| {
             ShaderError::CompileFailure {
                 info_log: format!("Error opening source {}", e),
             }
         })?;
-        let mut fsf = File::open("./assets/blinn-phong.frag").map_err(|e| {
+        let mut fsf = File::open("./assets/shaders/brdf.frag").map_err(|e| {
             ShaderError::CompileFailure {
                 info_log: format!("Error opening source {}", e),
             }
@@ -494,8 +494,8 @@ impl GlRenderer {
         use failure::Error;
         let base_material: material::UntexturedMat =
             material::UntexturedMat::new(
-                vec4(1.0, 1.0, 0.0, 1.0),
-                1.0,
+                vec4(1.0, 1.0, 1.0, 1.0),
+                0.0,
                 1.0,
                 vec3(0.0, 0.0, 0.0),
             );
@@ -540,10 +540,16 @@ impl GlRenderer {
             }
         };
 
+        self.materials.base_material_ubo.bind_to_material(
+            &self.scene_program,
+            &self.materials.base_material,
+        );
+
         self.scene_program = program;
         self.scene_program.use_program();
 
         self.bind_uniforms();
+        
         self.scene_program.bind_uniform(
             self.scene_uniforms.projection,
             &self.camera.borrow().projection,
