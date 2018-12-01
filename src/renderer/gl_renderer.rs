@@ -7,6 +7,8 @@ pub use renderer_common::*;
 use sdl2::video::Window;
 use std::cell::{Cell, Ref, RefCell};
 use std::time::Instant;
+use super::super::game;
+
 
 #[derive(Fail, Debug)]
 pub enum RendererError {
@@ -618,7 +620,6 @@ pub trait RenderScene<S> {
     fn render_scene(&self, mesh: &S);
 }
 
-use super::super::game;
 impl RenderScene<game::EntityWorld> for GlRenderer {
     fn render_scene(&self, scene: &game::EntityWorld) {
         use std::ptr;
@@ -643,7 +644,7 @@ impl RenderScene<game::EntityWorld> for GlRenderer {
         program.use_program();
         unsafe {
             let light_pos_ptr = xformed_light_positions.as_ptr();
-            gl::Uniform4fv(light_positions_id, 1, light_pos_ptr as *const _);
+            gl::Uniform3fv(light_positions_id, 1, light_pos_ptr as *const _);
         }
 
         for pos in &scene.sphere_positions {
