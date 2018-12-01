@@ -13,8 +13,7 @@ extern crate failure;
 
 use cgmath::prelude::*;
 use cgmath::*;
-use slsengine::renderer::gl_renderer::*;
-use slsengine::renderer::objects;
+use slsengine::renderer::{gl_renderer::*, objects, material};
 use slsengine::*;
 
 // returns the [u, v] surface coordinates for a unit sphere.
@@ -29,7 +28,7 @@ fn uv_for_unit_sphere(pos: Vector3<f32>) -> [f32; 2] {
     [u, v]
 }
 
-fn make_texture() -> objects::TextureObjects {
+fn make_textures() -> objects::TextureObjects {
     use stb_image::image;
     let img: image::Image<u8> = match image::load("assets/checker-map.png") {
         image::LoadResult::ImageU8(i) => i,
@@ -87,17 +86,15 @@ fn main() {
         window, event_pump, ..
     } = plt;
     let mut loop_state = MainLoopState::new();
+    let gltf_doc = gltf::Gltf::open("assets/stickman.glb")
+        .expect("could not load gltf model");
+    let model = renderer::model::Model::from_gltf(&gltf_doc).unwrap();
 
-    let model = {
-        let file = gltf::Gltf::open("assets/stickman.glb")
-            .expect("could not load gltf model");
-        renderer::model::Model::from_gltf(&file).unwrap()
-    };
 
     let mesh = &model.meshes[0].mesh;
     let mut renderer = GlRenderer::new(&window, mesh.clone()).unwrap();
 
-    let _texture = make_texture();
+    let _texture = make_textures();
 
     let mut timer = game::Timer::new(Duration::from_millis(1000 / 50));
     let mut world = game::EntityWorld::new();

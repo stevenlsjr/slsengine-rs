@@ -3,6 +3,7 @@ use math::*;
 // use sdl2::video::Window;
 use std::{cell, time::Duration};
 pub mod model;
+pub mod material;
 
 /// A cffi and GPU-friendly vertex representaion
 #[derive(Debug, Copy, Clone)]
@@ -155,7 +156,7 @@ pub trait ShaderProgram<T: Renderer> {
 pub trait Renderer {
     fn clear(&self) {}
     fn camera(&self) -> cell::Ref<Camera>;
-    fn set_clear_color(&mut self, color: Color) {}
+    fn set_clear_color(&mut self, _color: Color) {}
     fn on_resize(&self, _size: (u32, u32)) {}
     fn on_update(
         &mut self,

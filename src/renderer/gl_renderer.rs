@@ -5,7 +5,7 @@ use gl;
 pub use renderer_common::*;
 use sdl2::video::Window;
 use std::cell::{Cell, Ref, RefCell};
-use std::time::{Duration, Instant};
+use std::time::{ Instant};
 
 #[derive(Fail, Debug)]
 pub enum RendererError {
@@ -391,6 +391,11 @@ pub struct SceneUniforms {
     pub normal_matrix: i32,
 }
 
+struct Materials {
+    base_material: material::UntexturedMat,
+    base_material_ubo: super::objects::MaterialUbo
+}
+
 /// the renderer backend for openGL
 pub struct GlRenderer {
     camera: RefCell<Camera>,
@@ -398,6 +403,7 @@ pub struct GlRenderer {
     scene_uniforms: SceneUniforms,
     sample_mesh: Mesh,
     buffers: super::objects::MeshBuffers,
+    materials: Materials,
 
     recompile_flag: Cell<Option<Instant>>,
 }
@@ -437,11 +443,16 @@ impl GlRenderer {
                 reason: format!("could not bind buffers to mesh"),
             })?;
 
+        let material_ubo = MaterialUbo::new().map_err(|_|RendererError::Lifecycle {
+                reason: format!("could create material_obo"),
+            })?;
+
         let mut renderer = GlRenderer {
             scene_program,
             scene_uniforms,
             sample_mesh: mesh,
             buffers,
+            materials: GlRenderer::get_materials(),
             camera: RefCell::new(Camera::new(perspective)),
             recompile_flag: Cell::new(None),
         };
@@ -450,6 +461,10 @@ impl GlRenderer {
         renderer.on_resize((width, height));
 
         Ok(renderer)
+    }
+
+    fn get_materials()-> Materials {
+        unimplemented!();
     }
 
     fn bind_uniforms(&mut self) {
@@ -542,7 +557,7 @@ impl Renderer for GlRenderer {
     fn on_update(
         &mut self,
         _delta_time: ::std::time::Duration,
-        world: &game::EntityWorld,
+        _world: &game::EntityWorld,
     ) {
         if let Some(t) = self.recompile_flag.get() {
             self.rebuild_program();

@@ -4,19 +4,19 @@ use math::*;
 
 use cgmath::*;
 use gltf;
-use gltf::{mesh};
+use gltf::mesh;
 use renderer::Mesh;
+use std::collections::HashMap;
 
 use failure;
-pub struct PlaceholdMaterial;
-pub type Material = PlaceholdMaterial;
+
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct MeshData {
-    mesh: Mesh,
-    draw_mode: mesh::Mode,
-    transform_index: Option<usize>,
-    material_index: Option<usize>,
+    pub mesh: Mesh,
+    pub draw_mode: mesh::Mode,
+    pub transform_index: Option<usize>,
+    pub material_index: Option<usize>,
 }
 impl MeshData {
     fn new(mesh: Mesh, draw_mode: mesh::Mode) -> Self {
@@ -32,7 +32,7 @@ impl MeshData {
 pub struct Model {
     pub meshes: Vec<MeshData>,
     pub transforms: Vec<Mat4>,
-    pub materials: Vec<Material>,
+    pub materials: HashMap<Option<usize>, super::material::UntexturedMat>,
 }
 
 impl Model {
@@ -40,9 +40,25 @@ impl Model {
         Model {
             meshes: Vec::new(),
             transforms: Vec::new(),
-            materials: Vec::new(),
+            materials: HashMap::new(),
         }
     }
+
+    fn load_materials(&mut self, gltf_file: &gltf::Gltf) {
+        for material in gltf_file.materials() {
+            use super::material::*;
+            let pbr = material.pbr_metallic_roughness();
+            println!("found material {:?}", material.name());
+            let game_mat = Material::<Untextured>::new(
+                pbr.base_color_factor().into(),
+                pbr.metallic_factor(),
+                pbr.roughness_factor(),
+                material.emissive_factor().into(),
+            );
+            self.materials.insert(material.index(), game_mat);
+        }
+    }
+
     pub fn from_gltf(gltf_file: &gltf::Gltf) -> Result<Self, failure::Error> {
         let mut model = Model::new();
         let blob = &gltf_file
@@ -53,24 +69,30 @@ impl Model {
         for ref g_mesh in gltf_file.document.meshes() {
             let meshes: Vec<_> = make_mesh(g_mesh, blob)?;
             for m in meshes {
-                let md = MeshData::new(m.mesh, m.mode);
+                let mut md = MeshData::new(m.mesh, m.mode);
+                md.material_index = m.material;
+
                 model.meshes.push(md);
             }
         }
+
+        model.load_materials(gltf_file);
         Ok(model)
     }
 }
 
-struct ParsedMesh<'a> {
+struct ParsedMesh {
     mesh: Mesh,
     mode: mesh::Mode,
-    material: gltf::Material<'a>,
+    material: Option<usize>,
 }
 
-fn make_mesh<'a, 'b>(
-    gltf_mesh: &'b gltf::Mesh<'a>,
+impl ParsedMesh {}
+
+fn make_mesh(
+    gltf_mesh: &gltf::Mesh,
     blob: &[u8],
-) -> Result<Vec<ParsedMesh<'a>>, failure::Error> {
+) -> Result<Vec<ParsedMesh>, failure::Error> {
     use renderer::Vertex as SlsVertex;
     let mut meshes = Vec::new();
 
@@ -86,8 +108,7 @@ fn make_mesh<'a, 'b>(
             .map(|pos| SlsVertex {
                 position: pos.clone(),
                 ..SlsVertex::default()
-            })
-            .collect();
+            }).collect();
 
         if let Some(normals) = reader.read_normals() {
             for (i, normal) in normals.enumerate() {
@@ -105,10 +126,11 @@ fn make_mesh<'a, 'b>(
         } else {
             panic!("model doesn't have indices");
         };
+
         let mesh_data = ParsedMesh {
-            mesh: Mesh{indices, vertices},
+            mesh: Mesh { indices, vertices },
             mode: primitive.mode(),
-            material: primitive.material(),
+            material: primitive.material().index(),
         };
         meshes.push(mesh_data);
     }
@@ -128,13 +150,16 @@ mod test {
         let gl_model = Gltf::from_slice(GLB_BYTES)
             .expect("should load valid gltf document");
         let model_res = Model::from_gltf(&gl_model);
-        assert!(model_res.is_ok());
         if let Ok(model) = model_res {
             assert_eq!(
                 model.meshes.len(),
                 1,
                 "Model should load mesh with a single model"
             );
+            let mesh = model.meshes[0].clone();
+            assert!(model.materials.contains_key(&mesh.material_index));
+        } else {
+            panic!("No meshes found")
         }
     }
 }

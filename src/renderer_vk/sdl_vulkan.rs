@@ -1,8 +1,6 @@
 /**
  * bindings for SDL2's vulkan interface
  */
-use failure;
-use sdl2::sys::{SDL_Window, SDL_bool};
 use sdl2::version::version;
 
 pub fn sdl_supports_vulkan() -> bool {

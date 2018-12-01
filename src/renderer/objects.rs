@@ -2,7 +2,7 @@
  *  objects.rs: Managed OpenGL buffer, texture, and vertex objects
  **/
 extern crate failure;
-
+use super::super::renderer;
 use gl;
 use gl::types::*;
 use renderer_common::Mesh;
@@ -36,18 +36,50 @@ pub enum BufferObjectTarget {
 
 ///
 /// Representation of a single Buffer object Handle
-#[derive(Debug)]
-pub struct BufferObject(u32);
+#[derive(Debug, Copy, Clone)]
+pub struct BufferObject {
+    id: u32,
+}
 
 impl BufferObject {
+    pub fn new(id: u32) -> Self {
+        BufferObject { id }
+    }
     /// returns buffer handle
+    #[inline]
     pub fn id(&self) -> u32 {
-        self.0
+        self.id
     }
 
     /// binds buffer to `target` in openGL context
     pub unsafe fn bind(&self, target: GLenum) {
-        gl::BindBuffer(target, self.0);
+        gl::BindBuffer(target, self.id);
+    }
+}
+
+/// A managed object buffer with a singl instance
+#[derive(Debug, PartialEq)]
+struct SingleBuffer(pub u32);
+
+impl SingleBuffer {
+    pub fn new() -> Result<Self, ObjectError> {
+        let mut obj: u32 = 0;
+        unsafe {
+            gl::GenBuffers(1, &mut obj as *mut _);
+        }
+        Ok(SingleBuffer(obj))
+    }
+
+    #[inline]
+    pub fn buffer(&self) -> BufferObject {
+        BufferObject::new(self.0)
+    }
+}
+impl Drop for SingleBuffer {
+    fn drop(&mut self) {
+        unsafe {
+            gl::DeleteBuffers(1, &mut self.0);
+        }
     }
 }
 
@@ -67,7 +99,7 @@ impl VertexArrayObject {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct BufferObjects {
     objects: Vec<u32>,
 }
@@ -98,8 +130,8 @@ impl Drop for BufferObjects {
 
 #[derive(Debug)]
 pub struct MeshBuffers {
-    pub vertex_buffer: BufferObject,
-    pub index_buffer: BufferObject,
+    pub vertex_buffer: u32,
+    pub index_buffer: u32,
     pub vertex_array: VertexArrayObject,
 }
 
@@ -115,8 +147,8 @@ impl MeshBuffers {
         }
 
         Ok(MeshBuffers {
-            vertex_buffer: BufferObject(buffers[0]),
-            index_buffer: BufferObject(buffers[1]),
+            vertex_buffer: buffers[0],
+            index_buffer: buffers[1],
             vertex_array: VertexArrayObject(vao),
         })
     }
@@ -126,8 +158,8 @@ impl MeshBuffers {
         use std::mem::size_of;
         unsafe {
             gl::BindVertexArray(self.vertex_array.id());
-            gl::BindBuffer(gl::ARRAY_BUFFER, self.vertex_buffer.id());
-            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, self.index_buffer.id());
+            gl::BindBuffer(gl::ARRAY_BUFFER, self.vertex_buffer);
+            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, self.index_buffer);
 
             gl::BufferData(
                 gl::ARRAY_BUFFER,
@@ -180,11 +212,43 @@ impl MeshBuffers {
 
 impl Drop for MeshBuffers {
     fn drop(&mut self) {
-        let mut buff_objs = [self.index_buffer.0, self.vertex_buffer.0];
+        let mut buff_objs = [self.index_buffer, self.vertex_buffer];
         let mut vao = self.vertex_array.0;
         unsafe {
             gl::DeleteBuffers(2, buff_objs.as_mut_ptr());
             gl::DeleteVertexArrays(1, &mut vao);
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct MaterialUbo {
+    ubo: SingleBuffer,
+}
+
+const MATERIAL_UBO_SIZE: usize = 48;
+
+impl MaterialUbo {
+    pub fn new() -> Result<Self, ObjectError> {
+        use std::ptr;
+        let ubo = SingleBuffer::new()?;
+        unsafe {
+            ubo.buffer().bind(gl::UNIFORM_BUFFER);
+            let id = ubo.0;
+            gl::BufferData(gl::UNIFORM_BUFFER, MATERIAL_UBO_SIZE as isize, ptr::null(), gl::STATIC_DRAW);
+        }
+        Ok(MaterialUbo { ubo })
+    }
+
+    #[inline]
+    pub fn buffer(&self) -> BufferObject {
+        self.ubo.buffer()
+    }
+
+    pub fn bind_to_material<T>(&self, material: &renderer::material::Material<T>) {
+        unsafe {
+            self.buffer().bind(gl::UNIFORM_BUFFER);
+
         }
     }
 }
