@@ -93,9 +93,57 @@ pub mod base {
         roughness_factor: 0.3,
 
         emissive_factor: Vec3 {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        },
+        albedo_map: None,
+        metallic_map: None,
+        roughness_map: None,
+        emissive_map: None,
+        normal_map: None,
+        occlusion_map: None,
+    };
+    pub const PLASTIC_WHITE: UntexturedMat = Material {
+        albedo_factor: Vec4 {
             x: 1.0,
             y: 1.0,
             z: 1.0,
+            w: 1.0,
+        },
+
+        metallic_factor: 0.0,
+
+        roughness_factor: 0.2,
+
+        emissive_factor: Vec3 {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        },
+        albedo_map: None,
+        metallic_map: None,
+        roughness_map: None,
+        emissive_map: None,
+        normal_map: None,
+        occlusion_map: None,
+    };
+    pub const PLASTIC_RED: UntexturedMat = Material {
+        albedo_factor: Vec4 {
+            x: 0.4,
+            y: 0.1,
+            z: 0.1,
+            w: 1.0,
+        },
+
+        metallic_factor: 0.0,
+
+        roughness_factor: 0.2,
+
+        emissive_factor: Vec3 {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
         },
         albedo_map: None,
         metallic_map: None,

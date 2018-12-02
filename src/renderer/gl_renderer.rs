@@ -6,12 +6,19 @@ use game;
 use gl;
 pub use renderer_common::*;
 use sdl2::video::Window;
-use std::cell::{Cell, Ref, RefCell};
-use std::time::Instant;
+use std::{
+    cell::{Cell, Ref, RefCell},
+    collections::HashMap,
+    path::Path,
+    rc::Rc,
+    time::Instant,
+};
+
+use super::objects::*;
 
 #[derive(Fail, Debug)]
 pub enum RendererError {
-    #[fail(display = "Renderer lifecycle failed: {}", reason)]
+    #[fail(display = "RenderRc lifecycle failed: {}", reason)]
     Lifecycle { reason: String },
     #[fail(display = "Failed to construct Geometry: {}", reason)]
     GeometryFailure { reason: String },
@@ -334,44 +341,26 @@ mod test {
     //    #[test]
 }
 
-fn create_scene_shaders() -> Result<Program, ShaderError> {
-    use renderer::ShaderError;
-    use renderer::*;
-    use std::fs::File;
-    use std::io::Read;
+fn program_from_sources<P: AsRef<Path> + ::std::fmt::Debug>(
+    vs_path: P,
+    fs_path: P,
+) -> Result<Program, ShaderError> {
     let header: &'static str = "#version 410\n";
-    let mut vs_source = String::new();
-    let mut fs_source = String::new();
+    use std::fs;
+    let vs_source = fs::read_to_string(&vs_path).map_err(|e| {
+        ShaderError::CompileFailure {
+            info_log: format!("Error opening frag shader source {}", e),
+        }
+    })?;
 
-    {
-        let mut vsf =
-            File::open("./assets/shaders/brdf.vert").map_err(|e| {
-                ShaderError::CompileFailure {
-                    info_log: format!("Error opening source {}", e),
-                }
-            })?;
-        let mut fsf =
-            File::open("./assets/shaders/brdf.frag").map_err(|e| {
-                ShaderError::CompileFailure {
-                    info_log: format!("Error opening source {}", e),
-                }
-            })?;
-
-        vsf.read_to_string(&mut vs_source).map_err(|_| {
-            ShaderError::CompileFailure {
-                info_log: "could not read vert shader".to_string(),
-            }
-        })?;
-        fsf.read_to_string(&mut fs_source).map_err(|_| {
-            ShaderError::CompileFailure {
-                info_log: "could not read vert shader".to_string(),
-            }
-        })?;
-    }
+    let fs_source = fs::read_to_string(&fs_path).map_err(|e| {
+        ShaderError::CompileFailure {
+            info_log: format!("Error opening vertex shader source {}", e),
+        }
+    })?;
 
     let vs =
         unsafe { compile_source(&[header, &vs_source], gl::VERTEX_SHADER) }?;
-
     let fs =
         unsafe { compile_source(&[header, &fs_source], gl::FRAGMENT_SHADER) }?;
 
@@ -379,6 +368,22 @@ fn create_scene_shaders() -> Result<Program, ShaderError> {
         .frag_shader(fs.0)
         .vert_shader(vs.0)
         .build_program()
+}
+
+fn create_scene_shaders() -> Result<(Program, Program), ShaderError> {
+    use renderer::ShaderError;
+    use renderer::*;
+
+    let scene_program = program_from_sources(
+        "./assets/shaders/brdf.vert",
+        "./assets/shaders/brdf.frag",
+    )?;
+
+    let envmap_program = program_from_sources(
+        "./assets/shaders/envmap.vert",
+        "./assets/shaders/envmap.frag",
+    )?;
+    Ok((scene_program, envmap_program))
 }
 
 /*
@@ -406,6 +411,48 @@ impl Default for SceneUniforms {
     }
 }
 
+pub struct EnvmapUniforms {
+    pub modelview: i32,
+    pub projection: i32,
+    pub normal_matrix: i32,
+}
+impl Default for EnvmapUniforms {
+    fn default() -> Self {
+        EnvmapUniforms {
+            modelview: -1,
+            projection: -1,
+            normal_matrix: -1,
+        }
+    }
+}
+
+struct GlMesh {
+    mesh: Mesh,
+    buffers: MeshBuffers,
+}
+
+impl GlMesh {
+    fn skybox_mesh() -> Result<Self, failure::Error> {
+        use genmesh::*;
+        use renderer::Vertex;
+        let cube = genmesh::generators::Cube::new();
+        let vertices: Vec<Vertex> = cube
+            .vertex(|v| Vertex {
+                ..Vertex::default()
+            })
+            .triangulate()
+            .vertices()
+            .collect();
+
+        let indices: Vec<u32> = (0..vertices.len() as u32).collect();
+        let mesh = Mesh { vertices, indices };
+        let buffers = MeshBuffers::new()?;
+        buffers.bind_mesh(&mesh)?;
+
+        Ok(GlMesh { mesh, buffers })
+    }
+}
+
 struct Materials {
     base_material: material::UntexturedMat,
     base_material_ubo: super::objects::MaterialUbo,
@@ -416,9 +463,13 @@ pub struct GlRenderer {
     camera: RefCell<Camera>,
     scene_program: Program,
     scene_uniforms: SceneUniforms,
+    envmap_program: Program,
+    envmap_uniforms: EnvmapUniforms,
     sample_mesh: Mesh,
-    buffers: super::objects::MeshBuffers,
+    env_cube: GlMesh,
+    buffers: MeshBuffers,
     materials: Materials,
+    textures: HashMap<String, Rc<TextureObjects>>,
 
     recompile_flag: Cell<Option<Instant>>,
 }
@@ -436,9 +487,8 @@ impl GlRenderer {
             near: 0.1,
             far: 1000.0,
         };
-        let scene_program =
+        let (scene_program, envmap_program) =
             create_scene_shaders().map_err(RendererError::ShaderError)?;
-        let scene_uniforms = SceneUniforms::default();
 
         let buffers =
             MeshBuffers::new().map_err(|_| RendererError::Lifecycle {
@@ -456,15 +506,25 @@ impl GlRenderer {
             }
         })?;
 
+        let env_cube =
+            GlMesh::skybox_mesh().map_err(|_| RendererError::Lifecycle {
+                reason: format!("could create skybox mesh"),
+            })?;
+
         let mut renderer = GlRenderer {
             scene_program,
-            scene_uniforms,
+            scene_uniforms: SceneUniforms::default(),
+            envmap_program,
+            envmap_uniforms: EnvmapUniforms::default(),
+            env_cube,
             sample_mesh: mesh,
             buffers,
             materials,
+            textures: HashMap::new(),
             camera: RefCell::new(Camera::new(perspective)),
             recompile_flag: Cell::new(None),
         };
+
         if let Err(e) = renderer.initialize() {
             return Err(RendererError::Lifecycle {
                 reason: format!("could not initialize renderer: {:?}", e),
@@ -481,11 +541,13 @@ impl GlRenderer {
     }
 
     fn initialize(&mut self) -> Result<(), failure::Error> {
-        self.bind_uniforms();
+        self.get_uniform_locations();
         self.materials.base_material_ubo.bind_to_material(
             &self.scene_program,
             &self.materials.base_material,
         );
+
+        // load environment map
 
         Ok(())
     }
@@ -493,7 +555,8 @@ impl GlRenderer {
     fn make_materials() -> Result<Materials, ::failure::Error> {
         use super::objects::*;
         use failure::Error;
-        let base_material: material::UntexturedMat = material::base::GOLD;
+        let base_material: material::UntexturedMat =
+            material::base::PLASTIC_RED;
 
         let base_material_ubo = MaterialUbo::new().map_err(&Error::from)?;
         Ok(Materials {
@@ -502,7 +565,7 @@ impl GlRenderer {
         })
     }
 
-    fn bind_uniforms(&mut self) {
+    fn get_uniform_locations(&mut self) {
         self.scene_uniforms.modelview = self
             .scene_program
             .uniform_location("modelview")
@@ -520,6 +583,19 @@ impl GlRenderer {
             .scene_program
             .uniform_location("light_positions")
             .unwrap_or(-1);
+
+        self.envmap_uniforms.modelview = self
+            .envmap_program
+            .uniform_location("modelview")
+            .unwrap_or(-1);
+        self.envmap_uniforms.projection = self
+            .envmap_program
+            .uniform_location("projection")
+            .unwrap_or(-1);
+        self.envmap_uniforms.normal_matrix = self
+            .envmap_program
+            .uniform_location("normal_matrix")
+            .unwrap_or(-1);
     }
 
     pub fn rebuild_program(&mut self) {
@@ -528,8 +604,8 @@ impl GlRenderer {
             self.scene_program, self.scene_uniforms
         );
 
-        let program = match create_scene_shaders() {
-            Ok(mut program) => program,
+        let (scene, skybox) = match create_scene_shaders() {
+            Ok(mut programs) => programs,
             Err(e) => {
                 eprintln!("could not rebuild shaders: {}", e);
                 return;
@@ -541,15 +617,16 @@ impl GlRenderer {
             &self.materials.base_material,
         );
 
-        self.scene_program = program;
+        self.scene_program = scene;
+        self.envmap_program = skybox;
         self.scene_program.use_program();
 
-        self.bind_uniforms();
-
+        self.get_uniform_locations();
         self.scene_program.bind_uniform(
             self.scene_uniforms.projection,
             &self.camera.borrow().projection,
         );
+
         println!(
             "build new shader program {:#?} with uniforms {:#?}",
             self.scene_program, self.scene_uniforms
@@ -590,10 +667,12 @@ impl Renderer for GlRenderer {
         self.camera.borrow_mut().on_resize(size);
         let (width, height) = size;
         self.scene_program.use_program();
-        self.scene_program.bind_uniform(
-            self.scene_uniforms.projection,
-            &self.camera.borrow().projection,
-        );
+        let projection = &self.camera.borrow().projection;
+
+        self.scene_program
+            .bind_uniform(self.scene_uniforms.projection, projection);
+        self.envmap_program
+            .bind_uniform(self.envmap_uniforms.projection, projection);
 
         unsafe {
             gl::Viewport(0, 0, width as i32, height as i32);
@@ -648,6 +727,7 @@ impl RenderScene<game::EntityWorld> for GlRenderer {
 
         let buffers = &self.buffers;
         let mesh = &self.sample_mesh;
+
         program.use_program();
         unsafe {
             let light_pos_ptr = xformed_light_positions.as_ptr();
@@ -676,14 +756,32 @@ impl RenderScene<game::EntityWorld> for GlRenderer {
             let normal_matrix = modelview.invert().unwrap().transpose();
             program.bind_uniform(modelview_id, &modelview);
             program.bind_uniform(normal_matrix_id, &normal_matrix);
+            // unsafe {
+            //     gl::BindVertexArray(buffers.vertex_array.id());
+            //     gl::DrawElements(
+            //         gl::TRIANGLES,
+            //         mesh.indices.len() as i32,
+            //         gl::UNSIGNED_INT,
+            //         ptr::null(),
+            //     );
+            // }
+        }
+
+        // draw skybox
+        {
+            self.envmap_program.use_program();
+            let modelview = Mat4::from(Mat3::from(cam_view.clone()));
+            self.envmap_program
+                .bind_uniform(self.envmap_uniforms.modelview, &modelview);
             unsafe {
-                gl::BindVertexArray(buffers.vertex_array.id());
+                gl::Disable(gl::CULL_FACE);
+                gl::BindVertexArray(self.env_cube.buffers.vertex_array.id());
                 gl::DrawElements(
                     gl::TRIANGLES,
                     mesh.indices.len() as i32,
                     gl::UNSIGNED_INT,
                     ptr::null(),
-                );
+                )
             }
         }
     }

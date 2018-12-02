@@ -4,7 +4,7 @@ pub struct PlatformConfig {
     pub window_title: String,
     pub antialiasing: AntiAliasing,
     pub allow_highdpi: bool,
-    pub fullscreen: bool
+    pub fullscreen: bool,
 }
 
 impl Default for PlatformConfig {
@@ -14,7 +14,7 @@ impl Default for PlatformConfig {
             window_title: "Rust OpenGL demo".to_owned(),
             antialiasing: AntiAliasing::None,
             allow_highdpi: true,
-            fullscreen: false
+            fullscreen: false,
         }
     }
 }

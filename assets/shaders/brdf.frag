@@ -13,7 +13,6 @@ in vec3 frag_normal;
 in vec3 frag_eye_normal;
 
 uniform sampler2D u_texture;
-uniform mat4 modelview;
 
 uniform vec3 ambient_factor = vec3(1.0, 1.0, 1.0) * 0.01;
 

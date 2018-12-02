@@ -5,6 +5,7 @@ extern crate core;
 extern crate rand;
 #[macro_use]
 extern crate failure;
+extern crate genmesh;
 
 #[macro_use]
 extern crate bitflags;

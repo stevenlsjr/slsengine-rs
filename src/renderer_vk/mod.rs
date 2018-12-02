@@ -47,7 +47,10 @@ pub enum VkContextError {
     #[fail(display = "could not create device")]
     Device,
 
-    #[fail(display = "Could not create vulkan rendering context: {:#?}", _0)]
+    #[fail(
+        display = "Could not create vulkan rendering context: {:#?}",
+        _0
+    )]
     Other(String),
 }
 
@@ -166,8 +169,8 @@ pub fn create_device<W>(
             queue_families.graphics_family,
             queue_families.present_family,
         ]
-        .iter()
-        .cloned(),
+            .iter()
+            .cloned(),
     );
 
     let default_queue_priority = 1.0;
