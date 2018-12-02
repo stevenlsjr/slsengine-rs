@@ -21,6 +21,11 @@ extern crate vulkano;
 
 extern crate gltf;
 
+#[macro_use]
+extern crate serde_derive;
+extern crate serde;
+
+pub mod config;
 pub mod game;
 pub mod renderer;
 pub mod renderer_common;

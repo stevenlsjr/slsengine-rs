@@ -139,11 +139,8 @@ impl EntityWorld {
                 let mut xform = TransformComponent {
                     ..TransformComponent::default()
                 };
-                let rotation: Euler<Rad<f32>> = Euler::new(
-                    Rad(PI / 2.0),
-                    Rad::zero(),
-                    Rad::zero(),
-                );
+                let rotation: Euler<Rad<f32>> =
+                    Euler::new(Rad(PI / 2.0), Rad::zero(), Rad::zero());
                 xform.transform.disp = vec3(
                     (i - 2) as f32 * spacing,
                     (j - 2) as f32 * spacing,

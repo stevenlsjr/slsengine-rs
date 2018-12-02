@@ -494,7 +494,7 @@ impl GlRenderer {
         use super::objects::*;
         use failure::Error;
         let base_material: material::UntexturedMat = material::base::GOLD;
-        
+
         let base_material_ubo = MaterialUbo::new().map_err(&Error::from)?;
         Ok(Materials {
             base_material,

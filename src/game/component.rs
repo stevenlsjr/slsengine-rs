@@ -15,7 +15,6 @@ bitflags! {
     }
 }
 
-
 #[derive(Debug, Clone)]
 pub struct TransformComponent {
     pub parent: Option<EntityId>,

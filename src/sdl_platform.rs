@@ -10,6 +10,8 @@ use std::fmt;
 use std::ptr;
 use std::rc::Rc;
 
+use config::PlatformConfig;
+
 pub enum PlatformError {}
 
 ///
@@ -83,8 +85,7 @@ pub trait PlatformBuilderHooks {
 ///
 /// Builder patter for Platform
 pub struct PlatformBuilder {
-    pub window_size: (u32, u32),
-    pub window_title: String,
+    config: PlatformConfig,
     opengl_version: Option<(u32, u32)>,
     render_backend: RenderBackend,
 }
@@ -92,9 +93,8 @@ pub struct PlatformBuilder {
 impl PlatformBuilder {
     fn new() -> PlatformBuilder {
         PlatformBuilder {
-            window_size: (640, 480),
-            window_title: "Window".to_string(),
             opengl_version: None,
+            config: PlatformConfig::default(),
             render_backend: RenderBackend::Undefined,
         }
     }
@@ -113,19 +113,14 @@ impl PlatformBuilder {
         self.render_backend = RenderBackend::OpenGL;
         self
     }
-
-    pub fn with_window_size(
-        &mut self,
-        width: u32,
-        height: u32,
-    ) -> &mut PlatformBuilder {
-        self.window_size = (width, height);
+    #[inline]
+    pub fn with_config(&mut self, config: PlatformConfig) -> &mut Self {
+        self.config = config;
         self
     }
-
-    pub fn with_window_title(&mut self, title: &str) -> &mut PlatformBuilder {
-        self.window_title = title.to_string();
-        self
+    #[inline]
+    pub fn config(&self) -> &PlatformConfig {
+        &self.config
     }
 
     pub fn build<H: PlatformBuilderHooks>(
@@ -162,14 +157,18 @@ pub fn make_window_builder(
     platform_builder: &PlatformBuilder,
     video_subsystem: &VideoSubsystem,
 ) -> WindowBuilder {
-    let title = &platform_builder.window_title;
-    let (width, height) = platform_builder.window_size;
-    
-    let  mut wb = video_subsystem.window(title, width, height);
+    let config = &platform_builder.config;
+    let title = &config.window_title;
+    let (width, height) = config.window_size;
 
-    if cfg!(target_os="macos") {
-        println!("enabling highdpi display");
+    let mut wb = video_subsystem.window(title, width, height);
+
+    if config.allow_highdpi {
         wb.allow_highdpi();
+    }
+
+    if config.fullscreen {
+        wb.fullscreen();
     }
     wb
 }
@@ -196,6 +195,7 @@ impl PlatformBuilderHooks for GlPlatformBuilder {
         platform_builder: &PlatformBuilder,
         video_subsystem: &VideoSubsystem,
     ) -> PlatformResult<Window> {
+        use config::AntiAliasing;
         use sdl2::video::GLProfile;
         let mut wb = make_window_builder(platform_builder, video_subsystem);
 
@@ -203,6 +203,11 @@ impl PlatformBuilderHooks for GlPlatformBuilder {
 
         gl_attr.set_context_profile(GLProfile::Core);
         gl_attr.set_context_version(4, 1);
+        let n_samples = platform_builder.config.antialiasing.n_samples();
+        if n_samples > 0 {
+            gl_attr.set_multisample_buffers(1);
+            gl_attr.set_multisample_samples(n_samples as u8);
+        }
         #[cfg(feature = "gl-debug-output")]
         {
             gl_attr.set_context_flags().debug().set();
@@ -233,6 +238,12 @@ extern "system" fn gl_debug_output(
 ) {
     use std::ffi::CStr;
     let message = unsafe { CStr::from_ptr(_message) };
+    if severity != gl::DEBUG_SEVERITY_LOW
+        || severity != gl::DEBUG_SEVERITY_MEDIUM
+        || severity != gl::DEBUG_SEVERITY_HIGH
+    {
+        return;
+    }
     eprintln!("------------------------------");
     eprintln!(
         "Error {} (0x{:x}):",

@@ -2,8 +2,8 @@ use cgmath::*;
 use math::*;
 // use sdl2::video::Window;
 use std::{cell, time::Duration};
-pub mod model;
 pub mod material;
+pub mod model;
 
 /// A cffi and GPU-friendly vertex representaion
 #[derive(Debug, Copy, Clone)]

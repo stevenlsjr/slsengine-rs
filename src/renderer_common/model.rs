@@ -10,7 +10,6 @@ use std::collections::HashMap;
 
 use failure;
 
-
 #[derive(Clone, PartialEq, Debug)]
 pub struct MeshData {
     pub mesh: Mesh,
@@ -108,7 +107,8 @@ fn make_mesh(
             .map(|pos| SlsVertex {
                 position: pos.clone(),
                 ..SlsVertex::default()
-            }).collect();
+            })
+            .collect();
 
         if let Some(normals) = reader.read_normals() {
             for (i, normal) in normals.enumerate() {

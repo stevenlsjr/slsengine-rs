@@ -32,7 +32,7 @@ impl FpsCameraComponent {
             yaw,
             pitch,
             speed: 9.0,
-            mouse_sensitivity: 1.0,
+            mouse_sensitivity: 0.1,
             // other fields given default values
             transform: Mat4::identity(),
             front: zero.clone(),
@@ -53,7 +53,8 @@ impl FpsCameraComponent {
             yaw.cos() * pitch.cos(),
             pitch.sin(),
             yaw.sin() * pitch.cos(),
-        ).normalize();
+        )
+        .normalize();
         self.front = front;
         self.right = front.cross(self.world_up).normalize();
         self.up = self.right.cross(self.front).normalize();

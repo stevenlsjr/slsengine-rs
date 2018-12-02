@@ -79,7 +79,7 @@ pub struct Untextured;
 pub type UntexturedMat = Material<Untextured>;
 pub mod base {
     use super::*;
-   
+
     pub const GOLD: UntexturedMat = Material {
         albedo_factor: Vec4 {
             x: 1.0,
