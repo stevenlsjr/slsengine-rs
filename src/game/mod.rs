@@ -1,7 +1,12 @@
 use super::math::*;
 use cgmath::*;
 use sdl2::{keyboard::KeyboardState, mouse::MouseState, EventPump};
+use std::collections::HashMap;
 use std::time::{Duration, Instant};
+
+pub mod camera;
+pub mod component;
+pub use self::camera::*;
 
 /*--------------------------------------
  * Game timer: handles delta time, time since start, etc
@@ -72,115 +77,6 @@ impl Timer {
  * Scene
  */
 
-///
-/// Constructs the camera view matrix for the scene.
-#[derive(Debug)]
-pub struct FpsCameraComponent {
-    pos: Point3<f32>,
-    front: Vec3,
-    up: Vec3,
-    right: Vec3,
-    world_up: Vec3,
-    yaw: Rad<f32>,
-    pitch: Rad<f32>,
-    speed: f32,
-    mouse_sensitivity: f32,
-    transform: Mat4,
-}
-
-impl FpsCameraComponent {
-    pub fn new(
-        position: Point3<f32>,
-        up: Vec3,
-        yaw: Rad<f32>,
-        pitch: Rad<f32>,
-    ) -> Self {
-        use cgmath::{prelude::*, *};
-        let world_up = up.clone();
-        let zero = vec3(0.0, 0.0, 0.0);
-        let mut cmp = FpsCameraComponent {
-            pos: position,
-            up,
-            world_up,
-            yaw,
-            pitch,
-            speed: 9.0,
-            mouse_sensitivity: 1.0,
-            // other fields given default values
-            transform: Mat4::identity(),
-            front: zero.clone(),
-            right: zero.clone(),
-        };
-
-        cmp.update_vectors();
-        cmp.build_transform();
-
-        cmp
-    }
-
-    /// Set front, up, and right vectors to appropriate values
-    fn update_vectors(&mut self) {
-        let Rad(yaw) = self.yaw;
-        let Rad(pitch) = self.pitch;
-        let front = vec3(
-            yaw.cos() * pitch.cos(),
-            pitch.sin(),
-            yaw.sin() * pitch.cos(),
-        )
-        .normalize();
-        self.front = front;
-        self.right = front.cross(self.world_up).normalize();
-        self.up = self.right.cross(self.front).normalize();
-    }
-
-    fn build_transform(&mut self) {
-        use cgmath::*;
-        self.transform = Mat4::look_at_dir(self.pos, self.front, self.up);
-    }
-
-    pub fn transform(&self) -> &Mat4 {
-        &self.transform
-    }
-
-    pub fn input_move(
-        &mut self,
-        wasd_axis: Vec2,
-        dt: f64,
-        _input: &InputSources,
-    ) {
-        use cgmath::prelude::*;
-        let move_direction =
-            (wasd_axis.x * self.right + wasd_axis.y * self.front).normalize();
-        let delta_position = move_direction * self.speed * dt as f32;
-        self.pos += delta_position;
-        self.update_vectors();
-        self.build_transform();
-    }
-
-    pub fn mouselook(&mut self, mouse_offset: Vec2, dt: f64) {
-        use cgmath::*;
-        let mut mouse_offset = mouse_offset;
-        mouse_offset *= self.mouse_sensitivity * dt as f32;
-        self.yaw += Rad(mouse_offset.x);
-        self.pitch += Rad(mouse_offset.y);
-        self.pitch = if self.pitch < Deg(-89.0).into() {
-            Deg(-89.0).into()
-        } else if self.pitch > Deg(89.0).into() {
-            Deg(89.0).into()
-        } else {
-            self.pitch
-        };
-        self.update_vectors();
-        self.build_transform();
-    }
-}
-
-pub struct EntityWorld {
-    pub main_camera: FpsCameraComponent,
-    pub sphere_positions: Vec<Point3<f32>>,
-    pub input_state: Option<InputState>,
-}
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct InputState {
     pub last_mousepos: Point2<f32>,
@@ -201,6 +97,13 @@ impl<'a> InputSources<'a> {
     }
 }
 
+#[derive(Debug)]
+pub struct EntityWorld {
+    pub input_state: Option<InputState>,
+    pub main_camera: FpsCameraComponent,
+    pub components: component::ComponentManager,
+}
+
 impl EntityWorld {
     pub fn new() -> Self {
         use rand::random;
@@ -212,22 +115,44 @@ impl EntityWorld {
             Rad(0.0),
         );
 
-        let mut sphere_positions = Vec::with_capacity(11);
-        sphere_positions.push(Point3::new(0.0, 0.0, 0.0));
-        for _i in 0..10 {
-            let v = 50.0
-                * (Point3::new(
-                    random::<f32>(),
-                    random::<f32>(),
-                    random::<f32>(),
-                ) - vec3(0.5, 0.5, 0.5));
-            sphere_positions.push(v);
-        }
-
-        EntityWorld {
+        let mut world = EntityWorld {
             main_camera,
-            sphere_positions,
             input_state: None,
+            components: component::ComponentManager::new(),
+        };
+        world.setup_game();
+        world
+    }
+
+    fn setup_game(&mut self) {
+        use self::component::{ComponentMask, TransformComponent};
+        let spacing = 3.0;
+        /// setup grid of drawable entities
+        for j in 0..4 {
+            for i in 0..4 {
+                use std::f32::consts::PI;
+                let eid = self.components.alloc_entity();
+                let mask =
+                    ComponentMask::TRANSFORM | ComponentMask::STATIC_MESH;
+                self.components.masks[eid.0] =
+                    self.components.masks[eid.0] | mask;
+                let mut xform = TransformComponent {
+                    ..TransformComponent::default()
+                };
+                let rotation: Euler<Rad<f32>> = Euler::new(
+                    Rad(PI / 2.0),
+                    Rad::zero(),
+                    Rad::zero(),
+                );
+                xform.transform.disp = vec3(
+                    (i - 2) as f32 * spacing,
+                    (j - 2) as f32 * spacing,
+                    -3.0,
+                );
+                xform.transform.rot = rotation.into();
+
+                self.components.transforms.insert(eid, xform);
+            }
         }
     }
 

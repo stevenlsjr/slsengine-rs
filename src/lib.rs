@@ -6,6 +6,8 @@ extern crate rand;
 #[macro_use]
 extern crate failure;
 
+#[macro_use]
+extern crate bitflags;
 extern crate gl;
 
 extern crate image;
@@ -57,7 +59,7 @@ impl MainLoopState {
 
     pub fn handle_events<R: renderer::Renderer>(
         &mut self,
-        _window: &Window,
+        window: &Window,
         event_pump: &RefCell<sdl2::EventPump>,
         renderer: &R,
         world: &mut game::EntityWorld,
@@ -84,7 +86,8 @@ impl MainLoopState {
                 }
                 Event::Window { win_event, .. } => match win_event {
                     WindowEvent::Resized(width, height) => {
-                        renderer.on_resize((width as _, height as _));
+                        let size = window.drawable_size();
+                        renderer.on_resize(size);
                     }
                     _ => {}
                 },

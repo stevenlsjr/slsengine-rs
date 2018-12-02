@@ -1,4 +1,4 @@
-#define N_LIGHTS 1
+#define N_LIGHTS 4
 
 const float PI = 3.14159265359;
 
@@ -19,13 +19,16 @@ uniform vec3 ambient_factor = vec3(1.0, 1.0, 1.0) * 0.01;
 
 uniform vec3 light_positions[N_LIGHTS];
 
-const vec3 light_colors[N_LIGHTS] = vec3[](vec3(23.47, 21.31, 20.79));
+const vec3 light_colors[N_LIGHTS] = vec3[](vec3(23.47, 21.31, 20.79) / 5.0,
+                                           vec3(23.47, 21.31, 20.79) / 5.0,
+                                           vec3(23.47, 21.31, 20.79) / 5.0,
+                                           vec3(23.47, 21.31, 20.79) / 5.0);
 
-const float light_constants[N_LIGHTS] = float[](1.0);
+const float light_constants[N_LIGHTS] = float[](1.0, 1.0, 1.0, 1.0);
 
-const float light_linears[N_LIGHTS] = float[](0.014);
+const float light_linears[N_LIGHTS] = float[](0.014, 0.014, 0.014, 0.014);
 
-const float light_quadratics[N_LIGHTS] = float[](0.01);
+const float light_quadratics[N_LIGHTS] = float[](0.01, 0.01, 0.01, 0.01);
 
 layout(std140) uniform Material
 {
@@ -95,6 +98,7 @@ get_normal()
 void
 main()
 {
+  vec4 albedo_texel = texture(u_texture, frag_uv);
   vec3 N = get_normal();
   vec3 V = normalize(CAM_POS - frag_pos);
   float roughness = roughness_factor;
@@ -108,7 +112,7 @@ main()
 
   vec3 L_outgoing = vec3(0);
 
-  for (int i = 0; i < N_LIGHTS; ++i) {
+  for (int i = 0; i < 4; ++i) {
 
     vec3 light_position = light_positions[i];
     vec3 light_dir = normalize(light_position - frag_pos);
@@ -127,6 +131,7 @@ main()
 
       vec3 specular;
 
+      // vec3 numerator = normal_distribution * geometry * fresnel;
       vec3 numerator = normal_distribution * geometry * fresnel;
       float denominator =
         4.0 * max(dot(N, V), 0.0) * max(dot(N, light_dir), 0.0);

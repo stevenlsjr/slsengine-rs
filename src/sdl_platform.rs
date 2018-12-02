@@ -164,7 +164,14 @@ pub fn make_window_builder(
 ) -> WindowBuilder {
     let title = &platform_builder.window_title;
     let (width, height) = platform_builder.window_size;
-    video_subsystem.window(title, width, height)
+    
+    let  mut wb = video_subsystem.window(title, width, height);
+
+    if cfg!(target_os="macos") {
+        println!("enabling highdpi display");
+        wb.allow_highdpi();
+    }
+    wb
 }
 
 pub struct GlPlatformBuilder {

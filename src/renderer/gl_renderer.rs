@@ -2,13 +2,12 @@ use cgmath::prelude::*;
 use cgmath::*;
 use core;
 use failure;
+use game;
 use gl;
 pub use renderer_common::*;
 use sdl2::video::Window;
 use std::cell::{Cell, Ref, RefCell};
 use std::time::Instant;
-use ::game;
-
 
 #[derive(Fail, Debug)]
 pub enum RendererError {
@@ -345,16 +344,18 @@ fn create_scene_shaders() -> Result<Program, ShaderError> {
     let mut fs_source = String::new();
 
     {
-        let mut vsf = File::open("./assets/shaders/brdf.vert").map_err(|e| {
-            ShaderError::CompileFailure {
-                info_log: format!("Error opening source {}", e),
-            }
-        })?;
-        let mut fsf = File::open("./assets/shaders/brdf.frag").map_err(|e| {
-            ShaderError::CompileFailure {
-                info_log: format!("Error opening source {}", e),
-            }
-        })?;
+        let mut vsf =
+            File::open("./assets/shaders/brdf.vert").map_err(|e| {
+                ShaderError::CompileFailure {
+                    info_log: format!("Error opening source {}", e),
+                }
+            })?;
+        let mut fsf =
+            File::open("./assets/shaders/brdf.frag").map_err(|e| {
+                ShaderError::CompileFailure {
+                    info_log: format!("Error opening source {}", e),
+                }
+            })?;
 
         vsf.read_to_string(&mut vs_source).map_err(|_| {
             ShaderError::CompileFailure {
@@ -423,19 +424,7 @@ pub struct GlRenderer {
 }
 
 impl GlRenderer {
-    pub fn projection(&self) -> Matrix4<f32> {
-        self.camera.borrow().projection
-    }
-
-    fn initialize(&mut self) -> Result<(), failure::Error> {
-        self.bind_uniforms();
-        self.materials.base_material_ubo.bind_to_material(
-            &self.scene_program,
-            &self.materials.base_material,
-        );
-
-        Ok(())
-    }
+    
 
     pub fn new(
         window: &Window,
@@ -489,14 +478,28 @@ impl GlRenderer {
         Ok(renderer)
     }
 
+    pub fn projection(&self) -> Matrix4<f32> {
+        self.camera.borrow().projection
+    }
+
+    fn initialize(&mut self) -> Result<(), failure::Error> {
+        self.bind_uniforms();
+        self.materials.base_material_ubo.bind_to_material(
+            &self.scene_program,
+            &self.materials.base_material,
+        );
+
+        Ok(())
+    }
+
     fn get_materials() -> Result<Materials, ::failure::Error> {
         use super::objects::*;
         use failure::Error;
         let base_material: material::UntexturedMat =
             material::UntexturedMat::new(
-                vec4(1.0, 1.0, 1.0, 1.0),
-                0.0,
-                1.0,
+                vec4(1.0, 0.766, 0.336, 1.0),
+                0.1,
+                0.8,
                 vec3(0.0, 0.0, 0.0),
             );
         let base_material_ubo = MaterialUbo::new().map_err(&Error::from)?;
@@ -549,7 +552,7 @@ impl GlRenderer {
         self.scene_program.use_program();
 
         self.bind_uniforms();
-        
+
         self.scene_program.bind_uniform(
             self.scene_uniforms.projection,
             &self.camera.borrow().projection,
@@ -591,6 +594,7 @@ impl Renderer for GlRenderer {
     }
 
     fn on_resize(&self, size: (u32, u32)) {
+
         self.camera.borrow_mut().on_resize(size);
         let (width, height) = size;
         self.scene_program.use_program();
@@ -633,7 +637,12 @@ impl RenderScene<game::EntityWorld> for GlRenderer {
         use math::*;
         let program = self.scene_program();
         let cam_view = scene.main_camera.transform();
-        let light_positions: &[Vec3] = &[vec3(0.0, 1.0, -1.0)];
+        let light_positions: &[Vec3] = &[
+            vec3(10.0, 10.0, 10.0),
+            vec3(10.0, -10.0, 10.0),
+            vec3(-10.0, -10.0, 10.0),
+            vec3(-10.0, 10.0, 10.0),
+        ];
         let xformed_light_positions: Vec<Vec3> = light_positions
             .iter()
             .map(|v| (cam_view * v.extend(1.0)).xyz())
@@ -650,11 +659,28 @@ impl RenderScene<game::EntityWorld> for GlRenderer {
         program.use_program();
         unsafe {
             let light_pos_ptr = xformed_light_positions.as_ptr();
-            gl::Uniform3fv(light_positions_id, 1, light_pos_ptr as *const _);
+            gl::Uniform3fv(light_positions_id, 4, light_pos_ptr as *const _);
         }
+        use game::{component::*, *};
 
-        for pos in &scene.sphere_positions {
-            let modelview = cam_view * Mat4::from_translation(pos.to_vec());
+        let mask = ComponentMask::LIVE_ENTITY
+            | ComponentMask::TRANSFORM
+            | ComponentMask::STATIC_MESH;
+
+        let entities: Vec<_> = scene
+            .components
+            .masks
+            .iter()
+            .enumerate()
+            .map(|(k, v)| (EntityId(k), v))
+            .filter(|(k, v)| v.contains(mask))
+            .collect();
+
+        for (id, mask) in entities {
+            let transform = scene.components.transforms.get(&id).unwrap();
+            let model_matrix = Mat4::from(transform.transform);
+
+            let modelview = cam_view * model_matrix;
             let normal_matrix = modelview.invert().unwrap().transpose();
             program.bind_uniform(modelview_id, &modelview);
             program.bind_uniform(normal_matrix_id, &normal_matrix);

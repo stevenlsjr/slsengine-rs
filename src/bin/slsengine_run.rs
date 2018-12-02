@@ -86,7 +86,7 @@ fn main() {
         window, event_pump, ..
     } = plt;
     let mut loop_state = MainLoopState::new();
-    let gltf_doc = gltf::Gltf::open("assets/stickman.glb")
+    let gltf_doc = gltf::Gltf::open("assets/models/DamagedHelmet.glb")
         .expect("could not load gltf model");
     let model = renderer::model::Model::from_gltf(&gltf_doc).unwrap();
 
