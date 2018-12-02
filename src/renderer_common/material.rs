@@ -30,6 +30,31 @@ impl<Tex> Material<Tex> {
             ..Material::default()
         }
     }
+    pub fn transform_textures<BTex, F>(&self, f: F) -> Material<BTex>
+    where
+        F: Fn(&Tex) -> BTex,
+    {
+        let f = &f;
+        let mut mat: Material<BTex> = Material::default();
+        mat.albedo_map = self.albedo_map.as_ref().map(f);
+        mat.metallic_map = self.metallic_map.as_ref().map(f);
+        mat.roughness_map = self.roughness_map.as_ref().map(f);
+        mat.emissive_map = self.emissive_map.as_ref().map(f);
+        mat.occlusion_map = self.occlusion_map.as_ref().map(f);
+        mat
+    }
+}
+
+#[test]
+fn test_transform_texture() {
+    let m = Material {
+        albedo_map: Some(1),
+        occlusion_map: None,
+        ..Material::default()
+    };
+    let m2 = m.transform_textures(|tex| tex * 2);
+    assert_eq!(m2.albedo_map, Some(2));
+    assert_eq!(m2.occlusion_map, None);
 }
 
 impl<Tex> Default for Material<Tex> {
@@ -49,7 +74,35 @@ impl<Tex> Default for Material<Tex> {
     }
 }
 
-
 pub struct Untextured;
 
 pub type UntexturedMat = Material<Untextured>;
+pub mod base {
+    use super::*;
+   
+    pub const GOLD: UntexturedMat = Material {
+        albedo_factor: Vec4 {
+            x: 1.0,
+            y: 0.766,
+            z: 0.336,
+            w: 1.0,
+        },
+
+        metallic_factor: 1.0,
+
+        roughness_factor: 0.3,
+
+        emissive_factor: Vec3 {
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+        },
+        albedo_map: None,
+        metallic_map: None,
+        roughness_map: None,
+        emissive_map: None,
+        normal_map: None,
+        occlusion_map: None,
+    };
+
+}

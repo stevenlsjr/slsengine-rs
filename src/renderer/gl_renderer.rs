@@ -424,8 +424,6 @@ pub struct GlRenderer {
 }
 
 impl GlRenderer {
-    
-
     pub fn new(
         window: &Window,
         mesh: Mesh,
@@ -452,7 +450,7 @@ impl GlRenderer {
                 reason: format!("could not bind buffers to mesh"),
             })?;
 
-        let materials = GlRenderer::get_materials().map_err(|_| {
+        let materials = GlRenderer::make_materials().map_err(|_| {
             RendererError::Lifecycle {
                 reason: format!("could create material_obo"),
             }
@@ -492,16 +490,11 @@ impl GlRenderer {
         Ok(())
     }
 
-    fn get_materials() -> Result<Materials, ::failure::Error> {
+    fn make_materials() -> Result<Materials, ::failure::Error> {
         use super::objects::*;
         use failure::Error;
-        let base_material: material::UntexturedMat =
-            material::UntexturedMat::new(
-                vec4(1.0, 0.766, 0.336, 1.0),
-                0.1,
-                0.8,
-                vec3(0.0, 0.0, 0.0),
-            );
+        let base_material: material::UntexturedMat = material::base::GOLD;
+        
         let base_material_ubo = MaterialUbo::new().map_err(&Error::from)?;
         Ok(Materials {
             base_material,
@@ -594,7 +587,6 @@ impl Renderer for GlRenderer {
     }
 
     fn on_resize(&self, size: (u32, u32)) {
-
         self.camera.borrow_mut().on_resize(size);
         let (width, height) = size;
         self.scene_program.use_program();
