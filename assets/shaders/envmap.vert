@@ -14,5 +14,12 @@ out vec3 frag_pos;
 out vec3 frag_eye_normal;
 
 void main(){
-    gl_Position = projection * modelview * vec4(v_pos, 1.0);
+    mat3 rotation_mat = mat3(modelview);
+    gl_Position = vec4(v_pos.xy, -1.0, 1.0);
+    frag_uv = v_uv;
+    frag_normal = v_normal;
+    frag_eye_normal =  normalize((normal_matrix * vec4(v_normal, 0.0)).xyz);
+    vec3 eye = rotation_mat * v_pos;
+    gl_Position = vec4(eye, 1.0);
+    frag_pos = eye.xyz;
 }

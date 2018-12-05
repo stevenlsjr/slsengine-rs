@@ -394,34 +394,36 @@ fn create_scene_shaders() -> Result<(Program, Program), ShaderError> {
 /// Stores uniform ids for the main
 /// scene shader
 #[derive(Clone, Debug)]
-pub struct SceneUniforms {
+pub struct ShaderUniforms {
     pub modelview: i32,
     pub projection: i32,
     pub normal_matrix: i32,
     pub light_positions: i32,
+    user_uniforms: HashMap<String, i32>,
 }
-impl Default for SceneUniforms {
-    fn default() -> Self {
-        SceneUniforms {
-            modelview: -1,
-            projection: -1,
-            normal_matrix: -1,
-            light_positions: -1,
+
+impl ShaderUniforms {
+    pub fn find_locations(&mut self, program: &Program) {
+        self.modelview = program.uniform_location("modelview").unwrap_or(-1);
+        self.projection = program.uniform_location("projection").unwrap_or(-1);
+        self.normal_matrix =
+            program.uniform_location("normal_matrix").unwrap_or(-1);
+        self.light_positions =
+            program.uniform_location("light_positions").unwrap_or(-1);
+        for (key, value) in self.user_uniforms.iter_mut() {
+            *value = program.uniform_location(key).unwrap_or(-1);
         }
     }
 }
 
-pub struct EnvmapUniforms {
-    pub modelview: i32,
-    pub projection: i32,
-    pub normal_matrix: i32,
-}
-impl Default for EnvmapUniforms {
+impl Default for ShaderUniforms {
     fn default() -> Self {
-        EnvmapUniforms {
+        ShaderUniforms {
             modelview: -1,
             projection: -1,
             normal_matrix: -1,
+            light_positions: -1,
+            user_uniforms: HashMap::new(),
         }
     }
 }
@@ -435,12 +437,12 @@ impl GlMesh {
     fn skybox_mesh() -> Result<Self, failure::Error> {
         use genmesh::*;
         use renderer::Vertex;
-        let cube = genmesh::generators::Cube::new();
+        let cube = generators::Cube::new();
         let vertices: Vec<Vertex> = cube
             .vertex(|v| Vertex {
+                position: v.pos.into(),
                 ..Vertex::default()
-            })
-            .triangulate()
+            }).triangulate()
             .vertices()
             .collect();
 
@@ -462,9 +464,9 @@ struct Materials {
 pub struct GlRenderer {
     camera: RefCell<Camera>,
     scene_program: Program,
-    scene_uniforms: SceneUniforms,
+    scene_uniforms: ShaderUniforms,
     envmap_program: Program,
-    envmap_uniforms: EnvmapUniforms,
+    envmap_uniforms: ShaderUniforms,
     sample_mesh: Mesh,
     env_cube: GlMesh,
     buffers: MeshBuffers,
@@ -513,9 +515,9 @@ impl GlRenderer {
 
         let mut renderer = GlRenderer {
             scene_program,
-            scene_uniforms: SceneUniforms::default(),
+            scene_uniforms: ShaderUniforms::default(),
             envmap_program,
-            envmap_uniforms: EnvmapUniforms::default(),
+            envmap_uniforms: ShaderUniforms::default(),
             env_cube,
             sample_mesh: mesh,
             buffers,
@@ -546,6 +548,10 @@ impl GlRenderer {
             &self.scene_program,
             &self.materials.base_material,
         );
+        self.materials.base_material_ubo.bind_to_material(
+            &self.envmap_program,
+            &self.materials.base_material,
+        );
 
         // load environment map
 
@@ -566,36 +572,8 @@ impl GlRenderer {
     }
 
     fn get_uniform_locations(&mut self) {
-        self.scene_uniforms.modelview = self
-            .scene_program
-            .uniform_location("modelview")
-            .unwrap_or(-1);
-        self.scene_uniforms.projection = self
-            .scene_program
-            .uniform_location("projection")
-            .unwrap_or(-1);
-        self.scene_uniforms.normal_matrix = self
-            .scene_program
-            .uniform_location("normal_matrix")
-            .unwrap_or(-1);
-
-        self.scene_uniforms.light_positions = self
-            .scene_program
-            .uniform_location("light_positions")
-            .unwrap_or(-1);
-
-        self.envmap_uniforms.modelview = self
-            .envmap_program
-            .uniform_location("modelview")
-            .unwrap_or(-1);
-        self.envmap_uniforms.projection = self
-            .envmap_program
-            .uniform_location("projection")
-            .unwrap_or(-1);
-        self.envmap_uniforms.normal_matrix = self
-            .envmap_program
-            .uniform_location("normal_matrix")
-            .unwrap_or(-1);
+        self.scene_uniforms.find_locations(&self.scene_program);
+        self.envmap_uniforms.find_locations(&self.envmap_program);
     }
 
     pub fn rebuild_program(&mut self) {
@@ -619,11 +597,15 @@ impl GlRenderer {
 
         self.scene_program = scene;
         self.envmap_program = skybox;
-        self.scene_program.use_program();
+        self.envmap_program.use_program();
 
         self.get_uniform_locations();
         self.scene_program.bind_uniform(
             self.scene_uniforms.projection,
+            &self.camera.borrow().projection,
+        );
+        self.envmap_program.bind_uniform(
+            self.envmap_uniforms.projection,
             &self.camera.borrow().projection,
         );
 
@@ -639,7 +621,7 @@ impl GlRenderer {
     }
 
     #[inline]
-    pub fn scene_uniforms(&self) -> &SceneUniforms {
+    pub fn scene_uniforms(&self) -> &ShaderUniforms {
         &self.scene_uniforms
     }
 }
@@ -671,6 +653,7 @@ impl Renderer for GlRenderer {
 
         self.scene_program
             .bind_uniform(self.scene_uniforms.projection, projection);
+            self.envmap_program.use_program();
         self.envmap_program
             .bind_uniform(self.envmap_uniforms.projection, projection);
 
@@ -718,12 +701,7 @@ impl RenderScene<game::EntityWorld> for GlRenderer {
             .iter()
             .map(|v| (cam_view * v.extend(1.0)).xyz())
             .collect();
-        let SceneUniforms {
-            modelview: modelview_id,
-            normal_matrix: normal_matrix_id,
-            light_positions: light_positions_id,
-            ..
-        } = self.scene_uniforms().clone();
+        let uniforms = &self.scene_uniforms;
 
         let buffers = &self.buffers;
         let mesh = &self.sample_mesh;
@@ -731,7 +709,7 @@ impl RenderScene<game::EntityWorld> for GlRenderer {
         program.use_program();
         unsafe {
             let light_pos_ptr = xformed_light_positions.as_ptr();
-            gl::Uniform3fv(light_positions_id, 4, light_pos_ptr as *const _);
+            gl::Uniform3fv(uniforms.light_positions, 4, light_pos_ptr as *const _);
         }
         use game::{component::*, *};
 
@@ -754,34 +732,39 @@ impl RenderScene<game::EntityWorld> for GlRenderer {
 
             let modelview = cam_view * model_matrix;
             let normal_matrix = modelview.invert().unwrap().transpose();
-            program.bind_uniform(modelview_id, &modelview);
-            program.bind_uniform(normal_matrix_id, &normal_matrix);
-            // unsafe {
-            //     gl::BindVertexArray(buffers.vertex_array.id());
-            //     gl::DrawElements(
-            //         gl::TRIANGLES,
-            //         mesh.indices.len() as i32,
-            //         gl::UNSIGNED_INT,
-            //         ptr::null(),
-            //     );
-            // }
+            program.bind_uniform(uniforms.modelview, &modelview);
+            program.bind_uniform(uniforms.normal_matrix, &normal_matrix);
+            unsafe {
+                gl::Enable(gl::TRIANGLES);
+                gl::BindVertexArray(buffers.vertex_array.id());
+                gl::DrawElements(
+                    gl::LINES,
+                    mesh.indices.len() as i32,
+                    gl::UNSIGNED_INT,
+                    ptr::null(),
+                );
+            }
         }
-
-        // draw skybox
         {
-            self.envmap_program.use_program();
-            let modelview = Mat4::from(Mat3::from(cam_view.clone()));
-            self.envmap_program
-                .bind_uniform(self.envmap_uniforms.modelview, &modelview);
+            let GlMesh {
+                ref buffers,
+                ref mesh,
+            } = self.env_cube;
+
+            let ref uniforms = self.envmap_uniforms;
+            let ref program = self.envmap_program;
+            let modelview = cam_view;
+            program.use_program();
+            program.bind_uniform(uniforms.modelview, &modelview);
             unsafe {
                 gl::Disable(gl::CULL_FACE);
-                gl::BindVertexArray(self.env_cube.buffers.vertex_array.id());
+                gl::BindVertexArray(buffers.vertex_array.id());
                 gl::DrawElements(
                     gl::TRIANGLES,
                     mesh.indices.len() as i32,
                     gl::UNSIGNED_INT,
                     ptr::null(),
-                )
+                );
             }
         }
     }
