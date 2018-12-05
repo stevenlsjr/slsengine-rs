@@ -442,7 +442,8 @@ impl GlMesh {
             .vertex(|v| Vertex {
                 position: v.pos.into(),
                 ..Vertex::default()
-            }).triangulate()
+            })
+            .triangulate()
             .vertices()
             .collect();
 
@@ -597,13 +598,16 @@ impl GlRenderer {
 
         self.scene_program = scene;
         self.envmap_program = skybox;
-        self.envmap_program.use_program();
 
         self.get_uniform_locations();
+        self.scene_program.use_program();
         self.scene_program.bind_uniform(
             self.scene_uniforms.projection,
             &self.camera.borrow().projection,
         );
+        self.envmap_program.use_program();
+
+
         self.envmap_program.bind_uniform(
             self.envmap_uniforms.projection,
             &self.camera.borrow().projection,
@@ -623,6 +627,71 @@ impl GlRenderer {
     #[inline]
     pub fn scene_uniforms(&self) -> &ShaderUniforms {
         &self.scene_uniforms
+    }
+
+    fn draw_entities(&self, scene: &game::EntityWorld) {
+        use game::component::*;
+        use math::*;
+        use std::ptr;
+        let program = &self.scene_program;
+        let uniforms = &self.scene_uniforms;
+        let buffers = &self.buffers;
+        let mesh = &self.sample_mesh;
+
+        program.use_program();
+        unsafe { gl::Enable(gl::CULL_FACE) };
+
+        let cam_view = scene.main_camera.transform();
+        let light_positions: &[Vec3] = &[
+            vec3(10.0, 10.0, 10.0),
+            vec3(10.0, -10.0, 10.0),
+            vec3(-10.0, -10.0, 10.0),
+            vec3(-10.0, 10.0, 10.0),
+        ];
+        let xformed_light_positions: Vec<Vec3> = light_positions
+            .iter()
+            .map(|v| (cam_view * v.extend(1.0)).xyz())
+            .collect();
+        unsafe {
+            let light_pos_ptr = xformed_light_positions.as_ptr();
+            gl::Uniform3fv(
+                uniforms.light_positions,
+                4,
+                light_pos_ptr as *const _,
+            );
+        }
+
+        let mask = ComponentMask::LIVE_ENTITY
+            | ComponentMask::TRANSFORM
+            | ComponentMask::STATIC_MESH;
+
+        let entities: Vec<_> = scene
+            .components
+            .masks
+            .iter()
+            .enumerate()
+            .map(|(k, v)| (EntityId(k), v))
+            .filter(|(k, v)| v.contains(mask))
+            .collect();
+
+        for (id, mask) in entities {
+            let transform = scene.components.transforms.get(&id).unwrap();
+            let model_matrix = Mat4::from(transform.transform);
+
+            let modelview = cam_view * model_matrix;
+            let normal_matrix = modelview.invert().unwrap().transpose();
+            program.bind_uniform(uniforms.modelview, &modelview);
+            program.bind_uniform(uniforms.normal_matrix, &normal_matrix);
+            unsafe {
+                gl::BindVertexArray(buffers.vertex_array.id());
+                gl::DrawElements(
+                    gl::TRIANGLES,
+                    mesh.indices.len() as i32,
+                    gl::UNSIGNED_INT,
+                    ptr::null(),
+                );
+            }
+        }
     }
 }
 
@@ -653,7 +722,7 @@ impl Renderer for GlRenderer {
 
         self.scene_program
             .bind_uniform(self.scene_uniforms.projection, projection);
-            self.envmap_program.use_program();
+        self.envmap_program.use_program();
         self.envmap_program
             .bind_uniform(self.envmap_uniforms.projection, projection);
 
@@ -691,60 +760,9 @@ impl RenderScene<game::EntityWorld> for GlRenderer {
         use math::*;
         let program = self.scene_program();
         let cam_view = scene.main_camera.transform();
-        let light_positions: &[Vec3] = &[
-            vec3(10.0, 10.0, 10.0),
-            vec3(10.0, -10.0, 10.0),
-            vec3(-10.0, -10.0, 10.0),
-            vec3(-10.0, 10.0, 10.0),
-        ];
-        let xformed_light_positions: Vec<Vec3> = light_positions
-            .iter()
-            .map(|v| (cam_view * v.extend(1.0)).xyz())
-            .collect();
+
         let uniforms = &self.scene_uniforms;
 
-        let buffers = &self.buffers;
-        let mesh = &self.sample_mesh;
-
-        program.use_program();
-        unsafe {
-            let light_pos_ptr = xformed_light_positions.as_ptr();
-            gl::Uniform3fv(uniforms.light_positions, 4, light_pos_ptr as *const _);
-        }
-        use game::{component::*, *};
-
-        let mask = ComponentMask::LIVE_ENTITY
-            | ComponentMask::TRANSFORM
-            | ComponentMask::STATIC_MESH;
-
-        let entities: Vec<_> = scene
-            .components
-            .masks
-            .iter()
-            .enumerate()
-            .map(|(k, v)| (EntityId(k), v))
-            .filter(|(k, v)| v.contains(mask))
-            .collect();
-
-        for (id, mask) in entities {
-            let transform = scene.components.transforms.get(&id).unwrap();
-            let model_matrix = Mat4::from(transform.transform);
-
-            let modelview = cam_view * model_matrix;
-            let normal_matrix = modelview.invert().unwrap().transpose();
-            program.bind_uniform(uniforms.modelview, &modelview);
-            program.bind_uniform(uniforms.normal_matrix, &normal_matrix);
-            unsafe {
-                gl::Enable(gl::TRIANGLES);
-                gl::BindVertexArray(buffers.vertex_array.id());
-                gl::DrawElements(
-                    gl::LINES,
-                    mesh.indices.len() as i32,
-                    gl::UNSIGNED_INT,
-                    ptr::null(),
-                );
-            }
-        }
         {
             let GlMesh {
                 ref buffers,
@@ -758,6 +776,8 @@ impl RenderScene<game::EntityWorld> for GlRenderer {
             program.bind_uniform(uniforms.modelview, &modelview);
             unsafe {
                 gl::Disable(gl::CULL_FACE);
+                // gl::DepthMask(gl::FALSE);
+                gl::DepthFunc(gl::LEQUAL);
                 gl::BindVertexArray(buffers.vertex_array.id());
                 gl::DrawElements(
                     gl::TRIANGLES,
@@ -765,7 +785,11 @@ impl RenderScene<game::EntityWorld> for GlRenderer {
                     gl::UNSIGNED_INT,
                     ptr::null(),
                 );
+                gl::DepthFunc(gl::LESS);
+
+                // gl::DepthMask(gl::TRUE);
             }
         }
+        self.draw_entities(scene);
     }
 }
