@@ -31,7 +31,7 @@ fn uv_for_unit_sphere(pos: Vector3<f32>) -> [f32; 2] {
 
 fn make_textures() -> objects::TextureObjects {
     use stb_image::image;
-    let img: image::Image<u8> = match image::load("assets/checker-map.png") {
+    let img: image::Image<u8> = match image::load("assets/Textures/checker-map.png") {
         image::LoadResult::ImageU8(i) => i,
         _ => panic!("unsupported image format!"),
     };
