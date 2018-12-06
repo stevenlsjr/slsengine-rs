@@ -140,6 +140,8 @@ fn main() {
     let mut world = game::EntityWorld::new();
 
     loop_state.is_running = true;
+    let mut accumulator = Duration::from_secs(0);
+    let fixed_dt = Duration::from_millis(100/6);
     while loop_state.is_running {
         {
             loop_state.handle_events(
@@ -150,13 +152,16 @@ fn main() {
             );
         }
         let game::Tick { delta, .. } = timer.tick();
+        accumulator += delta;        
 
         let _ticks = Instant::now().duration_since(timer.start_instant());
 
-        {
+        while accumulator >= fixed_dt {
             let ep = event_pump.borrow();
 
-            world.update(delta, game::InputSources::from_event_pump(&ep));
+            world.update(fixed_dt, game::InputSources::from_event_pump(&ep));
+            accumulator -= fixed_dt;
+
         }
         {
             renderer.on_update(delta, &world);
