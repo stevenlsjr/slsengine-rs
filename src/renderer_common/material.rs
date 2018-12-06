@@ -130,13 +130,13 @@ pub mod base {
     };
     pub const PLASTIC_RED: UntexturedMat = Material {
         albedo_factor: Vec4 {
-            x: 0.4,
+            x: 0.6,
             y: 0.1,
             z: 0.1,
             w: 1.0,
         },
 
-        metallic_factor: 0.0,
+        metallic_factor: 0.4,
 
         roughness_factor: 0.2,
 
