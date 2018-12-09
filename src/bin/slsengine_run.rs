@@ -31,10 +31,11 @@ fn uv_for_unit_sphere(pos: Vector3<f32>) -> [f32; 2] {
 
 fn make_textures() -> objects::TextureObjects {
     use stb_image::image;
-    let img: image::Image<u8> = match image::load("assets/Textures/checker-map.png") {
-        image::LoadResult::ImageU8(i) => i,
-        _ => panic!("unsupported image format!"),
-    };
+    let img: image::Image<u8> =
+        match image::load("assets/Textures/checker-map.png") {
+            image::LoadResult::ImageU8(i) => i,
+            _ => panic!("unsupported image format!"),
+        };
 
     let textures =
         objects::TextureObjects::new(1).expect("could not create texture");
@@ -141,7 +142,7 @@ fn main() {
 
     loop_state.is_running = true;
     let mut accumulator = Duration::from_secs(0);
-    let fixed_dt = Duration::from_millis(100/6);
+    let fixed_dt = Duration::from_millis(100 / 6);
     while loop_state.is_running {
         {
             loop_state.handle_events(
@@ -152,7 +153,7 @@ fn main() {
             );
         }
         let game::Tick { delta, .. } = timer.tick();
-        accumulator += delta;        
+        accumulator += delta;
 
         let _ticks = Instant::now().duration_since(timer.start_instant());
 
@@ -161,7 +162,6 @@ fn main() {
 
             world.update(fixed_dt, game::InputSources::from_event_pump(&ep));
             accumulator -= fixed_dt;
-
         }
         {
             renderer.on_update(delta, &world);

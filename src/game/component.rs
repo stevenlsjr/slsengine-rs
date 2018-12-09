@@ -1,5 +1,6 @@
 use cgmath::*;
 use math::*;
+use renderer::material::UntexturedMat;
 use std::collections::HashMap;
 use std::iter::Filter;
 
@@ -11,6 +12,7 @@ bitflags! {
         const LIVE_ENTITY = 0x2;
         const TRANSFORM = 0x4;
         const STATIC_MESH = 0x5;
+        const MATERIAL = 0x5;
 
     }
 }
@@ -39,6 +41,7 @@ pub struct ComponentManager {
     pub masks: Vec<ComponentMask>,
     pub transforms: HashMap<EntityId, TransformComponent>,
     pub static_meshes: HashMap<EntityId, ()>,
+    pub materials: HashMap<EntityId, UntexturedMat>,
 }
 
 impl ComponentManager {
@@ -47,6 +50,7 @@ impl ComponentManager {
             masks: vec![ComponentMask::LIVE_ENTITY; 256],
             transforms: HashMap::new(),
             static_meshes: HashMap::new(),
+            materials: HashMap::new(),
         }
     }
 

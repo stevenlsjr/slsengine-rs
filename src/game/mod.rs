@@ -126,14 +126,18 @@ impl EntityWorld {
 
     fn setup_game(&mut self) {
         use self::component::{ComponentMask, TransformComponent};
+        use renderer::material::*;
         let spacing = 3.0;
         /// setup grid of drawable entities
-        for j in 0..4 {
-            for i in 0..4 {
+        let n_rows = 4;
+        let n_cols = 4;
+        for j in 0..n_rows {
+            for i in 0..n_cols {
                 use std::f32::consts::PI;
                 let eid = self.components.alloc_entity();
-                let mask =
-                    ComponentMask::TRANSFORM | ComponentMask::STATIC_MESH;
+                let mask = ComponentMask::TRANSFORM
+                    | ComponentMask::STATIC_MESH
+                    | ComponentMask::MATERIAL;
                 self.components.masks[eid.0] =
                     self.components.masks[eid.0] | mask;
                 let mut xform = TransformComponent {
@@ -142,12 +146,28 @@ impl EntityWorld {
                 let rotation: Euler<Rad<f32>> =
                     Euler::new(Rad(PI / 2.0), Rad::zero(), Rad::zero());
                 xform.transform.disp = vec3(
-                    (i - 2) as f32 * spacing,
-                    (j - 2) as f32 * spacing,
+                    (i as f32 - (n_cols as f32 / 2.0)) * spacing,
+                    (j as f32 - (n_rows as f32 / 2.0)) as f32 * spacing,
                     -3.0,
                 );
                 xform.transform.rot = rotation.into();
 
+                let mut material = UntexturedMat {
+                    roughness_factor: (j as f32) / ((n_rows - 1) as f32),
+                    metallic_factor: (i as f32) / ((n_cols - 1) as f32),
+                    ..base::PLASTIC_RED
+                };
+                material.roughness_factor = material.roughness_factor.max(0.1).min(1.0);
+                material.metallic_factor = material.metallic_factor.max(0.1).min(1.0);
+
+                eprintln!(
+                    "material for {} {} with position {:?}: {:?}",
+                    i,
+                    j,
+                    xform.transform.disp,
+                    (material.roughness_factor, material.metallic_factor)
+                );
+                self.components.materials.insert(eid, material);
                 self.components.transforms.insert(eid, xform);
             }
         }

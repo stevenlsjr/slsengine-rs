@@ -14,7 +14,14 @@ use std::{
     time::Instant,
 };
 
+use super::gl_materials::*;
 use super::objects::*;
+
+#[derive(Debug, Fail)]
+#[fail(display = "OpenGL errors: {:?}", errors)]
+pub struct GlErrors {
+    errors: Vec<gl::types::GLenum>,
+}
 
 #[derive(Fail, Debug)]
 pub enum RendererError {
@@ -81,8 +88,9 @@ pub fn drain_error_stack() {
 
 /// fills up a vector with errors produced by glGetError
 /// . dump_errors returns length of errors
-pub fn dump_errors(errors: &mut Vec<gl::types::GLenum>) -> usize {
-    errors.clear();
+pub fn dump_errors() -> Result<(), GlErrors> {
+    let mut errors = Vec::new();
+
     loop {
         let err = unsafe { gl::GetError() };
         if err == gl::NO_ERROR {
@@ -90,7 +98,11 @@ pub fn dump_errors(errors: &mut Vec<gl::types::GLenum>) -> usize {
         }
         errors.push(err);
     }
-    errors.len()
+    if errors.len() < 1 {
+        Ok(())
+    } else {
+        Err(GlErrors { errors })
+    }
 }
 
 pub fn debug_error_stack(file: &str, line: u32) {
@@ -458,7 +470,7 @@ impl GlMesh {
 
 struct Materials {
     base_material: material::UntexturedMat,
-    base_material_ubo: super::objects::MaterialUbo,
+    base_material_ubo: MaterialUbo,
 }
 
 /// the renderer backend for openGL
@@ -548,11 +560,11 @@ impl GlRenderer {
         self.materials.base_material_ubo.bind_to_material(
             &self.scene_program,
             &self.materials.base_material,
-        );
+        )?;
         self.materials.base_material_ubo.bind_to_material(
             &self.envmap_program,
             &self.materials.base_material,
-        );
+        )?;
 
         // load environment map
 
@@ -591,10 +603,12 @@ impl GlRenderer {
             }
         };
 
-        self.materials.base_material_ubo.bind_to_material(
+        if let Err(e) = self.materials.base_material_ubo.bind_to_material(
             &self.scene_program,
             &self.materials.base_material,
-        );
+        ) {
+            eprintln!("failed to bind material {:?}", e);
+        }
 
         self.scene_program = scene;
         self.envmap_program = skybox;
@@ -606,7 +620,6 @@ impl GlRenderer {
             &self.camera.borrow().projection,
         );
         self.envmap_program.use_program();
-
 
         self.envmap_program.bind_uniform(
             self.envmap_uniforms.projection,
@@ -675,6 +688,18 @@ impl GlRenderer {
             .collect();
 
         for (id, mask) in entities {
+            let material = if mask.contains(ComponentMask::MATERIAL) {
+                scene.components.materials.get(&id)
+            } else {
+                None
+            }
+            .unwrap_or(&self.materials.base_material);
+            {
+                let ref material_ubo = self.materials.base_material_ubo;
+                if let Err(e) = material_ubo.set_material(material) {
+                    eprintln!("couldn't set material {:?}", e);
+                }
+            }
             let transform = scene.components.transforms.get(&id).unwrap();
             let model_matrix = Mat4::from(transform.transform);
 

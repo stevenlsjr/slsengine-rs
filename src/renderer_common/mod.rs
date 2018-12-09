@@ -149,7 +149,7 @@ impl From<Vector4<f32>> for Color {
     }
 }
 
-pub trait ShaderProgram<T: Renderer> {
+pub trait ShaderPipeline<T: Renderer> {
     fn use_program(&self, renderer: &T);
 }
 

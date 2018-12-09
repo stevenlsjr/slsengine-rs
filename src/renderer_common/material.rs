@@ -74,6 +74,7 @@ impl<Tex> Default for Material<Tex> {
     }
 }
 
+#[derive(Debug, Copy, Clone)]
 pub struct Untextured;
 
 pub type UntexturedMat = Material<Untextured>;
