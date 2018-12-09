@@ -25,13 +25,13 @@ use std::cell::{Ref, RefCell};
 struct VulkanPlatformHooks;
 
 static FRAG_SPIRV: &[u8] =
-    include_bytes!("../assets/vulkan/flat-shading.frag.spv");
+    include_bytes!("../assets/shaders/spirv/flat-shading.frag.spv");
 
 static VERT_SPIRV: &[u8] =
-    include_bytes!("../assets/vulkan/flat-shading.vert.spv");
+    include_bytes!("../assets/shaders/spirv/flat-shading.vert.spv");
 
 static COMPUTE_SPIRV: &[u8] =
-    include_bytes!("../assets/vulkan/sample_compute.comp.spv");
+    include_bytes!("../assets/shaders/spirv/sample_compute.comp.spv");
 
 impl PlatformBuilderHooks for VulkanPlatformHooks {
     fn build_window(
