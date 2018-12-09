@@ -8,4 +8,4 @@ for multiple backends, including OpenGL and eventually Vulkan.
 SlsEngine's shading model employs the Cook-Torrence BRDF, compatible with
 gltf material descriptions
 
-Screenshot: ![A renderer screenshot](doc/screenshot.png)
+Screenshot: ![A renderer screenshot](doc/Screenshot.png)
