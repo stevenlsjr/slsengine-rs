@@ -14,7 +14,7 @@ in vec3 frag_eye_normal;
 
 uniform sampler2D u_texture;
 
-uniform vec3 ambient_factor = vec3(1.0, 1.0, 1.0) * 0.01;
+uniform vec3 ambient_factor = vec3(1.0, 1.0, 1.0) * 0.001;
 
 uniform vec3 light_positions[N_LIGHTS];
 

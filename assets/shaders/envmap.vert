@@ -12,7 +12,7 @@ out vec3 frag_uv;
 
 void main(){
     mat3 rotation_mat = mat3(modelview);
-    frag_uv = v_pos;
+    // frag_uv = v_pos;
     vec3 eye = rotation_mat * v_pos;
     gl_Position = (projection * vec4(eye, 1.0)).xyww;
 }
