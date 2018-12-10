@@ -129,8 +129,8 @@ impl EntityWorld {
         use renderer::material::*;
         let spacing = 3.0;
         /// setup grid of drawable entities
-        let n_rows = 4;
-        let n_cols = 4;
+        let n_rows = 5;
+        let n_cols = 5;
         for j in 0..n_rows {
             for i in 0..n_cols {
                 use std::f32::consts::PI;
@@ -155,7 +155,7 @@ impl EntityWorld {
                 let mut material = UntexturedMat {
                     roughness_factor: (j as f32) / ((n_rows - 1) as f32),
                     metallic_factor: (i as f32) / ((n_cols - 1) as f32),
-                    ..base::PLASTIC_RED
+                    ..base::PLASTIC_WHITE
                 };
                 material.roughness_factor = material.roughness_factor.max(0.1).min(1.0);
                 material.metallic_factor = material.metallic_factor.max(0.1).min(1.0);
