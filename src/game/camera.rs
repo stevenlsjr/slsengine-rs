@@ -61,7 +61,6 @@ impl FpsCameraComponent {
     }
 
     fn build_transform(&mut self) {
-        use cgmath::*;
         self.transform = Mat4::look_at_dir(self.pos, self.front, self.up);
     }
 

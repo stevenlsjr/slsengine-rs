@@ -14,7 +14,7 @@ extern crate failure;
 
 use cgmath::prelude::*;
 use cgmath::*;
-use slsengine::renderer::{gl_renderer::*, material, objects};
+use slsengine::renderer::{gl_renderer::*, material, objects, textures};
 use slsengine::*;
 
 // returns the [u, v] surface coordinates for a unit sphere.
@@ -29,48 +29,6 @@ fn uv_for_unit_sphere(pos: Vector3<f32>) -> [f32; 2] {
     [u, v]
 }
 
-fn make_textures() -> objects::TextureObjects {
-    use stb_image::image;
-    let img: image::Image<u8> =
-        match image::load("assets/Textures/checker-map.png") {
-            image::LoadResult::ImageU8(i) => i,
-            _ => panic!("unsupported image format!"),
-        };
-
-    let textures =
-        objects::TextureObjects::new(1).expect("could not create texture");
-
-    let id = textures.ids()[0];
-    let in_format = if img.depth == 3 { gl::RGB } else { gl::RGBA };
-    unsafe {
-        gl::BindTexture(gl::TEXTURE_2D, id);
-        gl::TexParameteri(
-            gl::TEXTURE_2D,
-            gl::TEXTURE_MIN_FILTER,
-            gl::LINEAR_MIPMAP_LINEAR as i32,
-        );
-        gl::TexParameteri(
-            gl::TEXTURE_2D,
-            gl::TEXTURE_MAG_FILTER,
-            gl::LINEAR as i32,
-        );
-        gl::TexImage2D(
-            gl::TEXTURE_2D,
-            0,
-            gl::RGBA as i32,
-            img.width as i32,
-            img.height as i32,
-            0,
-            in_format,
-            gl::UNSIGNED_BYTE,
-            img.data.as_ptr() as *const _,
-        );
-        gl::GenerateMipmap(gl::TEXTURE_2D);
-        gl::Enable(gl::CULL_FACE);
-    }
-
-    textures
-}
 
 fn get_or_create_config(
 ) -> Result<slsengine::config::PlatformConfig, failure::Error> {
@@ -135,7 +93,7 @@ fn main() {
     let mesh = &model.meshes[0].mesh;
     let mut renderer = GlRenderer::new(&window, mesh.clone()).unwrap();
 
-    let _texture = make_textures();
+   
 
     let mut timer = game::Timer::new(Duration::from_millis(1000 / 50));
     let mut world = game::EntityWorld::new();

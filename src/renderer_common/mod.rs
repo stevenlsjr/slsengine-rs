@@ -153,7 +153,11 @@ pub trait ShaderPipeline<T: Renderer> {
     fn use_program(&self, renderer: &T);
 }
 
+/// A trait encapsulating the game's rendering capabilities
 pub trait Renderer {
+    /// The type parameter for the renderer's texture representation
+    type Texture;
+
     fn clear(&self) {}
     fn camera(&self) -> cell::Ref<Camera>;
     fn set_clear_color(&mut self, _color: Color) {}

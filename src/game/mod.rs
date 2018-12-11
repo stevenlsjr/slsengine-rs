@@ -157,8 +157,8 @@ impl EntityWorld {
                     metallic_factor: (i as f32) / ((n_cols - 1) as f32),
                     ..base::PLASTIC_WHITE
                 };
-                material.roughness_factor = material.roughness_factor.max(0.1).min(1.0);
-                material.metallic_factor = material.metallic_factor.max(0.1).min(1.0);
+                material.roughness_factor = material.roughness_factor.max(0.01).min(1.0);
+                material.metallic_factor = material.metallic_factor.max(0.01).min(1.0);
 
                 eprintln!(
                     "material for {} {} with position {:?}: {:?}",

@@ -287,8 +287,10 @@ impl VulkanRenderer {
         //        })
     }
 }
+pub struct VkTexture;
 
 impl Renderer for VulkanRenderer {
+    type Texture = VkTexture;
     fn camera(&self) -> Ref<Camera> {
         self.camera.borrow()
     }

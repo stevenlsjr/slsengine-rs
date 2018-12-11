@@ -253,38 +253,3 @@ pub enum UboBindings {
     Material = 0,
     Lights = 1,
 }
-
-#[derive(Debug)]
-pub struct TextureObjects {
-    ids: Vec<u32>,
-}
-
-impl TextureObjects {
-    pub fn new(len: usize) -> Result<TextureObjects, ObjectError> {
-        let mut ids: Vec<u32> = vec![0; len];
-
-        unsafe {
-            gl::GenTextures(len as i32, ids.as_mut_ptr());
-        }
-
-        Ok(TextureObjects { ids })
-    }
-
-    pub fn ids(&self) -> &[u32] {
-        &self.ids
-    }
-
-    pub fn len(&self) -> usize {
-        self.ids.len()
-    }
-}
-
-impl Drop for TextureObjects {
-    fn drop(&mut self) {
-        unsafe {
-            gl::DeleteTextures(self.ids.len() as i32, self.ids.as_mut_ptr());
-        }
-
-        self.ids.clear();
-    }
-}

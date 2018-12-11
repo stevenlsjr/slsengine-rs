@@ -141,7 +141,7 @@ fn make_mesh(
 mod test {
     use super::*;
 
-    static GLB_BYTES: &[u8] = include_bytes!("../../assets/earth.glb");
+    static GLB_BYTES: &[u8] = include_bytes!("../../assets/models/earth.glb");
     #[test]
     fn test_model_loader() {
         use gltf::{binary::Glb, Gltf};

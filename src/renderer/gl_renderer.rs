@@ -14,8 +14,7 @@ use std::{
     time::Instant,
 };
 
-use super::gl_materials::*;
-use super::objects::*;
+use super::{gl_materials::*, objects::*, textures::*};
 
 #[derive(Debug, Fail)]
 #[fail(display = "OpenGL errors: {:?}", errors)]
@@ -484,7 +483,7 @@ pub struct GlRenderer {
     env_cube: GlMesh,
     buffers: MeshBuffers,
     materials: Materials,
-    textures: HashMap<String, Rc<TextureObjects>>,
+    textures: HashMap<String, Rc<RefCell<GlTexture>>>,
 
     recompile_flag: Cell<Option<Instant>>,
 }
@@ -526,6 +525,9 @@ impl GlRenderer {
                 reason: format!("could create skybox mesh"),
             })?;
 
+        let texture = GlTexture::new().unwrap();
+        println!("created texture {:?}", texture);
+
         let mut renderer = GlRenderer {
             scene_program,
             scene_uniforms: ShaderUniforms::default(),
@@ -539,6 +541,9 @@ impl GlRenderer {
             camera: RefCell::new(Camera::new(perspective)),
             recompile_flag: Cell::new(None),
         };
+        renderer
+            .textures
+            .insert("a_tex".to_owned(), Rc::new(RefCell::new(texture)));
 
         if let Err(e) = renderer.initialize() {
             return Err(RendererError::Lifecycle {
@@ -566,8 +571,11 @@ impl GlRenderer {
             &self.materials.base_material,
         )?;
 
-        // load environment map
-
+        use image;
+        let base_color = image::open("assets/Textures/DamagedHelmet_img0.jpg")?;
+        if let Some(tex_obj) = self.textures.get_mut("a_tex").map(|rc| rc.clone()){
+            tex_obj.borrow_mut().load_image(base_color)?;
+        }
         Ok(())
     }
 
@@ -721,6 +729,8 @@ impl GlRenderer {
 }
 
 impl Renderer for GlRenderer {
+    type Texture = GlTexture;
+
     fn clear(&self) {
         unsafe {
             gl::ClearColor(0.6, 0.0, 0.8, 1.0);
