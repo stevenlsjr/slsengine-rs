@@ -24,14 +24,11 @@ use std::cell::{Ref, RefCell};
 
 struct VulkanPlatformHooks;
 
-static FRAG_SPIRV: &[u8] =
-    include_bytes!("../assets/shaders/spirv/flat-shading.frag.spv");
+// static FRAG_SPIRV: &[u8] =
+//     include_bytes!("../assets/shaders/spirv/brdf.frag.spv");
 
-static VERT_SPIRV: &[u8] =
-    include_bytes!("../assets/shaders/spirv/flat-shading.vert.spv");
-
-static COMPUTE_SPIRV: &[u8] =
-    include_bytes!("../assets/shaders/spirv/sample_compute.comp.spv");
+// static VERT_SPIRV: &[u8] =
+//     include_bytes!("../assets/shaders/spirv/brdf.vert.spv");
 
 impl PlatformBuilderHooks for VulkanPlatformHooks {
     fn build_window(
@@ -62,7 +59,7 @@ fn main() {
     let platform = platform().build(&VulkanPlatformHooks).unwrap();
 
     let mut loop_state = slsengine::MainLoopState::new();
-    let mut timer = game::Timer::new(Duration::from_millis(100 / 6));
+    let timer = game::Timer::new(Duration::from_millis(100 / 6));
 
     let renderer = VulkanRenderer::new(&platform.window).unwrap();
     let device = renderer.device.clone();
