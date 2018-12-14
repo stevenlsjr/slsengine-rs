@@ -1,3 +1,4 @@
+cargo-features = ["profile-overrides"]
 [package]
 name = "slsengine"
 version = "0.1.0"
@@ -7,6 +8,13 @@ authors = ["Steve Shea <stevenlsjr@gmail.com>"]
 default=["with-vulkan", "gl-debug-output"]
 with-vulkan = ["ash", "vulkano", "vulkano-shaders"]
 gl-debug-output = []
+
+# image is crazy slow on debug
+[profile.dev.overrides.image]
+opt-level = 3
+[profile.dev.overrides.jpeg-decoder]
+opt-level = 3
+
 
 [dependencies]
 bitflags = "1.0.4"
@@ -24,15 +32,15 @@ vulkano = {version= "0.11.1", optional= true}
 vulkano-shaders = {version= "0.11.0", optional= true}
 toml = "0.4.9"
 
-[dependencies.gltf]
-version = "0.11"
-features = ["extras", "names"]
+    [dependencies.gltf]
+    version = "0.11"
+    features = ["extras", "names"]
 
-[dependencies.sdl2]
-git = "https://github.com/AngryLawyer/rust-sdl2.git"
+    [dependencies.sdl2]
+    git = "https://github.com/AngryLawyer/rust-sdl2.git"
 
-[dependencies.ash]
-optional = true
-version = "0.24.0"
+    [dependencies.ash]
+    optional = true
+    version = "0.24.0"
 
 
