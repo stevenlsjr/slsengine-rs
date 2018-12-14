@@ -1,4 +1,7 @@
 use cgmath::*;
+use failure;
+use gltf;
+use image::{self, DynamicImage};
 use math::*;
 
 #[derive(Debug, Clone)]
@@ -6,9 +9,8 @@ pub struct Material<Tex> {
     pub albedo_factor: Vec4,
     pub albedo_map: Option<Tex>,
     pub metallic_factor: f32,
-    pub metallic_map: Option<Tex>,
+    pub metallic_roughness_map: Option<Tex>,
     pub roughness_factor: f32,
-    pub roughness_map: Option<Tex>,
     pub emissive_factor: Vec3,
     pub emissive_map: Option<Tex>,
     pub normal_map: Option<Tex>,
@@ -30,6 +32,7 @@ impl<Tex> Material<Tex> {
             ..Material::default()
         }
     }
+
     pub fn transform_textures<BTex, F>(&self, f: F) -> Material<BTex>
     where
         F: Fn(&Tex) -> BTex,
@@ -37,8 +40,8 @@ impl<Tex> Material<Tex> {
         let f = &f;
         let mut mat: Material<BTex> = Material::default();
         mat.albedo_map = self.albedo_map.as_ref().map(f);
-        mat.metallic_map = self.metallic_map.as_ref().map(f);
-        mat.roughness_map = self.roughness_map.as_ref().map(f);
+        mat.metallic_roughness_map =
+            self.metallic_roughness_map.as_ref().map(f);
         mat.emissive_map = self.emissive_map.as_ref().map(f);
         mat.occlusion_map = self.occlusion_map.as_ref().map(f);
         mat
@@ -63,9 +66,8 @@ impl<Tex> Default for Material<Tex> {
             albedo_factor: vec4(1.0, 1.0, 1.0, 1.0),
             albedo_map: None,
             metallic_factor: 0.0,
-            metallic_map: None,
+            metallic_roughness_map: None,
             roughness_factor: 1.0,
-            roughness_map: None,
             emissive_factor: vec3(0.0, 0.0, 0.0),
             emissive_map: None,
             normal_map: None,
@@ -74,84 +76,92 @@ impl<Tex> Default for Material<Tex> {
     }
 }
 
+pub fn from_gltf_material(
+    gltf_mat: &gltf::Material,
+    images: &[gltf::image::Data],
+) -> Material<gltf::image::Data> {
+    let load_tex = |opt: Option<gltf::texture::Info>| {
+        opt.and_then(|info| {
+            let tex = info.texture();
+            let idx = tex.source().index();
+            if idx < images.len() {
+                Some(images[idx].clone())
+            } else {
+                None
+            }
+        })
+    };
+    let pbr = gltf_mat.pbr_metallic_roughness();
+    let mut mat = Material {
+        albedo_factor: pbr.base_color_factor().into(),
+        emissive_factor: gltf_mat.emissive_factor().into(),
+        metallic_factor: pbr.metallic_factor(),
+        roughness_factor: pbr.roughness_factor(),
+        ..Material::default()
+    };
+    mat.albedo_map = load_tex(pbr.base_color_texture());
+
+    mat
+}
+
 #[derive(Debug, Copy, Clone)]
 pub struct Untextured;
 
 pub type UntexturedMat = Material<Untextured>;
+
+const fn untextured_mat(
+    albedo_factor: Vec4,
+    metallic_factor: f32,
+    roughness_factor: f32,
+) -> UntexturedMat {
+    Material {
+        albedo_factor,
+        metallic_factor,
+        roughness_factor,
+        emissive_factor: Vec3 {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        },
+        albedo_map: None,
+        metallic_roughness_map: None,
+        emissive_map: None,
+        normal_map: None,
+        occlusion_map: None,
+    }
+}
+
 pub mod base {
     use super::*;
 
-    pub const GOLD: UntexturedMat = Material {
-        albedo_factor: Vec4 {
+    pub const GOLD: UntexturedMat = untextured_mat(
+        Vec4 {
             x: 1.0,
             y: 0.766,
             z: 0.336,
             w: 1.0,
         },
-
-        metallic_factor: 1.0,
-
-        roughness_factor: 0.3,
-
-        emissive_factor: Vec3 {
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-        },
-        albedo_map: None,
-        metallic_map: None,
-        roughness_map: None,
-        emissive_map: None,
-        normal_map: None,
-        occlusion_map: None,
-    };
-    pub const PLASTIC_WHITE: UntexturedMat = Material {
-        albedo_factor: Vec4 {
+        1.0,
+        0.3,
+    );
+    pub const PLASTIC_WHITE: UntexturedMat = untextured_mat(
+        Vec4 {
             x: 1.0,
             y: 1.0,
-            z: 1.0,
+            z: 0.0,
             w: 1.0,
         },
-
-        metallic_factor: 0.0,
-
-        roughness_factor: 0.2,
-
-        emissive_factor: Vec3 {
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-        },
-        albedo_map: None,
-        metallic_map: None,
-        roughness_map: None,
-        emissive_map: None,
-        normal_map: None,
-        occlusion_map: None,
-    };
+        0.0,
+        0.3,
+    );
     pub const PLASTIC_RED: UntexturedMat = Material {
         albedo_factor: Vec4 {
-            x: 0.6,
-            y: 0.1,
-            z: 0.1,
-            w: 1.0,
-        },
-
-        metallic_factor: 0.4,
-
-        roughness_factor: 0.2,
-
-        emissive_factor: Vec3 {
-            x: 0.0,
+            x: 1.0,
             y: 0.0,
             z: 0.0,
+            w: 1.0,
         },
-        albedo_map: None,
-        metallic_map: None,
-        roughness_map: None,
-        emissive_map: None,
-        normal_map: None,
-        occlusion_map: None,
+        ..PLASTIC_WHITE
     };
 
 }

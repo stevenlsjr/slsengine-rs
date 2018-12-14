@@ -573,7 +573,9 @@ impl GlRenderer {
 
         use image;
         let base_color = image::open("assets/Textures/DamagedHelmet_img0.jpg")?;
-        if let Some(tex_obj) = self.textures.get_mut("a_tex").map(|rc| rc.clone()){
+        if let Some(tex_obj) =
+            self.textures.get_mut("a_tex").map(|rc| rc.clone())
+        {
             tex_obj.borrow_mut().load_image(base_color)?;
         }
         Ok(())

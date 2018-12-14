@@ -92,7 +92,7 @@ impl MainLoopState {
                     self.is_running = false;
                 }
                 Event::Window { win_event, .. } => match win_event {
-                    WindowEvent::Resized(width, height) => {
+                    WindowEvent::Resized(_width, _height) => {
                         let size = window.drawable_size();
                         renderer.on_resize(size);
                     }

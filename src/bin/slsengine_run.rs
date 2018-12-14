@@ -14,7 +14,7 @@ extern crate failure;
 
 use cgmath::prelude::*;
 use cgmath::*;
-use slsengine::renderer::{gl_renderer::*, material, objects, textures};
+use slsengine::renderer::{gl_renderer::*};
 use slsengine::*;
 
 // returns the [u, v] surface coordinates for a unit sphere.
@@ -28,7 +28,6 @@ fn uv_for_unit_sphere(pos: Vector3<f32>) -> [f32; 2] {
 
     [u, v]
 }
-
 
 fn get_or_create_config(
 ) -> Result<slsengine::config::PlatformConfig, failure::Error> {
@@ -73,8 +72,23 @@ fn get_or_create_config(
     Ok(conf)
 }
 
+fn load_model_materials(
+    model: &gltf::Gltf,
+    mesh_index: usize,
+    images: &[gltf::image::Data],
+) {
+    use renderer::material::{self, Material};
+    let mesh = model.meshes().nth(mesh_index).unwrap();
+    let materials = mesh
+        .primitives()
+        .map(|p| material::from_gltf_material(&p.material(), images))
+        .collect::<Vec<_>>();
+}
+
 fn main() {
+    use renderer::model::{*};
     use sdl_platform::{platform, OpenGLVersion, Platform};
+    use std::path::*;
     use std::time::*;
     let config = get_or_create_config().unwrap();
 
@@ -86,14 +100,12 @@ fn main() {
         window, event_pump, ..
     } = plt;
     let mut loop_state = MainLoopState::new();
-    let gltf_doc = gltf::Gltf::open("assets/models/DamagedHelmet.glb")
-        .expect("could not load gltf model");
-    let model = renderer::model::Model::from_gltf(&gltf_doc).unwrap();
+    let path = Path::new("assets/models/DamagedHelmet.glb");
+    let model = Model::from_gltf(&path).unwrap();
+
 
     let mesh = &model.meshes[0].mesh;
     let mut renderer = GlRenderer::new(&window, mesh.clone()).unwrap();
-
-   
 
     let mut timer = game::Timer::new(Duration::from_millis(1000 / 50));
     let mut world = game::EntityWorld::new();

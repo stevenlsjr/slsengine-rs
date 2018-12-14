@@ -2,7 +2,6 @@ use cgmath::*;
 use math::*;
 use renderer::material::UntexturedMat;
 use std::collections::HashMap;
-use std::iter::Filter;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Hash)]
 pub struct EntityId(pub usize);

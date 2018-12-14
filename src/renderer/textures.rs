@@ -92,7 +92,7 @@ impl GlTexture {
             gl::RGB => gl::RGB,
             gl::RGBA => gl::RG,
             gl::RED => gl::RED,
-            other => gl::RGB
+            other => gl::RGB,
         };
         unsafe {
             gl::BindTexture(gl::TEXTURE_2D, self.id);

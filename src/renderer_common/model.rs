@@ -6,7 +6,7 @@ use cgmath::*;
 use gltf;
 use gltf::mesh;
 use renderer::Mesh;
-use std::collections::HashMap;
+use std::{collections::HashMap, path::Path};
 
 use failure;
 
@@ -28,23 +28,31 @@ impl MeshData {
     }
 }
 
+struct GltfImport {
+    document: gltf::Document,
+    buffers: Vec<gltf::buffer::Data>,
+    images: Vec<gltf::image::Data>,
+}
+
 pub struct Model {
     pub meshes: Vec<MeshData>,
     pub transforms: Vec<Mat4>,
     pub materials: HashMap<Option<usize>, super::material::UntexturedMat>,
+    imports: GltfImport,
 }
 
 impl Model {
-    fn new() -> Self {
+    fn new(imports: GltfImport) -> Self {
         Model {
             meshes: Vec::new(),
             transforms: Vec::new(),
             materials: HashMap::new(),
+            imports,
         }
     }
 
-    fn load_materials(&mut self, gltf_file: &gltf::Gltf) {
-        for material in gltf_file.materials() {
+    fn load_materials(&mut self) {
+        for material in self.imports.document.materials() {
             use super::material::*;
             let pbr = material.pbr_metallic_roughness();
             println!("found material {:?}", material.name());
@@ -58,24 +66,31 @@ impl Model {
         }
     }
 
-    pub fn from_gltf(gltf_file: &gltf::Gltf) -> Result<Self, failure::Error> {
-        let mut model = Model::new();
-        let blob = &gltf_file
-            .blob
-            .clone()
-            .ok_or(format_err!("loader only supports glb files"))?;
-        model.transforms.push(Mat4::identity());
-        for ref g_mesh in gltf_file.document.meshes() {
-            let meshes: Vec<_> = make_mesh(g_mesh, blob)?;
-            for m in meshes {
-                let mut md = MeshData::new(m.mesh, m.mode);
-                md.material_index = m.material;
+    pub fn from_gltf<P: AsRef<Path>>(path: P) -> Result<Self, failure::Error> {
+        let (document, buffers, images) = gltf::import(path)?;
+        let mut model = Model::new(GltfImport {
+            document,
+            buffers,
+            images,
+        });
+        {
+            let GltfImport {
+                document, buffers, ..
+            } = &model.imports;
 
-                model.meshes.push(md);
+            model.transforms.push(Mat4::identity());
+            for ref g_mesh in document.meshes() {
+                let meshes: Vec<_> = make_mesh(g_mesh, &buffers)?;
+                for m in meshes {
+                    let mut md = MeshData::new(m.mesh, m.mode);
+                    md.material_index = m.material;
+
+                    model.meshes.push(md);
+                }
             }
         }
 
-        model.load_materials(gltf_file);
+        model.load_materials();
         Ok(model)
     }
 }
@@ -90,13 +105,15 @@ impl ParsedMesh {}
 
 fn make_mesh(
     gltf_mesh: &gltf::Mesh,
-    blob: &[u8],
+    buffers: &[gltf::buffer::Data],
 ) -> Result<Vec<ParsedMesh>, failure::Error> {
     use renderer::Vertex as SlsVertex;
     let mut meshes = Vec::new();
+    let get_buffer_data =
+        |buffer: gltf::Buffer| Some(&*buffers[buffer.index()]);
 
     for primitive in gltf_mesh.primitives() {
-        let reader = primitive.reader(|_buffer| Some(blob));
+        let reader = primitive.reader(get_buffer_data);
         let positions: Vec<_> = reader
             .read_positions()
             .map(|iter| iter.collect())
