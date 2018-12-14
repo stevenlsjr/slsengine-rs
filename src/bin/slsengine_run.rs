@@ -14,7 +14,7 @@ extern crate failure;
 
 use cgmath::prelude::*;
 use cgmath::*;
-use slsengine::renderer::{gl_renderer::*};
+use slsengine::renderer::{backend_gl::*, *};
 use slsengine::*;
 
 // returns the [u, v] surface coordinates for a unit sphere.
@@ -86,7 +86,7 @@ fn load_model_materials(
 }
 
 fn main() {
-    use renderer::model::{*};
+    use renderer::model::*;
     use sdl_platform::{platform, OpenGLVersion, Platform};
     use std::path::*;
     use std::time::*;
@@ -103,9 +103,7 @@ fn main() {
     let path = Path::new("assets/models/DamagedHelmet.glb");
     let model = Model::from_gltf(&path).unwrap();
 
-
-    let mesh = &model.meshes[0].mesh;
-    let mut renderer = GlRenderer::new(&window, mesh.clone()).unwrap();
+    let mut renderer = GlRenderer::new(&window, model).unwrap();
 
     let mut timer = game::Timer::new(Duration::from_millis(1000 / 50));
     let mut world = game::EntityWorld::new();

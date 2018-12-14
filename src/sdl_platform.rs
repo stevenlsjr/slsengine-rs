@@ -195,7 +195,6 @@ impl PlatformBuilderHooks for GlPlatformBuilder {
         platform_builder: &PlatformBuilder,
         video_subsystem: &VideoSubsystem,
     ) -> PlatformResult<Window> {
-        use config::AntiAliasing;
         use sdl2::video::GLProfile;
         let mut wb = make_window_builder(platform_builder, video_subsystem);
 

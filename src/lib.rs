@@ -29,7 +29,6 @@ extern crate serde;
 pub mod config;
 pub mod game;
 pub mod renderer;
-pub mod renderer_common;
 pub mod sdl_platform;
 pub mod system;
 
@@ -40,8 +39,6 @@ use sdl2::keyboard::Keycode;
 use sdl2::video::Window;
 use std::{cell::RefCell, error::Error, time::Instant};
 
-#[cfg(feature = "with-vulkan")]
-pub mod renderer_vk;
 
 pub fn get_error_desc<E: Error>(e: E) -> String {
     e.description().to_string()

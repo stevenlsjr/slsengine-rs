@@ -7,6 +7,7 @@ use std::time::{Duration, Instant};
 pub mod camera;
 pub mod component;
 pub use self::camera::*;
+use renderer::{material::*};
 
 /*--------------------------------------
  * Game timer: handles delta time, time since start, etc

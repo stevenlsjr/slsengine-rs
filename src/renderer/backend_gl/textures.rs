@@ -1,9 +1,7 @@
-use super::gl_renderer::*;
 use super::objects::*;
 use failure;
 use gl;
 use image;
-use std::path::Path;
 
 #[derive(Debug)]
 pub struct TextureObjects {

@@ -35,15 +35,15 @@ impl<Tex> Material<Tex> {
 
     pub fn transform_textures<BTex, F>(&self, f: F) -> Material<BTex>
     where
-        F: Fn(&Tex) -> BTex,
+        F: Fn(&Tex) -> Option<BTex>,
     {
         let f = &f;
         let mut mat: Material<BTex> = Material::default();
-        mat.albedo_map = self.albedo_map.as_ref().map(f);
+        mat.albedo_map = self.albedo_map.as_ref().and_then(f);
         mat.metallic_roughness_map =
-            self.metallic_roughness_map.as_ref().map(f);
-        mat.emissive_map = self.emissive_map.as_ref().map(f);
-        mat.occlusion_map = self.occlusion_map.as_ref().map(f);
+            self.metallic_roughness_map.as_ref().and_then(f);
+        mat.emissive_map = self.emissive_map.as_ref().and_then(f);
+        mat.occlusion_map = self.occlusion_map.as_ref().and_then(f);
         mat
     }
 }

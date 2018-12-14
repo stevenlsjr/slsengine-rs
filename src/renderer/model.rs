@@ -5,8 +5,9 @@ use math::*;
 use cgmath::*;
 use gltf;
 use gltf::mesh;
+use renderer::material;
 use renderer::Mesh;
-use std::{collections::HashMap, path::Path};
+use std::{cell::RefCell, collections::HashMap, path::Path};
 
 use failure;
 
@@ -28,17 +29,20 @@ impl MeshData {
     }
 }
 
+#[derive(Clone)]
 struct GltfImport {
     document: gltf::Document,
     buffers: Vec<gltf::buffer::Data>,
     images: Vec<gltf::image::Data>,
 }
 
+#[derive(Clone)]
 pub struct Model {
     pub meshes: Vec<MeshData>,
     pub transforms: Vec<Mat4>,
-    pub materials: HashMap<Option<usize>, super::material::UntexturedMat>,
-    imports: GltfImport,
+    pub materials:
+        HashMap<Option<usize>, material::Material<gltf::image::Data>>,
+    imports: RefCell<GltfImport>,
 }
 
 impl Model {
@@ -47,22 +51,48 @@ impl Model {
             meshes: Vec::new(),
             transforms: Vec::new(),
             materials: HashMap::new(),
-            imports,
+            imports: RefCell::new(imports),
         }
     }
 
     fn load_materials(&mut self) {
-        for material in self.imports.document.materials() {
+        let imports = self.imports.borrow();
+        for material in imports.document.materials() {
             use super::material::*;
             let pbr = material.pbr_metallic_roughness();
             println!("found material {:?}", material.name());
-            let game_mat = Material::<Untextured>::new(
-                pbr.base_color_factor().into(),
-                pbr.metallic_factor(),
-                pbr.roughness_factor(),
-                material.emissive_factor().into(),
-            );
-            self.materials.insert(material.index(), game_mat);
+            let image_from_index = |idx: usize| -> (Option<gltf::image::Data>) {
+                let img = imports.images.get(idx).map(|i| i.clone());
+                img
+            };
+            let mut mat = Material {
+                albedo_factor: pbr.base_color_factor().into(),
+                metallic_factor: pbr.metallic_factor(),
+                roughness_factor: pbr.roughness_factor(),
+                emissive_factor: material.emissive_factor().into(),
+                albedo_map: pbr
+                    .base_color_texture()
+                    .map(|i| i.texture().source().index())
+                    .and_then(image_from_index),
+                metallic_roughness_map: pbr
+                    .metallic_roughness_texture()
+                    .map(|i| i.texture().source().index())
+                    .and_then(image_from_index),
+                emissive_map: material
+                    .emissive_texture()
+                    .map(|i| i.texture().source().index())
+                    .and_then(image_from_index),
+                occlusion_map: material
+                    .occlusion_texture()
+                    .map(|i| i.texture().source().index())
+                    .and_then(image_from_index),
+                normal_map: material
+                    .normal_texture()
+                    .map(|i| i.texture().source().index())
+                    .and_then(image_from_index),
+            };
+
+            self.materials.insert(material.index(), mat);
         }
     }
 
@@ -75,8 +105,10 @@ impl Model {
         });
         {
             let GltfImport {
-                document, buffers, ..
-            } = &model.imports;
+                ref document,
+                ref buffers,
+                ..
+            } = *model.imports.borrow();
 
             model.transforms.push(Mat4::identity());
             for ref g_mesh in document.meshes() {

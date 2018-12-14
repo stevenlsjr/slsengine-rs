@@ -18,8 +18,8 @@ use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use std::ptr;
 
+use slsengine::renderer::backend_vk::*;
 use slsengine::renderer::Camera;
-use slsengine::renderer_vk::*;
 use std::cell::{Ref, RefCell};
 
 struct VulkanPlatformHooks;
