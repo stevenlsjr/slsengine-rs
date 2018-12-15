@@ -215,7 +215,8 @@ impl GlRenderer {
 
         let ref ubo = self.materials.base_material_ubo;
         for i in &[&self.envmap_program, &self.scene_program] {
-            ubo.bind_to_program(i);
+            ubo.bind_to_program(i)
+                .unwrap_or_else(|e| println!("error {:?}", e));
         }
 
         println!("build new shader program {:#?}", self.scene_program);
@@ -250,14 +251,13 @@ impl GlRenderer {
             .map(|v| (cam_view * v.extend(1.0)).xyz())
             .collect();
         let light_pos_ptr = xformed_light_positions.as_ptr();
-        
-        uniforms.light_positions.map(|id| unsafe {
-            gl::Uniform3fv(
-                id as _,
-                4,
-                light_pos_ptr as *const _,
-            );
-        });
+
+        uniforms
+            .light_positions
+            .map(|id| unsafe {
+                gl::Uniform3fv(id as _, 4, light_pos_ptr as *const _);
+            })
+            .unwrap_or_else(|| println!("light position uniform unbound!"));
 
         let mask = ComponentMask::LIVE_ENTITY
             | ComponentMask::TRANSFORM

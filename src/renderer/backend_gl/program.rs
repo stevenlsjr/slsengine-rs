@@ -217,7 +217,9 @@ impl BindUniform<Matrix4<f32>> for Program {
             unsafe {
                 gl::UniformMatrix4fv(id as _, 1, gl::FALSE, val.as_ptr());
             }
-        } 
+        } else {
+            eprintln!("uniform is unbound");
+        }
     }
 }
 
