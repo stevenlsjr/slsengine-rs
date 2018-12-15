@@ -1,6 +1,7 @@
 use super::objects::*;
 use failure;
 use gl;
+use gl::types::GLenum;
 use image::{self, DynamicImage};
 
 #[derive(Debug)]
@@ -34,7 +35,13 @@ impl TextureObjects {
         let mut ids = Vec::new();
         swap(&mut self.ids, &mut ids);
 
-        ids.iter().map(|&id| GlTexture { id }).collect()
+        ids.iter()
+            .map(|&id| GlTexture {
+                id,
+                min_filter: None,
+                mag_filter: None,
+            })
+            .collect()
     }
 
     pub fn ids(&self) -> &[u32] {
@@ -62,6 +69,8 @@ impl Drop for TextureObjects {
 #[derive(Debug, PartialEq)]
 pub struct GlTexture {
     pub id: u32,
+    min_filter: Option<GLenum>,
+    mag_filter: Option<GLenum>,
 }
 
 impl GlTexture {
@@ -70,7 +79,21 @@ impl GlTexture {
         unsafe {
             gl::GenTextures(1, &mut id as *mut _);
         }
-        Ok(GlTexture { id })
+        Ok(GlTexture {
+            id,
+            min_filter: None,
+            mag_filter: None,
+        })
+    }
+
+    pub fn with_filter_params(
+        min_filter: gl::types::GLenum,
+        mag_filter: gl::types::GLenum,
+    ) -> Result<Self, failure::Error> {
+        let mut tex = GlTexture::new()?;
+        tex.min_filter = Some(min_filter);
+        tex.mag_filter = Some(mag_filter);
+        Ok(tex)
     }
 }
 
@@ -95,13 +118,13 @@ impl FromImage<gltf::image::Data> for GlTexture {
             gl::TexParameteri(
                 gl::TEXTURE_2D,
                 gl::TEXTURE_MIN_FILTER,
-                gl::LINEAR as _,
+                self.min_filter.unwrap_or(gl::LINEAR_MIPMAP_LINEAR) as _,
             );
 
             gl::TexParameteri(
                 gl::TEXTURE_2D,
                 gl::TEXTURE_MAG_FILTER,
-                gl::LINEAR as _,
+                self.mag_filter.unwrap_or(gl::LINEAR) as _,
             );
 
             gl::TexImage2D(

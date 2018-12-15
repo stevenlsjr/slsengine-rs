@@ -33,9 +33,7 @@ pub struct Materials {
 pub struct GlRenderer {
     camera: RefCell<Camera>,
     scene_program: Program,
-    scene_uniforms: ShaderUniforms,
     envmap_program: Program,
-    envmap_uniforms: ShaderUniforms,
     sample_mesh: Mesh,
     env_cube: GlMesh,
     buffers: MeshBuffers,
@@ -129,9 +127,7 @@ impl GlRenderer {
 
         let mut renderer = GlRenderer {
             scene_program,
-            scene_uniforms: ShaderUniforms::default(),
             envmap_program,
-            envmap_uniforms: ShaderUniforms::default(),
             env_cube,
             sample_mesh: mesh,
             buffers,
@@ -156,7 +152,6 @@ impl GlRenderer {
     }
 
     fn initialize(&mut self) -> Result<(), failure::Error> {
-        self.get_uniform_locations();
         let ref ubo = self.materials.base_material_ubo;
         for i in [&self.envmap_program, &self.scene_program].iter() {
             ubo.bind_to_program(i)
@@ -183,17 +178,7 @@ impl GlRenderer {
         })
     }
 
-    fn get_uniform_locations(&mut self) {
-        self.scene_uniforms.find_locations(&self.scene_program);
-        self.envmap_uniforms.find_locations(&self.envmap_program);
-    }
-
     pub fn rebuild_program(&mut self) {
-        println!(
-            "old shader program {:#?} with uniforms {:#?}",
-            self.scene_program, self.scene_uniforms
-        );
-
         let (scene, skybox) = match create_scene_shaders() {
             Ok(mut programs) => programs,
             Err(e) => {
@@ -212,29 +197,28 @@ impl GlRenderer {
 
         self.scene_program = scene;
         self.envmap_program = skybox;
+        {
+            let camera = self.camera.borrow();
 
-        self.get_uniform_locations();
-        self.scene_program.use_program();
-        self.scene_program.bind_uniform(
-            self.scene_uniforms.projection,
-            &self.camera.borrow().projection,
-        );
-        self.envmap_program.use_program();
+            self.scene_program.use_program();
+            self.scene_program.bind_uniform(
+                self.scene_program.uniforms().projection,
+                &camera.projection,
+            );
+            self.envmap_program.use_program();
 
-        self.envmap_program.bind_uniform(
-            self.envmap_uniforms.projection,
-            &self.camera.borrow().projection,
-        );
+            self.envmap_program.bind_uniform(
+                self.envmap_program.uniforms().projection,
+                &camera.projection,
+            );
+        }
 
         let ref ubo = self.materials.base_material_ubo;
         for i in &[&self.envmap_program, &self.scene_program] {
             ubo.bind_to_program(i);
         }
 
-        println!(
-            "build new shader program {:#?} with uniforms {:#?}",
-            self.scene_program, self.scene_uniforms
-        );
+        println!("build new shader program {:#?}", self.scene_program);
     }
 
     #[inline]
@@ -242,17 +226,12 @@ impl GlRenderer {
         &self.scene_program
     }
 
-    #[inline]
-    pub fn scene_uniforms(&self) -> &ShaderUniforms {
-        &self.scene_uniforms
-    }
-
     fn draw_entities(&self, scene: &game::EntityWorld<Self>) {
         use game::component::*;
         use math::*;
         use std::ptr;
         let program = &self.scene_program;
-        let uniforms = &self.scene_uniforms;
+        let uniforms = program.uniforms();
         let buffers = &self.buffers;
         let mesh = &self.sample_mesh;
 
@@ -270,14 +249,15 @@ impl GlRenderer {
             .iter()
             .map(|v| (cam_view * v.extend(1.0)).xyz())
             .collect();
-        unsafe {
-            let light_pos_ptr = xformed_light_positions.as_ptr();
+        let light_pos_ptr = xformed_light_positions.as_ptr();
+        
+        uniforms.light_positions.map(|id| unsafe {
             gl::Uniform3fv(
-                uniforms.light_positions,
+                id as _,
                 4,
                 light_pos_ptr as *const _,
             );
-        }
+        });
 
         let mask = ComponentMask::LIVE_ENTITY
             | ComponentMask::TRANSFORM
@@ -298,9 +278,13 @@ impl GlRenderer {
                         .unwrap_or_else(|e| {
                             eprintln!("error {:?}", e);
                         });
-                    self.scene_program.bind_material_textures(material.borrow());
+                    self.scene_program
+                        .bind_material_textures(material.borrow());
                 } else {
-                    eprintln!("missing material for entity {:?}, {:?}", id, mask);
+                    eprintln!(
+                        "missing material for entity {:?}, {:?}",
+                        id, mask
+                    );
                 }
             } else {
                 self.materials
@@ -359,10 +343,12 @@ impl Renderer for GlRenderer {
         let projection = &self.camera.borrow().projection;
 
         self.scene_program
-            .bind_uniform(self.scene_uniforms.projection, projection);
+            .bind_uniform(self.scene_program.uniforms().projection, projection);
         self.envmap_program.use_program();
-        self.envmap_program
-            .bind_uniform(self.envmap_uniforms.projection, projection);
+        self.envmap_program.bind_uniform(
+            self.envmap_program.uniforms().projection,
+            projection,
+        );
 
         unsafe {
             gl::Viewport(0, 0, width as i32, height as i32);
@@ -393,7 +379,7 @@ impl Renderer for GlRenderer {
         let program = self.scene_program();
         let cam_view = scene.main_camera.transform();
 
-        let uniforms = &self.scene_uniforms;
+        let uniforms = &self.scene_program.uniforms();
 
         {
             let GlMesh {
@@ -401,7 +387,7 @@ impl Renderer for GlRenderer {
                 ref mesh,
             } = self.env_cube;
 
-            let ref uniforms = self.envmap_uniforms;
+            let ref uniforms = self.envmap_program.uniforms();
             let ref program = self.envmap_program;
             let modelview = cam_view;
             program.use_program();

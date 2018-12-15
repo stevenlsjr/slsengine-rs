@@ -1,14 +1,17 @@
 use super::errors::*;
 use cgmath::*;
 use gl;
+use std::borrow::Borrow;
+use std::cell::{BorrowMutError, Ref, RefCell};
 use std::collections::HashMap;
 use std::path::Path;
 
 pub struct ShaderStage(pub u32);
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub struct Program {
     pub id: u32,
+    pub uniforms: RefCell<ShaderUniforms>,
 }
 
 pub struct ProgramBuilder {
@@ -22,23 +25,38 @@ pub struct ProgramBuilder {
 /// scene shader
 #[derive(Clone, Debug)]
 pub struct ShaderUniforms {
-    pub modelview: i32,
-    pub projection: i32,
-    pub normal_matrix: i32,
-    pub light_positions: i32,
-    user_uniforms: HashMap<String, i32>,
+    pub modelview: Option<u32>,
+    pub projection: Option<u32>,
+    pub normal_matrix: Option<u32>,
+    pub light_positions: Option<u32>,
+    pub albedo_map: Option<u32>,
+    pub metallic_roughness_map: Option<u32>,
+    pub normal_map: Option<u32>,
+    pub ao_map: Option<u32>,
+    pub emssive_map: Option<u32>,
+    user_uniforms: HashMap<String, Option<u32>>,
 }
 
 impl ShaderUniforms {
     pub fn find_locations(&mut self, program: &Program) {
-        self.modelview = program.uniform_location("modelview").unwrap_or(-1);
-        self.projection = program.uniform_location("projection").unwrap_or(-1);
-        self.normal_matrix =
-            program.uniform_location("normal_matrix").unwrap_or(-1);
-        self.light_positions =
-            program.uniform_location("light_positions").unwrap_or(-1);
+        fn handle_err(e: ShaderError) -> Option<u32> {
+            eprintln!("error: {:?}", e);
+            None
+        }
+        self.modelview = program
+            .uniform_location("modelview")
+            .unwrap_or_else(&handle_err);
+        self.projection = program
+            .uniform_location("projection")
+            .unwrap_or_else(&handle_err);
+        self.normal_matrix = program
+            .uniform_location("normal_matrix")
+            .unwrap_or_else(&handle_err);
+        self.light_positions = program
+            .uniform_location("light_positions")
+            .unwrap_or_else(&handle_err);
         for (key, value) in self.user_uniforms.iter_mut() {
-            *value = program.uniform_location(key).unwrap_or(-1);
+            *value = program.uniform_location(key).unwrap_or_else(&handle_err);
         }
     }
 }
@@ -46,10 +64,15 @@ impl ShaderUniforms {
 impl Default for ShaderUniforms {
     fn default() -> Self {
         ShaderUniforms {
-            modelview: -1,
-            projection: -1,
-            normal_matrix: -1,
-            light_positions: -1,
+            modelview: None,
+            projection: None,
+            normal_matrix: None,
+            light_positions: None,
+            albedo_map: None,
+            metallic_roughness_map: None,
+            normal_map: None,
+            ao_map: None,
+            emssive_map: None,
             user_uniforms: HashMap::new(),
         }
     }
@@ -142,12 +165,31 @@ impl Program {
             gl::UseProgram(self.id);
         }
     }
+
+    #[inline]
+    pub fn uniforms(&self) -> Ref<ShaderUniforms> {
+        use std::borrow::Borrow;
+        self.uniforms.borrow()
+    }
+
+    pub fn try_set_uniforms(&self) -> Result<(), BorrowMutError> {
+        let mut u = self.uniforms.try_borrow_mut()?;
+        u.find_locations(self);
+        Ok(())
+    }
+
     /// Binds textures in pbr material to shader samplers
-    pub fn bind_material_textures(&self, material: &super::ManagedTextureMaterial) {
+    pub fn bind_material_textures(
+        &self,
+        material: &super::ManagedTextureMaterial,
+    ) {
 
     }
 
-    pub fn uniform_location(&self, name: &str) -> Result<i32, ShaderError> {
+    pub fn uniform_location(
+        &self,
+        name: &str,
+    ) -> Result<Option<u32>, ShaderError> {
         use std::ffi::CString;
         let cs_name = CString::new(name).map_err(|e| {
             ShaderError::UniformBindFailure {
@@ -157,12 +199,9 @@ impl Program {
         })?;
         let id = unsafe { gl::GetUniformLocation(self.id, cs_name.as_ptr()) };
         if id < 0 {
-            return Err(ShaderError::UniformBindFailure {
-                name: name.to_string(),
-                msg: "".to_string(),
-            });
+            return Ok(None);
         }
-        Ok(id)
+        Ok(Some(id as _))
     }
 }
 
@@ -172,15 +211,15 @@ pub trait BindUniform<T> {
 }
 
 impl BindUniform<Matrix4<f32>> for Program {
-    type Id = i32;
-    fn bind_uniform(&self, id: i32, val: &Matrix4<f32>) {
-        unsafe {
-            gl::UniformMatrix4fv(id, 1, gl::FALSE, val.as_ptr());
-        }
+    type Id = Option<u32>;
+    fn bind_uniform(&self, id: Self::Id, val: &Matrix4<f32>) {
+        if let Some(id) = id {
+            unsafe {
+                gl::UniformMatrix4fv(id as _, 1, gl::FALSE, val.as_ptr());
+            }
+        } 
     }
 }
-
-
 
 impl Drop for Program {
     fn drop(&mut self) {
@@ -208,7 +247,13 @@ impl ProgramBuilder {
 
     pub fn build_program(&self) -> Result<Program, ShaderError> {
         let id = unsafe { self.link_program() }?;
-        Ok(Program { id })
+        let prog = Program {
+            id,
+            uniforms: RefCell::new(ShaderUniforms::default()),
+        };
+        prog.uniforms.borrow_mut().find_locations(&prog);
+
+        Ok(prog)
     }
 
     pub unsafe fn link_program(&self) -> Result<u32, ShaderError> {

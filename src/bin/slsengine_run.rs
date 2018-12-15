@@ -72,7 +72,7 @@ fn get_or_create_config(
 }
 
 fn setup_materials(
-    renderer: &GlRenderer,
+    _renderer: &GlRenderer,
     model: &renderer::model::Model,
     world: &mut EntityWorld<GlRenderer>,
 ) {
