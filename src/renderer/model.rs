@@ -190,15 +190,10 @@ fn make_mesh(
 mod test {
     use super::*;
 
-    static GLB_BYTES: &[u8] = include_bytes!("../../assets/models/earth.glb");
     #[test]
     fn test_model_loader() {
-        use gltf::{binary::Glb, Gltf};
-        let glb = Glb::from_slice(GLB_BYTES)
-            .expect("file should be valid gltf binary bytecode");
-        let gl_model = Gltf::from_slice(GLB_BYTES)
-            .expect("should load valid gltf document");
-        let model_res = Model::from_gltf(&gl_model);
+        
+        let model_res = Model::from_gltf("assets/models/earth.glb");
         if let Ok(model) = model_res {
             assert_eq!(
                 model.meshes.len(),

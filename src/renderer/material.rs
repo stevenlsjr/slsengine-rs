@@ -1,7 +1,6 @@
 use cgmath::*;
 use failure;
 use gltf;
-use image::{self, DynamicImage};
 use math::*;
 
 #[derive(Debug, Clone)]
