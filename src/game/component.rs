@@ -1,7 +1,7 @@
 use cgmath::*;
 use math::*;
-use renderer::material::*;
-use std::collections::HashMap;
+use renderer::{material::*, traits::*};
+use std::{collections::HashMap, rc::Rc};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Hash)]
 pub struct EntityId(pub usize);
@@ -39,14 +39,17 @@ impl Default for TransformComponent {
 }
 
 #[derive(Debug)]
-pub struct ComponentManager {
+pub struct ComponentManager<R>
+where
+    R: Renderer,
+{
     pub masks: Vec<ComponentMask>,
     pub transforms: HashMap<EntityId, TransformComponent>,
-    pub static_meshes: HashMap<EntityId, ()>,
-    pub materials: HashMap<EntityId, ResourceId>,
+    pub static_meshes: HashMap<EntityId, Rc<R::Mesh>>,
+    pub materials: HashMap<EntityId, Material<R::Texture>>,
 }
 
-impl ComponentManager {
+impl<R: Renderer> ComponentManager<R> {
     pub fn new() -> Self {
         ComponentManager {
             masks: vec![ComponentMask::LIVE_ENTITY; 256],
@@ -67,7 +70,7 @@ impl ComponentManager {
         id
     }
 
-    pub fn enumerate_entities<'a>(&'a self) -> EntityIter<'a> {
+    pub fn enumerate_entities<'a>(&'a self) -> EntityIter<'a, R> {
         EntityIter {
             manager: self,
             i: 0,
@@ -75,12 +78,12 @@ impl ComponentManager {
     }
 }
 
-pub struct EntityIter<'a> {
-    manager: &'a ComponentManager,
+pub struct EntityIter<'a, R: Renderer> {
+    manager: &'a ComponentManager<R>,
     i: usize,
 }
 
-impl<'a> Iterator for EntityIter<'a> {
+impl<'a, R: Renderer> Iterator for EntityIter<'a, R> {
     type Item = (EntityId, ComponentMask);
     fn next(&mut self) -> Option<Self::Item> {
         let i = self.i;
