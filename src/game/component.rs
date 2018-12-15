@@ -1,6 +1,6 @@
 use cgmath::*;
 use math::*;
-use renderer::material::UntexturedMat;
+use renderer::material::*;
 use std::collections::HashMap;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Hash)]
@@ -15,6 +15,9 @@ bitflags! {
 
     }
 }
+
+#[derive(Copy, Clone, Debug, PartialEq, PartialOrd, Hash)]
+pub struct ResourceId(pub usize);
 
 #[derive(Debug, Clone)]
 pub struct TransformComponent {
@@ -40,7 +43,7 @@ pub struct ComponentManager {
     pub masks: Vec<ComponentMask>,
     pub transforms: HashMap<EntityId, TransformComponent>,
     pub static_meshes: HashMap<EntityId, ()>,
-    pub materials: HashMap<EntityId, UntexturedMat>,
+    pub materials: HashMap<EntityId, ResourceId>,
 }
 
 impl ComponentManager {
@@ -62,5 +65,31 @@ impl ComponentManager {
         let id = EntityId(self.masks.len());
         self.masks.push(ComponentMask::LIVE_ENTITY);
         id
+    }
+
+    pub fn enumerate_entities<'a>(&'a self) -> EntityIter<'a> {
+        EntityIter {
+            manager: self,
+            i: 0,
+        }
+    }
+}
+
+pub struct EntityIter<'a> {
+    manager: &'a ComponentManager,
+    i: usize,
+}
+
+impl<'a> Iterator for EntityIter<'a> {
+    type Item = (EntityId, ComponentMask);
+    fn next(&mut self) -> Option<Self::Item> {
+        let i = self.i;
+        self.i += 1;
+        let masks = &self.manager.masks;
+        if i < masks.len() {
+            Some((EntityId(i), masks[i]))
+        } else {
+            None
+        }
     }
 }

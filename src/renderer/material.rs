@@ -55,7 +55,7 @@ fn test_transform_texture() {
         occlusion_map: None,
         ..Material::default()
     };
-    let m2 = m.transform_textures(|tex| tex * 2);
+    let m2 = m.transform_textures(|tex| Some(tex * 2));
     assert_eq!(m2.albedo_map, Some(2));
     assert_eq!(m2.occlusion_map, None);
 }

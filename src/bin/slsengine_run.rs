@@ -72,19 +72,6 @@ fn get_or_create_config(
     Ok(conf)
 }
 
-fn load_model_materials(
-    model: &gltf::Gltf,
-    mesh_index: usize,
-    images: &[gltf::image::Data],
-) {
-    use renderer::material::{self, Material};
-    let mesh = model.meshes().nth(mesh_index).unwrap();
-    let materials = mesh
-        .primitives()
-        .map(|p| material::from_gltf_material(&p.material(), images))
-        .collect::<Vec<_>>();
-}
-
 fn main() {
     use renderer::model::*;
     use sdl_platform::{platform, OpenGLVersion, Platform};
@@ -103,10 +90,35 @@ fn main() {
     let path = Path::new("assets/models/DamagedHelmet.glb");
     let model = Model::from_gltf(&path).unwrap();
 
-    let mut renderer = GlRenderer::new(&window, model).unwrap();
+    let mut renderer = GlRenderer::new(&window, &model).unwrap();
 
     let mut timer = game::Timer::new(Duration::from_millis(1000 / 50));
     let mut world = game::EntityWorld::new();
+
+    {
+        use game::component::*;
+        let material_id = model.meshes[0].material_index;
+        let mat = &model.materials[&material_id];
+        let gl_mat = mat.transform_textures(|img_data| {
+            use renderer::backend_gl::textures::*;
+            use std::cell::*;
+            use std::rc::*;
+            let mut glt = GlTexture::new().unwrap();
+            glt.load_from_image(&img_data).unwrap();
+            Some(Rc::new(RefCell::new(glt)))
+        });
+        let mat_id = renderer.materials.table.len();
+        renderer.materials.table.push(gl_mat);
+        let entities: Vec<(EntityId, ComponentMask)> = world
+            .components
+            .enumerate_entities()
+            .filter(|(_id, mask)| mask.contains(ComponentMask::MATERIAL))
+            .collect();
+
+        for (id, _mask) in entities {
+            world.components.materials.insert(id, ResourceId(mat_id));
+        }
+    }
 
     loop_state.is_running = true;
     let mut accumulator = Duration::from_secs(0);

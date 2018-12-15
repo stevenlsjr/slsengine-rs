@@ -7,7 +7,7 @@ use std::time::{Duration, Instant};
 pub mod camera;
 pub mod component;
 pub use self::camera::*;
-use renderer::{material::*};
+use renderer::material::*;
 
 /*--------------------------------------
  * Game timer: handles delta time, time since start, etc
@@ -153,17 +153,6 @@ impl EntityWorld {
                 );
                 xform.transform.rot = rotation.into();
 
-                let mut material = UntexturedMat {
-                    roughness_factor: (j as f32) / ((n_rows - 1) as f32),
-                    metallic_factor: (i as f32) / ((n_cols - 1) as f32),
-                    ..base::PLASTIC_WHITE
-                };
-                material.roughness_factor =
-                    material.roughness_factor.max(0.01).min(1.0);
-                material.metallic_factor =
-                    material.metallic_factor.max(0.01).min(1.0);
-
-                self.components.materials.insert(eid, material);
                 self.components.transforms.insert(eid, xform);
             }
         }

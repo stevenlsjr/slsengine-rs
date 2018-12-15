@@ -382,7 +382,6 @@ fn program_from_sources<P: AsRef<Path> + ::std::fmt::Debug>(
 }
 
 fn create_scene_shaders() -> Result<(Program, Program), ShaderError> {
-
     let scene_program = program_from_sources(
         "./assets/shaders/brdf.vert",
         "./assets/shaders/brdf.frag",
@@ -465,9 +464,12 @@ impl GlMesh {
     }
 }
 
-struct Materials {
-    base_material: material::UntexturedMat,
+type ManagedTextureMaterial = material::Material<Rc<RefCell<GlTexture>>>;
+
+pub struct Materials {
+    default_material: ManagedTextureMaterial,
     base_material_ubo: MaterialUbo,
+    pub table: Vec<ManagedTextureMaterial>,
 }
 
 /// the renderer backend for openGL
@@ -480,8 +482,8 @@ pub struct GlRenderer {
     sample_mesh: Mesh,
     env_cube: GlMesh,
     buffers: MeshBuffers,
-    materials: Materials,
-    textures: HashMap<String, Rc<RefCell<GlTexture>>>,
+    pub materials: Materials,
+    pub textures: HashMap<String, Rc<RefCell<GlTexture>>>,
 
     recompile_flag: Cell<Option<Instant>>,
 }
@@ -489,7 +491,7 @@ pub struct GlRenderer {
 impl GlRenderer {
     pub fn new(
         window: &Window,
-        model: model::Model,
+        model: &model::Model,
     ) -> Result<GlRenderer, RendererError> {
         use super::objects::*;
         let mesh = model.meshes[0].mesh.clone();
@@ -541,9 +543,6 @@ impl GlRenderer {
             camera: RefCell::new(Camera::new(perspective)),
             recompile_flag: Cell::new(None),
         };
-        renderer
-            .textures
-            .insert("a_tex".to_owned(), Rc::new(RefCell::new(texture)));
 
         if let Err(e) = renderer.initialize() {
             return Err(RendererError::Lifecycle {
@@ -562,35 +561,28 @@ impl GlRenderer {
 
     fn initialize(&mut self) -> Result<(), failure::Error> {
         self.get_uniform_locations();
-        self.materials.base_material_ubo.bind_to_material(
-            &self.scene_program,
-            &self.materials.base_material,
-        )?;
-        self.materials.base_material_ubo.bind_to_material(
-            &self.envmap_program,
-            &self.materials.base_material,
-        )?;
-
-        use image;
-        let base_color = image::open("assets/Textures/DamagedHelmet_img0.jpg")?;
-        if let Some(tex_obj) =
-            self.textures.get_mut("a_tex").map(|rc| rc.clone())
-        {
-            tex_obj.borrow_mut().load_image(base_color)?;
+        let ref ubo = self.materials.base_material_ubo;
+        for i in [&self.envmap_program, &self.scene_program].iter() {
+            ubo.bind_to_program(i);
         }
+
         Ok(())
     }
 
     fn make_materials() -> Result<Materials, ::failure::Error> {
         use super::objects::*;
-        use failure::Error;
-        let base_material: material::UntexturedMat =
-            material::base::PLASTIC_RED;
+        use renderer::material::*;
 
+        use failure::Error;
+        let base_material: UntexturedMat = base::PLASTIC_RED;
+
+        let default_material = base_material.transform_textures(|_| None);
         let base_material_ubo = MaterialUbo::new().map_err(&Error::from)?;
+
         Ok(Materials {
-            base_material,
+            default_material,
             base_material_ubo,
+            table: Vec::new(),
         })
     }
 
@@ -613,10 +605,11 @@ impl GlRenderer {
             }
         };
 
-        if let Err(e) = self.materials.base_material_ubo.bind_to_material(
-            &self.scene_program,
-            &self.materials.base_material,
-        ) {
+        if let Err(e) = self
+            .materials
+            .base_material_ubo
+            .bind_to_program(&self.scene_program)
+        {
             eprintln!("failed to bind material {:?}", e);
         }
 
@@ -635,6 +628,11 @@ impl GlRenderer {
             self.envmap_uniforms.projection,
             &self.camera.borrow().projection,
         );
+
+        let ref ubo = self.materials.base_material_ubo;
+        for i in &[&self.envmap_program, &self.scene_program] {
+            ubo.bind_to_program(i);
+        }
 
         println!(
             "build new shader program {:#?} with uniforms {:#?}",
@@ -690,26 +688,23 @@ impl GlRenderer {
 
         let entities: Vec<_> = scene
             .components
-            .masks
-            .iter()
-            .enumerate()
-            .map(|(k, v)| (EntityId(k), v))
+            .enumerate_entities()
             .filter(|(k, v)| v.contains(mask))
             .collect();
 
         for (id, mask) in entities {
             let material = if mask.contains(ComponentMask::MATERIAL) {
-                scene.components.materials.get(&id)
+                let mid = scene.components.materials[&id];
+                &self.materials.table[mid.0]
             } else {
-                None
-            }
-            .unwrap_or(&self.materials.base_material);
+                &self.materials.default_material
+            };
+            if let Err(e) =
+                self.materials.base_material_ubo.set_material(material)
             {
-                let ref material_ubo = self.materials.base_material_ubo;
-                if let Err(e) = material_ubo.set_material(material) {
-                    eprintln!("couldn't set material {:?}", e);
-                }
+                eprintln!("error {:?}", e);
             }
+
             let transform = scene.components.transforms.get(&id).unwrap();
             let model_matrix = Mat4::from(transform.transform);
 
@@ -813,7 +808,6 @@ impl RenderScene<game::EntityWorld> for GlRenderer {
             program.bind_uniform(uniforms.modelview, &modelview);
             unsafe {
                 gl::Disable(gl::CULL_FACE);
-                // gl::DepthMask(gl::FALSE);
                 gl::DepthFunc(gl::LEQUAL);
                 gl::BindVertexArray(buffers.vertex_array.id());
                 gl::DrawElements(
@@ -823,8 +817,6 @@ impl RenderScene<game::EntityWorld> for GlRenderer {
                     ptr::null(),
                 );
                 gl::DepthFunc(gl::LESS);
-
-                // gl::DepthMask(gl::TRUE);
             }
         }
         self.draw_entities(scene);

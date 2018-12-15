@@ -105,14 +105,12 @@ impl MaterialUbo {
         Ok(())
     }
 
-    pub fn bind_to_material<T>(
+    pub fn bind_to_program(
         &self,
         program: &super::gl_renderer::Program,
-        material: &::renderer::material::Material<T>,
     ) -> Result<(), super::GlErrors> {
-
         self.setup_binding(program);
 
-        self.set_material(material)
+        Ok(())
     }
 }

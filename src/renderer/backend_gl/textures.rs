@@ -1,13 +1,17 @@
 use super::objects::*;
 use failure;
 use gl;
-use image;
+use image::{self, DynamicImage};
 
 #[derive(Debug)]
 pub struct TextureObjects {
     ids: Vec<u32>,
 }
 use std::iter::FromIterator;
+
+pub trait FromImage<Image> {
+    fn load_from_image(&mut self, image: &Image) -> Result<(), failure::Error>;
+}
 
 impl TextureObjects {
     pub fn new(len: usize) -> Result<TextureObjects, ObjectError> {
@@ -68,44 +72,37 @@ impl GlTexture {
         }
         Ok(GlTexture { id })
     }
+}
 
-    pub fn load_image(
-        &mut self,
-        image: image::DynamicImage,
-    ) -> Result<(), failure::Error> {
-        use image::*;
-        let (input_format, _depth) = match image.color() {
-            ColorType::Gray(depth) => (gl::RED, depth),
-            ColorType::GrayA(depth) => (gl::RG, depth),
-            ColorType::RGB(depth) => (gl::RGB, depth),
-            ColorType::RGBA(depth) => (gl::RGBA, depth),
-            ColorType::BGR(depth) => (gl::RGB, depth),
-            ColorType::BGRA(depth) => (gl::RGBA, depth),
-
-            other => bail!("invalid color format {:?}", other),
+impl FromImage<gltf::image::Data> for GlTexture
+{
+    fn load_from_image(&mut self, image: &gltf::image::Data) -> Result<(), failure::Error> {
+        use gltf::image::*;
+        let format = match image.format {
+            Format::R8 => gl::RED,
+            Format::R8G8 => gl::RG,
+            Format::R8G8B8 => gl::RGB,
+            Format::R8G8B8A8 => gl::RGBA,
         };
+        let ptr = image.pixels.as_ptr();
 
-        let output_format = match input_format {
-            gl::RG => gl::RG,
-            gl::RGB => gl::RGB,
-            gl::RGBA => gl::RG,
-            gl::RED => gl::RED,
-            other => gl::RGB,
-        };
+        let internal_format = format;
+
         unsafe {
-            gl::BindTexture(gl::TEXTURE_2D, self.id);
+            gl::BindTexture(self.id, gl::TEXTURE_2D);
+
             gl::TexImage2D(
                 gl::TEXTURE_2D,
                 0,
-                output_format as i32,
-                image.width() as i32,
-                image.height() as i32,
+                internal_format as i32,
+                image.width as i32,
+                image.height as i32,
                 0,
-                input_format,
+                format,
                 gl::UNSIGNED_BYTE,
-                image.raw_pixels().as_ptr() as *const _,
+                ptr as *const _,
             );
-            gl::BindTexture(gl::TEXTURE_2D, 0);
+            gl::BindTexture(0, gl::TEXTURE_2D);
         }
         Ok(())
     }
