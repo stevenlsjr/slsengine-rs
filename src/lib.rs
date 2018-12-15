@@ -39,7 +39,6 @@ use sdl2::keyboard::Keycode;
 use sdl2::video::Window;
 use std::{cell::RefCell, error::Error, time::Instant};
 
-
 pub fn get_error_desc<E: Error>(e: E) -> String {
     e.description().to_string()
 }
@@ -66,7 +65,7 @@ impl MainLoopState {
         window: &Window,
         event_pump: &RefCell<sdl2::EventPump>,
         renderer: &R,
-        world: &mut game::EntityWorld,
+        world: &mut game::EntityWorld<R>,
     ) {
         use cgmath::*;
         if let None = world.input_state {

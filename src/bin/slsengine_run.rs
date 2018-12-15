@@ -14,8 +14,11 @@ extern crate failure;
 
 use cgmath::prelude::*;
 use cgmath::*;
-use slsengine::renderer::{backend_gl::*, *};
-use slsengine::*;
+use slsengine::{
+    game::*,
+    renderer::{backend_gl::*, *},
+    *,
+};
 
 // returns the [u, v] surface coordinates for a unit sphere.
 fn uv_for_unit_sphere(pos: Vector3<f32>) -> [f32; 2] {
@@ -32,11 +35,7 @@ fn uv_for_unit_sphere(pos: Vector3<f32>) -> [f32; 2] {
 fn get_or_create_config(
 ) -> Result<slsengine::config::PlatformConfig, failure::Error> {
     use slsengine::config::PlatformConfig;
-    use std::{
-        fs,
-        io::{self, Write},
-        path,
-    };
+    use std::{fs, io::Write, path};
 
     let pref_dir = sdl2::filesystem::pref_path("dangerbird", "slsengine")
         .map_err(&failure::Error::from)?;
@@ -72,9 +71,36 @@ fn get_or_create_config(
     Ok(conf)
 }
 
+fn setup_materials(
+    renderer: &GlRenderer,
+    model: &renderer::model::Model,
+    world: &mut EntityWorld<GlRenderer>,
+) {
+    use renderer::backend_gl::textures::*;
+    use slsengine::game::component::*;
+    use std::sync::*;
+    let mat = model.materials.values().next().unwrap();
+    let gl_mat = mat.transform_textures(|img| {
+        let mut tex = GlTexture::new().unwrap();
+        tex.load_from_image(img).map(&Some).unwrap_or_else(|e| {
+            eprintln!("could not load image {:?}", e);
+            None
+        })?;
+        Some(Arc::new(tex))
+    });
+    let entities = world
+        .components
+        .enumerate_entities()
+        .filter(|(_, mask)| mask.contains(ComponentMask::MATERIAL))
+        .collect::<Vec<_>>();
+    for (id, _mask) in entities.iter() {
+        world.components.materials.insert(*id, gl_mat.clone());
+    }
+}
+
 fn main() {
     use renderer::model::*;
-    use sdl_platform::{platform, OpenGLVersion, Platform};
+    use sdl_platform::{platform, Platform};
     use std::path::*;
     use std::time::*;
     let config = get_or_create_config().unwrap();
@@ -93,32 +119,9 @@ fn main() {
     let mut renderer = GlRenderer::new(&window, &model).unwrap();
 
     let mut timer = game::Timer::new(Duration::from_millis(1000 / 50));
-    let mut world = game::EntityWorld::new();
+    let mut world = game::EntityWorld::new(&renderer);
 
-    {
-        use game::component::*;
-        let material_id = model.meshes[0].material_index;
-        let mat = &model.materials[&material_id];
-        let gl_mat = mat.transform_textures(|img_data| {
-            use renderer::backend_gl::textures::*;
-            use std::cell::*;
-            use std::rc::*;
-            let mut glt = GlTexture::new().unwrap();
-            glt.load_from_image(&img_data).unwrap();
-            Some(Rc::new(RefCell::new(glt)))
-        });
-        let mat_id = renderer.materials.table.len();
-        renderer.materials.table.push(gl_mat);
-        let entities: Vec<(EntityId, ComponentMask)> = world
-            .components
-            .enumerate_entities()
-            .filter(|(_id, mask)| mask.contains(ComponentMask::MATERIAL))
-            .collect();
-
-        for (id, _mask) in entities {
-            world.components.materials.insert(id, ResourceId(mat_id));
-        }
-    }
+    setup_materials(&renderer, &model, &mut world);
 
     loop_state.is_running = true;
     let mut accumulator = Duration::from_secs(0);

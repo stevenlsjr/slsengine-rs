@@ -192,7 +192,6 @@ mod test {
 
     #[test]
     fn test_model_loader() {
-        
         let model_res = Model::from_gltf("assets/models/earth.glb");
         if let Ok(model) = model_res {
             assert_eq!(

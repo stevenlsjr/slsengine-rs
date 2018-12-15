@@ -1,6 +1,5 @@
-
-use cgmath::*;
 use super::traits::*;
+use cgmath::*;
 /*
  *  Camera
  **/

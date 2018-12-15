@@ -74,9 +74,11 @@ impl GlTexture {
     }
 }
 
-impl FromImage<gltf::image::Data> for GlTexture
-{
-    fn load_from_image(&mut self, image: &gltf::image::Data) -> Result<(), failure::Error> {
+impl FromImage<gltf::image::Data> for GlTexture {
+    fn load_from_image(
+        &mut self,
+        image: &gltf::image::Data,
+    ) -> Result<(), failure::Error> {
         use gltf::image::*;
         let format = match image.format {
             Format::R8 => gl::RED,
@@ -87,9 +89,20 @@ impl FromImage<gltf::image::Data> for GlTexture
         let ptr = image.pixels.as_ptr();
 
         let internal_format = format;
-
+        super::drain_error_stack();
         unsafe {
-            gl::BindTexture(self.id, gl::TEXTURE_2D);
+            gl::BindTexture(gl::TEXTURE_2D, self.id);
+            gl::TexParameteri(
+                gl::TEXTURE_2D,
+                gl::TEXTURE_MIN_FILTER,
+                gl::LINEAR as _,
+            );
+
+            gl::TexParameteri(
+                gl::TEXTURE_2D,
+                gl::TEXTURE_MAG_FILTER,
+                gl::LINEAR as _,
+            );
 
             gl::TexImage2D(
                 gl::TEXTURE_2D,
@@ -102,8 +115,12 @@ impl FromImage<gltf::image::Data> for GlTexture
                 gl::UNSIGNED_BYTE,
                 ptr as *const _,
             );
-            gl::BindTexture(0, gl::TEXTURE_2D);
+
+            gl::GenerateMipmap(gl::TEXTURE_2D);
+
+            gl::BindTexture(gl::TEXTURE_2D, 0);
         }
+        super::dump_errors()?;
         Ok(())
     }
 }

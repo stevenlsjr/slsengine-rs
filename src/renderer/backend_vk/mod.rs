@@ -287,9 +287,11 @@ impl VulkanRenderer {
     }
 }
 pub struct VkTexture;
+pub struct VkMesh;
 
 impl Renderer for VulkanRenderer {
     type Texture = VkTexture;
+    type Mesh = VkMesh;
     fn camera(&self) -> Ref<Camera> {
         self.camera.borrow()
     }

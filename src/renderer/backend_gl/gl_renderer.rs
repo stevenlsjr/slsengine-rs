@@ -17,34 +17,37 @@ use std::{
     time::Instant,
 };
 
-pub fn rectangle_mesh() -> MeshBuilder {
-    let mut mb = MeshBuilder::new();
-    mb.positions.append(&mut vec![
-        [-1.0f32, -1.0f32, 0.0f32],
-        [1.0, -1.0, 0.0],
-        [1.0, 1.0, 0.0],
-        [-1.0, 1.0, 0.0],
-    ]);
+use std::sync::Arc;
 
-    mb.normals.append(&mut vec![
-        [0.0f32, 0.0f32, 1.0f32],
-        [0.0, 0.0, 1.0],
-        [0.0, 0.0, 1.0],
-        [0.0, 0.0, 1.0],
-    ]);
+use std::borrow::Borrow;
 
-    mb.uvs.append(&mut vec![
-        [0.0f32, 0.0f32],
-        [1.0, 0.0],
-        [1.0, 1.0],
-        [0.0, 1.0],
-    ]);
+pub type ManagedTexture = Arc<GlTexture>;
+pub type ManagedTextureMaterial = material::Material<Arc<GlTexture>>;
 
-    mb.indices.append(&mut vec![0, 1, 2, 2, 3, 0]);
-    mb
+pub struct Materials {
+    default_material: Arc<ManagedTextureMaterial>,
+    base_material_ubo: MaterialUbo,
 }
 
+/// the renderer backend for openGL
+pub struct GlRenderer {
+    camera: RefCell<Camera>,
+    scene_program: Program,
+    scene_uniforms: ShaderUniforms,
+    envmap_program: Program,
+    envmap_uniforms: ShaderUniforms,
+    sample_mesh: Mesh,
+    env_cube: GlMesh,
+    buffers: MeshBuffers,
+    pub materials: Materials,
 
+    recompile_flag: Cell<Option<Instant>>,
+}
+
+pub struct GlMesh {
+    mesh: Mesh,
+    buffers: MeshBuffers,
+}
 
 fn create_scene_shaders() -> Result<(Program, Program), ShaderError> {
     let scene_program = program_from_sources(
@@ -57,53 +60,6 @@ fn create_scene_shaders() -> Result<(Program, Program), ShaderError> {
         "./assets/shaders/envmap.frag",
     )?;
     Ok((scene_program, envmap_program))
-}
-
-/*
- * Opengl renderer implementation
- */
-
-///
-/// Stores uniform ids for the main
-/// scene shader
-#[derive(Clone, Debug)]
-pub struct ShaderUniforms {
-    pub modelview: i32,
-    pub projection: i32,
-    pub normal_matrix: i32,
-    pub light_positions: i32,
-    user_uniforms: HashMap<String, i32>,
-}
-
-impl ShaderUniforms {
-    pub fn find_locations(&mut self, program: &Program) {
-        self.modelview = program.uniform_location("modelview").unwrap_or(-1);
-        self.projection = program.uniform_location("projection").unwrap_or(-1);
-        self.normal_matrix =
-            program.uniform_location("normal_matrix").unwrap_or(-1);
-        self.light_positions =
-            program.uniform_location("light_positions").unwrap_or(-1);
-        for (key, value) in self.user_uniforms.iter_mut() {
-            *value = program.uniform_location(key).unwrap_or(-1);
-        }
-    }
-}
-
-impl Default for ShaderUniforms {
-    fn default() -> Self {
-        ShaderUniforms {
-            modelview: -1,
-            projection: -1,
-            normal_matrix: -1,
-            light_positions: -1,
-            user_uniforms: HashMap::new(),
-        }
-    }
-}
-
-struct GlMesh {
-    mesh: Mesh,
-    buffers: MeshBuffers,
 }
 
 impl GlMesh {
@@ -127,30 +83,6 @@ impl GlMesh {
 
         Ok(GlMesh { mesh, buffers })
     }
-}
-
-type ManagedTextureMaterial = material::Material<Rc<RefCell<GlTexture>>>;
-
-pub struct Materials {
-    default_material: ManagedTextureMaterial,
-    base_material_ubo: MaterialUbo,
-    pub table: Vec<ManagedTextureMaterial>,
-}
-
-/// the renderer backend for openGL
-pub struct GlRenderer {
-    camera: RefCell<Camera>,
-    scene_program: Program,
-    scene_uniforms: ShaderUniforms,
-    envmap_program: Program,
-    envmap_uniforms: ShaderUniforms,
-    sample_mesh: Mesh,
-    env_cube: GlMesh,
-    buffers: MeshBuffers,
-    pub materials: Materials,
-    pub textures: HashMap<String, Rc<RefCell<GlTexture>>>,
-
-    recompile_flag: Cell<Option<Instant>>,
 }
 
 impl GlRenderer {
@@ -204,7 +136,6 @@ impl GlRenderer {
             sample_mesh: mesh,
             buffers,
             materials,
-            textures: HashMap::new(),
             camera: RefCell::new(Camera::new(perspective)),
             recompile_flag: Cell::new(None),
         };
@@ -228,7 +159,8 @@ impl GlRenderer {
         self.get_uniform_locations();
         let ref ubo = self.materials.base_material_ubo;
         for i in [&self.envmap_program, &self.scene_program].iter() {
-            ubo.bind_to_program(i);
+            ubo.bind_to_program(i)
+                .expect("could not set up program buffer");
         }
 
         Ok(())
@@ -241,13 +173,13 @@ impl GlRenderer {
         use failure::Error;
         let base_material: UntexturedMat = base::PLASTIC_RED;
 
-        let default_material = base_material.transform_textures(|_| None);
+        let default_material =
+            Arc::new(base_material.transform_textures(|_| None));
         let base_material_ubo = MaterialUbo::new().map_err(&Error::from)?;
 
         Ok(Materials {
             default_material,
             base_material_ubo,
-            table: Vec::new(),
         })
     }
 
@@ -315,7 +247,7 @@ impl GlRenderer {
         &self.scene_uniforms
     }
 
-    fn draw_entities(&self, scene: &game::EntityWorld) {
+    fn draw_entities(&self, scene: &game::EntityWorld<Self>) {
         use game::component::*;
         use math::*;
         use std::ptr;
@@ -358,16 +290,25 @@ impl GlRenderer {
             .collect();
 
         for (id, mask) in entities {
-            let material = if mask.contains(ComponentMask::MATERIAL) {
-                let mid = scene.components.materials[&id];
-                &self.materials.table[mid.0]
+            if mask.contains(ComponentMask::MATERIAL) {
+                if let Some(material) = scene.components.materials.get(&id) {
+                    self.materials
+                        .base_material_ubo
+                        .set_material(material.borrow())
+                        .unwrap_or_else(|e| {
+                            eprintln!("error {:?}", e);
+                        });
+                    self.scene_program.bind_material_textures(material.borrow());
+                } else {
+                    eprintln!("missing material for entity {:?}, {:?}", id, mask);
+                }
             } else {
-                &self.materials.default_material
-            };
-            if let Err(e) =
-                self.materials.base_material_ubo.set_material(material)
-            {
-                eprintln!("error {:?}", e);
+                self.materials
+                    .base_material_ubo
+                    .set_material(self.materials.default_material.borrow())
+                    .unwrap_or_else(|e| {
+                        eprintln!("error {:?}", e);
+                    });
             }
 
             let transform = scene.components.transforms.get(&id).unwrap();
@@ -391,8 +332,8 @@ impl GlRenderer {
 }
 
 impl Renderer for GlRenderer {
-    type Texture = GlTexture;
-
+    type Texture = ManagedTexture;
+    type Mesh = GlMesh;
     fn clear(&self) {
         unsafe {
             gl::ClearColor(0.6, 0.0, 0.8, 1.0);
@@ -431,7 +372,7 @@ impl Renderer for GlRenderer {
     fn on_update(
         &mut self,
         _delta_time: ::std::time::Duration,
-        _world: &game::EntityWorld,
+        _world: &game::EntityWorld<Self>,
     ) {
         if let Some(t) = self.recompile_flag.get() {
             self.rebuild_program();
@@ -444,14 +385,8 @@ impl Renderer for GlRenderer {
             self.recompile_flag.set(Some(Instant::now()))
         }
     }
-}
 
-pub trait RenderScene<S> {
-    fn render_scene(&self, mesh: &S);
-}
-
-impl RenderScene<game::EntityWorld> for GlRenderer {
-    fn render_scene(&self, scene: &game::EntityWorld) {
+    fn render_scene(&self, scene: &game::EntityWorld<Self>) {
         use std::ptr;
 
         use math::*;

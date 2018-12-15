@@ -1,6 +1,7 @@
 use super::errors::*;
 use cgmath::*;
 use gl;
+use std::collections::HashMap;
 use std::path::Path;
 
 pub struct ShaderStage(pub u32);
@@ -14,6 +15,44 @@ pub struct ProgramBuilder {
     frag_shader: Option<u32>,
     vert_shader: Option<u32>,
     // geometry_shader: Option<u32>,
+}
+
+//
+/// Stores uniform ids for the main
+/// scene shader
+#[derive(Clone, Debug)]
+pub struct ShaderUniforms {
+    pub modelview: i32,
+    pub projection: i32,
+    pub normal_matrix: i32,
+    pub light_positions: i32,
+    user_uniforms: HashMap<String, i32>,
+}
+
+impl ShaderUniforms {
+    pub fn find_locations(&mut self, program: &Program) {
+        self.modelview = program.uniform_location("modelview").unwrap_or(-1);
+        self.projection = program.uniform_location("projection").unwrap_or(-1);
+        self.normal_matrix =
+            program.uniform_location("normal_matrix").unwrap_or(-1);
+        self.light_positions =
+            program.uniform_location("light_positions").unwrap_or(-1);
+        for (key, value) in self.user_uniforms.iter_mut() {
+            *value = program.uniform_location(key).unwrap_or(-1);
+        }
+    }
+}
+
+impl Default for ShaderUniforms {
+    fn default() -> Self {
+        ShaderUniforms {
+            modelview: -1,
+            projection: -1,
+            normal_matrix: -1,
+            light_positions: -1,
+            user_uniforms: HashMap::new(),
+        }
+    }
 }
 
 pub unsafe fn get_shader_info_log(shader: u32) -> String {
@@ -103,6 +142,10 @@ impl Program {
             gl::UseProgram(self.id);
         }
     }
+    /// Binds textures in pbr material to shader samplers
+    pub fn bind_material_textures(&self, material: &super::ManagedTextureMaterial) {
+
+    }
 
     pub fn uniform_location(&self, name: &str) -> Result<i32, ShaderError> {
         use std::ffi::CString;
@@ -136,6 +179,8 @@ impl BindUniform<Matrix4<f32>> for Program {
         }
     }
 }
+
+
 
 impl Drop for Program {
     fn drop(&mut self) {

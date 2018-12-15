@@ -7,7 +7,6 @@ pub mod mesh;
 pub mod model;
 pub mod traits;
 
-
 pub use self::{camera::*, mesh::*, traits::*};
 
 pub trait ShaderPipeline<T: Renderer> {
