@@ -1,7 +1,21 @@
-#[derive(Debug, Fail)]
+#[derive(Fail)]
 #[fail(display = "OpenGL errors: {:?}", errors)]
 pub struct GlErrors {
     pub errors: Vec<gl::types::GLenum>,
+}
+use std::fmt;
+impl fmt::Debug for GlErrors {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use std::fmt::Write;
+        f.write_str("GlErrors: {[")?;
+        for (i, error) in self.errors.iter().enumerate() {
+            write!(f, "0x{:x}", error)?;
+            if i < self.errors.len() - 1 {
+                f.write_char(',')?;
+            }
+        }
+        f.write_str("]}")
+    }
 }
 
 #[derive(Fail, Debug)]
@@ -30,7 +44,6 @@ pub enum ShaderError {
     #[fail(display = "Could not bind uniform, name: {}, {}", name, msg)]
     UniformBindFailure { name: String, msg: String },
 }
-
 
 /// Silently drain errors from OpenGL error stack.
 /// This is neccessary if you wish to
@@ -64,8 +77,6 @@ pub fn dump_errors() -> Result<(), GlErrors> {
     }
 }
 
-
-
 pub fn debug_error_stack(file: &str, line: u32) {
     loop {
         let err = unsafe { gl::GetError() };
@@ -75,4 +86,3 @@ pub fn debug_error_stack(file: &str, line: u32) {
         eprintln!("{}, {}, GL error: 0x{:X}", file, line, err)
     }
 }
-
