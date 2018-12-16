@@ -67,7 +67,7 @@ impl ShaderUniforms {
                 (&mut self.metallic_roughness_map, "metallic_roughness_map"),
                 (&mut self.normal_map, "normal_map"),
                 (&mut self.ao_map, "ao_map"),
-                (&mut self.emissive_map, "emmissive_map"),
+                (&mut self.emissive_map, "emissive_map"),
             ];
             for (ref mut ptr, name) in uniforms {
                 **ptr = program.uniform_location(name).unwrap_or_else(|e| {

@@ -169,7 +169,7 @@ impl GlRenderer {
         let base_material: UntexturedMat = base::PLASTIC_RED;
 
         let default_material =
-            Arc::new(base_material.transform_textures(|_| None));
+            Arc::new(base_material.transform_textures(|_,_| None));
         let base_material_ubo = MaterialUbo::new().map_err(&Error::from)?;
 
         Ok(Materials {

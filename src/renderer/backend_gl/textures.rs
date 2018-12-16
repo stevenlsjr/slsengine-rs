@@ -4,66 +4,10 @@ use gl;
 use gl::types::GLenum;
 use image::{self, DynamicImage};
 
-#[derive(Debug)]
-pub struct TextureObjects {
-    ids: Vec<u32>,
-}
 use std::iter::FromIterator;
 
 pub trait FromImage<Image> {
     fn load_from_image(&mut self, image: &Image) -> Result<(), failure::Error>;
-}
-
-impl TextureObjects {
-    pub fn new(len: usize) -> Result<TextureObjects, ObjectError> {
-        let mut ids: Vec<u32> = vec![0; len];
-
-        unsafe {
-            gl::GenTextures(len as i32, ids.as_mut_ptr());
-        }
-
-        Ok(TextureObjects { ids })
-    }
-
-    /// takes ownership of the texture objects, and returns a FromIter of GlTextures
-    pub fn into_individual_textures<B>(mut self) -> B
-    where
-        B: FromIterator<GlTexture>,
-    {
-        use std::mem::swap;
-
-        let mut ids = Vec::new();
-        swap(&mut self.ids, &mut ids);
-
-        ids.iter()
-            .map(|&id| GlTexture {
-                id,
-                min_filter: None,
-                mag_filter: None,
-            })
-            .collect()
-    }
-
-    pub fn ids(&self) -> &[u32] {
-        &self.ids
-    }
-
-    pub fn len(&self) -> usize {
-        self.ids.len()
-    }
-}
-
-impl Drop for TextureObjects {
-    fn drop(&mut self) {
-        if self.len() < 1 {
-            return;
-        }
-        unsafe {
-            gl::DeleteTextures(self.ids.len() as i32, self.ids.as_mut_ptr());
-        }
-
-        self.ids.clear();
-    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -71,6 +15,7 @@ pub struct GlTexture {
     pub id: u32,
     min_filter: Option<GLenum>,
     mag_filter: Option<GLenum>,
+    name: Option<String>,
 }
 
 impl GlTexture {
@@ -83,10 +28,30 @@ impl GlTexture {
             id,
             min_filter: None,
             mag_filter: None,
+            name: None,
         })
     }
+
     #[inline]
-    pub fn id(&self)->u32 {
+    pub fn name(&self) -> &Option<String> {
+        &self.name
+    }
+
+    pub fn set_name(&mut self, name: String) {
+        if cfg!(feature = "gl-debug-output") && gl::ObjectLabel::is_loaded() {
+            unsafe {
+                gl::BindTexture(gl::TEXTURE_2D, self.id);
+                gl::ObjectLabel(gl::TEXTURE, self.id, name.len() as i32, name.as_ptr() as *const _);
+            }
+        }
+        self.name = Some(name);
+        super::drain_error_stack();
+        
+        super::debug_error_stack(file!(), line!());
+    }
+
+    #[inline]
+    pub fn id(&self) -> u32 {
         self.id
     }
 

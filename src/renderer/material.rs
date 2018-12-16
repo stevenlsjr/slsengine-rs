@@ -16,6 +16,15 @@ pub struct Material<Tex> {
     pub occlusion_map: Option<Tex>,
 }
 
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum MaterialMapName {
+    Albedo,
+    MetallicRoughness,
+    Emissive,
+    Normal,
+    Occlusion
+}
+
 impl<Tex> Material<Tex> {
     pub fn new(
         albedo_factor: Vec4,
@@ -34,15 +43,15 @@ impl<Tex> Material<Tex> {
 
     pub fn transform_textures<BTex, F>(&self, f: F) -> Material<BTex>
     where
-        F: Fn(&Tex) -> Option<BTex>,
+        F: Fn(&Tex, MaterialMapName) -> Option<BTex>,
     {
         let f = &f;
         let mut mat: Material<BTex> = Material::default();
-        mat.albedo_map = self.albedo_map.as_ref().and_then(f);
+        mat.albedo_map = self.albedo_map.as_ref().and_then(|tex| f(tex, MaterialMapName::Albedo));
         mat.metallic_roughness_map =
-            self.metallic_roughness_map.as_ref().and_then(f);
-        mat.emissive_map = self.emissive_map.as_ref().and_then(f);
-        mat.occlusion_map = self.occlusion_map.as_ref().and_then(f);
+            self.metallic_roughness_map.as_ref().and_then(|tex| f(tex, MaterialMapName::MetallicRoughness));
+        mat.emissive_map = self.emissive_map.as_ref().and_then(|tex| f(tex, MaterialMapName::Emissive));
+        mat.occlusion_map = self.occlusion_map.as_ref().and_then(|tex| f(tex, MaterialMapName::Occlusion));
         mat
     }
 }
@@ -54,7 +63,7 @@ fn test_transform_texture() {
         occlusion_map: None,
         ..Material::default()
     };
-    let m2 = m.transform_textures(|tex| Some(tex * 2));
+    let m2 = m.transform_textures(|tex, _| Some(tex * 2));
     assert_eq!(m2.albedo_map, Some(2));
     assert_eq!(m2.occlusion_map, None);
 }

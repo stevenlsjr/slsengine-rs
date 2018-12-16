@@ -80,14 +80,21 @@ fn setup_materials(
     use slsengine::game::component::*;
     use std::sync::*;
     let mat = model.materials.values().next().unwrap();
-    let gl_mat = mat.transform_textures(|img| {
+
+    let gl_mat = mat.transform_textures(|img, name| {
         let mut tex = GlTexture::new().unwrap();
-        tex.load_from_image(img).map(&Some).unwrap_or_else(|e| {
-            eprintln!("could not load image {:?}", e);
-            None
-        })?;
+        let tex_id = tex.id;
+
+        {
+            tex.load_from_image(img).map(&Some).unwrap_or_else(|e| {
+                eprintln!("could not load image {:?}", e);
+                None
+            })?;
+            tex.set_name(format!("tex.{}, '{:?}'", tex_id, name));
+        }
         Some(Arc::new(tex))
     });
+
     let entities = world
         .components
         .enumerate_entities()
