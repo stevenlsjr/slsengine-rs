@@ -257,7 +257,7 @@ impl GlRenderer {
             .map(|id| unsafe {
                 gl::Uniform3fv(id as _, 4, light_pos_ptr as *const _);
             })
-            .unwrap_or_else(|| println!("light position uniform unbound!"));
+            .unwrap_or(());
 
         let mask = ComponentMask::LIVE_ENTITY
             | ComponentMask::TRANSFORM
@@ -360,7 +360,7 @@ impl Renderer for GlRenderer {
         _delta_time: ::std::time::Duration,
         _world: &game::EntityWorld<Self>,
     ) {
-        if let Some(t) = self.recompile_flag.get() {
+        if let Some(_t) = self.recompile_flag.get() {
             self.rebuild_program();
             self.recompile_flag.set(None);
         }

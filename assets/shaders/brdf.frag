@@ -12,7 +12,12 @@ in vec2 frag_uv;
 in vec3 frag_normal;
 in vec3 frag_eye_normal;
 
-uniform sampler2D u_texture;
+uniform sampler2D albedo_map;
+uniform sampler2D metallic_roughness_map;
+uniform sampler2D normal_map;
+uniform sampler2D ao_map;
+uniform sampler2D emissive_map;
+
 
 uniform vec3 ambient_factor = vec3(1.0, 1.0, 1.0) * 0.001;
 
@@ -97,12 +102,15 @@ get_normal()
 void
 main()
 {
-  vec4 albedo_texel = texture(u_texture, frag_uv);
+  vec4 albedo_alpha_texel = texture(albedo_map, frag_uv);
+  vec4 metallic_roughness_texel = texture(metallic_roughness_map, frag_uv);
+  vec3 emissive_texel = texture(emissive_map, frag_uv).rgb;
   vec3 N = get_normal();
   vec3 V = normalize(CAM_POS - frag_pos);
-  float roughness = roughness_factor;
-  float metalness = metallic_factor;
-  vec3 albedo = albedo_factor.rgb;
+  float roughness = roughness_factor * metallic_roughness_texel.g;
+  float metalness = metallic_roughness_texel.b;
+  // float metalness = metallic_factor * metallic_roughness_texel.b;
+  vec3 albedo = albedo_factor.rgb * albedo_alpha_texel.rgb;
 
   vec3 F0 = vec3(0.04);
   F0 = mix(F0, albedo, metalness);
@@ -150,5 +158,5 @@ main()
   // gamma correction
   color = pow(color, vec3(1.0 / 2.2));
 
-  out_color = vec4(color, 1.0);
+  out_color = vec4(color, albedo_alpha_texel.a);
 }

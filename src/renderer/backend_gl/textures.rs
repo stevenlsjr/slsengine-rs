@@ -85,6 +85,10 @@ impl GlTexture {
             mag_filter: None,
         })
     }
+    #[inline]
+    pub fn id(&self)->u32 {
+        self.id
+    }
 
     pub fn with_filter_params(
         min_filter: gl::types::GLenum,

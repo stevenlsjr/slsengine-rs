@@ -92,6 +92,16 @@ impl Model {
                     .and_then(image_from_index),
             };
 
+            assert_ne!(
+                material.emissive_texture().unwrap().texture().source().index(),
+                pbr.base_color_texture().unwrap().texture().source().index()
+            );
+
+            if mat.metallic_roughness_map.is_some() {
+                mat.roughness_factor = 1.0;
+                mat.metallic_factor = 1.0;
+            }
+
             self.materials.insert(material.index(), mat);
         }
     }

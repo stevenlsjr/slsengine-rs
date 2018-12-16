@@ -1,6 +1,7 @@
 use super::errors::*;
 use cgmath::*;
 use gl;
+use gl::types::GLenum;
 use std::borrow::Borrow;
 use std::cell::{BorrowMutError, Ref, RefCell};
 use std::collections::HashMap;
@@ -20,6 +21,23 @@ pub struct ProgramBuilder {
     // geometry_shader: Option<u32>,
 }
 
+#[derive(Debug, Copy, Clone, PartialEq)]
+enum TextureUnits {
+    Albedo = 0,
+    MetallicRoughness = 1,
+    Normal = 2,
+    Ao = 3,
+    Emissive = 4,
+}
+
+impl TextureUnits {
+    /// returns the opengl texture unit for given
+    /// Texture map
+    fn gl_unit(self) -> GLenum {
+        gl::TEXTURE0 + self as u32
+    }
+}
+
 //
 /// Stores uniform ids for the main
 /// scene shader
@@ -33,30 +51,54 @@ pub struct ShaderUniforms {
     pub metallic_roughness_map: Option<u32>,
     pub normal_map: Option<u32>,
     pub ao_map: Option<u32>,
-    pub emssive_map: Option<u32>,
+    pub emissive_map: Option<u32>,
     user_uniforms: HashMap<String, Option<u32>>,
 }
 
 impl ShaderUniforms {
     pub fn find_locations(&mut self, program: &Program) {
-        fn handle_err(e: ShaderError) -> Option<u32> {
-            eprintln!("error: {:?}", e);
-            None
+        {
+            let mut uniforms = &mut [
+                (&mut self.modelview, "modelview"),
+                (&mut self.projection, "projection"),
+                (&mut self.normal_matrix, "normal_matrix"),
+                (&mut self.light_positions, "light_positions"),
+                (&mut self.albedo_map, "albedo_map"),
+                (&mut self.metallic_roughness_map, "metallic_roughness_map"),
+                (&mut self.normal_map, "normal_map"),
+                (&mut self.ao_map, "ao_map"),
+                (&mut self.emissive_map, "emmissive_map"),
+            ];
+            for (ref mut ptr, name) in uniforms {
+                **ptr = program.uniform_location(name).unwrap_or_else(|e| {
+                    eprintln!("could not bind location '{}'", name);
+                    None
+                });
+            }
         }
-        self.modelview = program
-            .uniform_location("modelview")
-            .unwrap_or_else(&handle_err);
-        self.projection = program
-            .uniform_location("projection")
-            .unwrap_or_else(&handle_err);
-        self.normal_matrix = program
-            .uniform_location("normal_matrix")
-            .unwrap_or_else(&handle_err);
-        self.light_positions = program
-            .uniform_location("light_positions")
-            .unwrap_or_else(&handle_err);
+
         for (key, value) in self.user_uniforms.iter_mut() {
-            *value = program.uniform_location(key).unwrap_or_else(&handle_err);
+            *value = program.uniform_location(key).unwrap_or_else(|e| {
+                eprintln!("could not bind location '{}'", key);
+                None
+            });
+        }
+
+        // set texture units
+        let units = [
+            (self.albedo_map, TextureUnits::Albedo),
+            (self.metallic_roughness_map, TextureUnits::MetallicRoughness),
+            (self.normal_map, TextureUnits::Normal),
+            (self.ao_map, TextureUnits::Ao),
+            (self.emissive_map, TextureUnits::Emissive),
+        ];
+        program.use_program();
+        for (location_opt, unit) in &units {
+            if let Some(location) = *location_opt {
+                unsafe {
+                    gl::Uniform1i(location as _, *unit as i32);
+                }
+            }
         }
     }
 }
@@ -72,7 +114,7 @@ impl Default for ShaderUniforms {
             metallic_roughness_map: None,
             normal_map: None,
             ao_map: None,
-            emssive_map: None,
+            emissive_map: None,
             user_uniforms: HashMap::new(),
         }
     }
@@ -183,8 +225,25 @@ impl Program {
         &self,
         material: &super::ManagedTextureMaterial,
     ) {
+        self.use_program();
+        let units = [
+            (&material.albedo_map, TextureUnits::Albedo),
+            (&material.metallic_roughness_map, TextureUnits::MetallicRoughness),
+            (&material.normal_map, TextureUnits::Normal),
+            (&material.occlusion_map, TextureUnits::Ao),
+            (&material.emissive_map, TextureUnits::Emissive),
+        ];
 
+        for (texture_opt, unit) in &units {
+            if let Some(texture) = texture_opt {
+                unsafe {
+                    gl::ActiveTexture(unit.gl_unit());
+                    gl::BindTexture(gl::TEXTURE_2D, texture.id());
+                }
+            }
+        }
     }
+
 
     pub fn uniform_location(
         &self,
@@ -205,6 +264,12 @@ impl Program {
     }
 }
 
+impl Drop for Program {
+    fn drop(&mut self) {
+        unsafe { gl::DeleteProgram(self.id) }
+    }
+}
+
 pub trait BindUniform<T> {
     type Id;
     fn bind_uniform(&self, id: Self::Id, val: &T);
@@ -217,17 +282,11 @@ impl BindUniform<Matrix4<f32>> for Program {
             unsafe {
                 gl::UniformMatrix4fv(id as _, 1, gl::FALSE, val.as_ptr());
             }
-        } else {
-            eprintln!("uniform is unbound");
-        }
+        } 
     }
 }
 
-impl Drop for Program {
-    fn drop(&mut self) {
-        unsafe { gl::DeleteProgram(self.id) }
-    }
-}
+
 
 impl ProgramBuilder {
     pub fn new() -> ProgramBuilder {
