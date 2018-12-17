@@ -122,8 +122,6 @@ impl GlRenderer {
                 reason: format!("could create skybox mesh"),
             })?;
 
-        let texture = GlTexture::new().unwrap();
-        println!("created texture {:?}", texture);
 
         let mut renderer = GlRenderer {
             scene_program,
@@ -182,7 +180,7 @@ impl GlRenderer {
         let (scene, skybox) = match create_scene_shaders() {
             Ok(mut programs) => programs,
             Err(e) => {
-                eprintln!("could not rebuild shaders: {}", e);
+                error!("could not rebuild shaders: {}", e);
                 return;
             }
         };
@@ -192,7 +190,7 @@ impl GlRenderer {
             .base_material_ubo
             .bind_to_program(&self.scene_program)
         {
-            eprintln!("failed to bind material {:?}", e);
+            error!("failed to bind material {:?}", e);
         }
 
         self.scene_program = scene;
@@ -219,7 +217,7 @@ impl GlRenderer {
                 .unwrap_or_else(|e| println!("error {:?}", e));
         }
 
-        println!("build new shader program {:#?}", self.scene_program);
+        info!("build new shader program {:#?}", self.scene_program);
     }
 
     #[inline]
@@ -276,12 +274,12 @@ impl GlRenderer {
                         .base_material_ubo
                         .set_material(material.borrow())
                         .unwrap_or_else(|e| {
-                            eprintln!("error {:?}", e);
+                            error!("error {:?}", e);
                         });
                     self.scene_program
                         .bind_material_textures(material.borrow());
                 } else {
-                    eprintln!(
+                    warn!(
                         "missing material for entity {:?}, {:?}",
                         id, mask
                     );
@@ -291,7 +289,7 @@ impl GlRenderer {
                     .base_material_ubo
                     .set_material(self.materials.default_material.borrow())
                     .unwrap_or_else(|e| {
-                        eprintln!("error {:?}", e);
+                        error!("error {:?}", e);
                     });
             }
 

@@ -1,3 +1,4 @@
+
 #define N_LIGHTS 4
 
 const float PI = 3.14159265359;

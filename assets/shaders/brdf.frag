@@ -1,4 +1,6 @@
 #define N_LIGHTS 4
+/// ma
+#define SEPARATE_OCCLUSION_MAP
 
 const float PI = 3.14159265359;
 
@@ -15,11 +17,13 @@ in vec3 frag_eye_normal;
 uniform sampler2D albedo_map;
 uniform sampler2D metallic_roughness_map;
 uniform sampler2D normal_map;
+
+#ifdef SEPARATE_OCCLUSION_MAP
 uniform sampler2D ao_map;
+#endif //! SEPARATE_OCCLUSION_MAP
 uniform sampler2D emissive_map;
 
-
-uniform vec3 ambient_factor = vec3(1.0, 1.0, 1.0) * 0.001;
+uniform vec3 ambient_factor = vec3(1.0, 1.0, 1.0) * 0.005;
 
 uniform vec3 light_positions[N_LIGHTS];
 
@@ -39,7 +43,7 @@ layout(std140) uniform Material
   vec4 albedo_factor;     // size 16
   float roughness_factor; // 4
   float metallic_factor;  // 4
-  vec3 emissive;          // 16
+  vec3 emissive_factor;   // 16
 };                        // min size=48
 
 float
@@ -90,6 +94,16 @@ smith_geometry(vec3 normal, vec3 V, vec3 L, float roughness)
   float ggx2 = smith_geometry__schlick_ggx(n_dot_v, roughness);
   float ggx1 = smith_geometry__schlick_ggx(n_dot_l, roughness);
   return ggx2 * ggx1;
+}
+/// returns the occlusion value for material
+float
+get_occlusion(vec2 uv)
+{
+  #ifdef SEPARATE_OCCLUSION_MAP
+    return texture(ao_map, uv).r;
+  #else 
+    return texture(metallic_roughness_map).r;
+  #endif
 }
 
 vec3
@@ -151,8 +165,9 @@ main()
     }
   }
 
-  vec3 ambient = ambient_factor * albedo;
-  vec3 color = ambient + L_outgoing;
+  vec3 emissive = texture(emissive_map, frag_uv).rgb * emissive_factor;
+  vec3 ambient = ambient_factor * albedo * get_occlusion(frag_uv);
+  vec3 color = ambient + L_outgoing + emissive;
   // HDR tonemap
   color = color / (color + vec3(1));
   // gamma correction

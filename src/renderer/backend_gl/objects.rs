@@ -227,10 +227,28 @@ impl MeshBuffers {
                 size_of::<Vertex>() as i32,
                 offset_of!(Vertex, uv) as *const _,
             );
+            gl::VertexAttribPointer(
+                3,
+                3,
+                gl::FLOAT,
+                gl::FALSE,
+                size_of::<Vertex>() as i32,
+                offset_of!(Vertex, tangent) as *const _,
+            );
+            gl::VertexAttribPointer(
+                4,
+                3,
+                gl::FLOAT,
+                gl::FALSE,
+                size_of::<Vertex>() as i32,
+                offset_of!(Vertex, bitangent) as *const _,
+            );
 
             gl::EnableVertexAttribArray(0);
             gl::EnableVertexAttribArray(1);
             gl::EnableVertexAttribArray(2);
+            gl::EnableVertexAttribArray(3);
+            gl::EnableVertexAttribArray(4);
         }
 
         Ok(&self)

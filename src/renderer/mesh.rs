@@ -6,15 +6,21 @@ use cgmath::*;
 pub struct Vertex {
     pub position: [f32; 3],
     pub normal: [f32; 3],
+    pub tangent: [f32; 3],
+    pub bitangent: [f32; 3],
     pub uv: [f32; 2],
     pub color: [f32; 4],
 }
+
+
 
 impl Default for Vertex {
     fn default() -> Self {
         Vertex {
             position: [0., 0., 0.],
             normal: [0., 0., 1.],
+            tangent: [0., 0., 0.],
+            bitangent: [0., 0., 0.],
             uv: [0., 0.],
             color: [1., 1., 1., 1.],
         }

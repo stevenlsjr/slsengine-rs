@@ -52,6 +52,7 @@ impl<Tex> Material<Tex> {
             self.metallic_roughness_map.as_ref().and_then(|tex| f(tex, MaterialMapName::MetallicRoughness));
         mat.emissive_map = self.emissive_map.as_ref().and_then(|tex| f(tex, MaterialMapName::Emissive));
         mat.occlusion_map = self.occlusion_map.as_ref().and_then(|tex| f(tex, MaterialMapName::Occlusion));
+        mat.normal_map = self.normal_map.as_ref().and_then(|tex| f(tex, MaterialMapName::Normal));
         mat
     }
 }

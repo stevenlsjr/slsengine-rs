@@ -71,7 +71,7 @@ impl ShaderUniforms {
             ];
             for (ref mut ptr, name) in uniforms {
                 **ptr = program.uniform_location(name).unwrap_or_else(|e| {
-                    eprintln!("could not bind location '{}'", name);
+                    warn!("could not bind location '{}'", name);
                     None
                 });
             }
@@ -79,11 +79,15 @@ impl ShaderUniforms {
 
         for (key, value) in self.user_uniforms.iter_mut() {
             *value = program.uniform_location(key).unwrap_or_else(|e| {
-                eprintln!("could not bind location '{}'", key);
+                warn!("could not bind location '{}'", key);
                 None
             });
         }
 
+        self.set_texture_units(program);
+    }
+
+    fn set_texture_units(&self, program: &Program) {
         // set texture units
         let units = [
             (self.albedo_map, TextureUnits::Albedo),
@@ -226,13 +230,22 @@ impl Program {
         material: &super::ManagedTextureMaterial,
     ) {
         self.use_program();
+        // self.uniforms.borrow().set_texture_units(self);
         let units = [
             (&material.albedo_map, TextureUnits::Albedo),
-            (&material.metallic_roughness_map, TextureUnits::MetallicRoughness),
+            (
+                &material.metallic_roughness_map,
+                TextureUnits::MetallicRoughness,
+            ),
             (&material.normal_map, TextureUnits::Normal),
             (&material.occlusion_map, TextureUnits::Ao),
             (&material.emissive_map, TextureUnits::Emissive),
         ];
+
+        {
+            let m = material.borrow();
+            
+        }
 
         for (texture_opt, unit) in &units {
             if let Some(texture) = texture_opt {
@@ -243,7 +256,6 @@ impl Program {
             }
         }
     }
-
 
     pub fn uniform_location(
         &self,
@@ -282,11 +294,9 @@ impl BindUniform<Matrix4<f32>> for Program {
             unsafe {
                 gl::UniformMatrix4fv(id as _, 1, gl::FALSE, val.as_ptr());
             }
-        } 
+        }
     }
 }
-
-
 
 impl ProgramBuilder {
     pub fn new() -> ProgramBuilder {

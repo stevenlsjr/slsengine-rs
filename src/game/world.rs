@@ -119,10 +119,9 @@ where
             }
 
             if keyboard_state.is_scancode_pressed(Scancode::Y) {
-                println!("Camera: {:?}", self.main_camera);
+                info!("Camera: {:?}", self.main_camera);
             }
         }
-        // println!("wasd_axis: {:?} {}", wasd_axis, wasd_axis.magnitude());
         if wasd_axis.magnitude() > 0.0 {
             self.main_camera.input_move(
                 wasd_axis,

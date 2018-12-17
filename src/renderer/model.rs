@@ -60,7 +60,7 @@ impl Model {
         for material in imports.document.materials() {
             use super::material::*;
             let pbr = material.pbr_metallic_roughness();
-            println!("found material {:?}", material.name());
+            info!("found material {:?}", material.name());
             let image_from_index = |idx: usize| -> (Option<gltf::image::Data>) {
                 let img = imports.images.get(idx).map(|i| i.clone());
                 img
@@ -92,10 +92,7 @@ impl Model {
                     .and_then(image_from_index),
             };
 
-            assert_ne!(
-                material.emissive_texture().unwrap().texture().source().index(),
-                pbr.base_color_texture().unwrap().texture().source().index()
-            );
+            
 
             if mat.metallic_roughness_map.is_some() {
                 mat.roughness_factor = 1.0;
@@ -179,6 +176,19 @@ fn make_mesh(
                 vertices[i].uv = uv.clone();
             }
         }
+
+        if let Some(tangents) = reader.read_tangents() {
+            for (i, tan) in tangents.enumerate() {
+                let t: Vec3 = vec3(tan[0], tan[1], tan[2]);
+                let n: Vec3 = vertices[i].normal.into();
+                let bitangent = t.cross(n);
+                vertices[i].tangent = t.into();
+                vertices[i].bitangent = bitangent.into();
+
+
+            }
+        }
+
         let indices: Vec<u32> = if let Some(index_enum) = reader.read_indices()
         {
             index_enum.into_u32().collect()

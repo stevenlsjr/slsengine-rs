@@ -83,6 +83,6 @@ pub fn debug_error_stack(file: &str, line: u32) {
         if err == gl::NO_ERROR {
             break;
         }
-        eprintln!("{}, {}, GL error: 0x{:X}", file, line, err)
+        error!("{}, {}, GL error: 0x{:X}", file, line, err)
     }
 }

@@ -79,7 +79,7 @@ pub fn pick_physical_device(
             top_device = (rating, Some(dev));
         }
 
-        println!("device {:?} {:?} with rating {}", dev, dev.name(), rating);
+        info!("device {:?} {:?} with rating {}", dev, dev.name(), rating);
     }
     match top_device.1 {
         Some(dev) => Ok(dev),

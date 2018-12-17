@@ -243,54 +243,54 @@ extern "system" fn gl_debug_output(
     {
         return;
     }
-    eprintln!("------------------------------");
-    eprintln!(
-        "Error {} (0x{:x}):",
+    warn!(
+        "------------------------------\nError {} (0x{:x}):",
         message.to_str().unwrap_or("unknown error"),
         id
     );
+
     match source {
-        gl::DEBUG_SOURCE_API => eprint!("Source: DEBUG_SOURCE_API\t"),
+        gl::DEBUG_SOURCE_API => warn!("Source: DEBUG_SOURCE_API\t"),
         gl::DEBUG_SOURCE_WINDOW_SYSTEM => {
-            eprint!("Source: DEBUG_SOURCE_WINDOW_SYSTEM\t")
+            warn!("Source: DEBUG_SOURCE_WINDOW_SYSTEM\t")
         }
         gl::DEBUG_SOURCE_SHADER_COMPILER => {
-            eprint!("Source: DEBUG_SOURCE_SHADER_COMPILER\t")
+            warn!("Source: DEBUG_SOURCE_SHADER_COMPILER\t")
         }
         gl::DEBUG_SOURCE_THIRD_PARTY => {
-            eprint!("Source: DEBUG_SOURCE_THIRD_PARTY\t")
+            warn!("Source: DEBUG_SOURCE_THIRD_PARTY\t")
         }
         gl::DEBUG_SOURCE_APPLICATION => {
-            eprint!("Source: DEBUG_SOURCE_APPLICATION\t")
+            warn!("Source: DEBUG_SOURCE_APPLICATION\t")
         }
-        gl::DEBUG_SOURCE_OTHER => eprint!("Source: DEBUG_SOURCE_OTHER\t"),
-        other => eprint!("Source: unknown:0x{:x};\t", other),
+        gl::DEBUG_SOURCE_OTHER => warn!("Source: DEBUG_SOURCE_OTHER\t"),
+        other => warn!("Source: unknown:0x{:x};\t", other),
     };
     match err_type {
-        gl::DEBUG_TYPE_ERROR => eprint!("Type: DEBUG_TYPE_ERROR\t"),
+        gl::DEBUG_TYPE_ERROR => warn!("Type: DEBUG_TYPE_ERROR\t"),
         gl::DEBUG_TYPE_DEPRECATED_BEHAVIOR => {
-            eprint!("Type: DEBUG_SOURCE_OTHER\t")
+            warn!("Type: DEBUG_SOURCE_OTHER\t")
         }
         gl::DEBUG_TYPE_UNDEFINED_BEHAVIOR => {
-            eprint!("Type: DEBUG_TYPE_UNDEFINED_BEHAVIOR\t")
+            warn!("Type: DEBUG_TYPE_UNDEFINED_BEHAVIOR\t")
         }
-        gl::DEBUG_TYPE_PORTABILITY => eprint!("Type: DEBUG_TYPE_PORTABILITY\t"),
-        gl::DEBUG_TYPE_PERFORMANCE => eprint!("Type: DEBUG_TYPE_PORTABILITY\t"),
-        gl::DEBUG_TYPE_MARKER => eprint!("Type: DEBUG_TYPE_PORTABILITY\t"),
-        gl::DEBUG_TYPE_PUSH_GROUP => eprint!("Type: DEBUG_TYPE_PUSH_GROUP\t"),
-        gl::DEBUG_TYPE_POP_GROUP => eprint!("Type: DEBUG_TYPE_POP_GROUP\t"),
+        gl::DEBUG_TYPE_PORTABILITY => warn!("Type: DEBUG_TYPE_PORTABILITY\t"),
+        gl::DEBUG_TYPE_PERFORMANCE => warn!("Type: DEBUG_TYPE_PORTABILITY\t"),
+        gl::DEBUG_TYPE_MARKER => warn!("Type: DEBUG_TYPE_PORTABILITY\t"),
+        gl::DEBUG_TYPE_PUSH_GROUP => warn!("Type: DEBUG_TYPE_PUSH_GROUP\t"),
+        gl::DEBUG_TYPE_POP_GROUP => warn!("Type: DEBUG_TYPE_POP_GROUP\t"),
 
-        gl::DEBUG_TYPE_OTHER => eprint!("Type: DEBUG_TYPE_OTHER\t"),
-        other => eprint!("Type: unknown 0x{:x}\t", other),
+        gl::DEBUG_TYPE_OTHER => warn!("Type: DEBUG_TYPE_OTHER\t"),
+        other => warn!("Type: unknown 0x{:x}\t", other),
     };
 
     match severity {
-        gl::DEBUG_SEVERITY_HIGH => eprint!("Severity: high\n"),
-        gl::DEBUG_SEVERITY_MEDIUM => eprint!("Severity: medium\n"),
-        gl::DEBUG_SEVERITY_LOW => eprint!("Severity: low\n"),
-        other => eprint!("Severity: Unknown 0x{:x}\t", other),
+        gl::DEBUG_SEVERITY_HIGH => warn!("Severity: high\n"),
+        gl::DEBUG_SEVERITY_MEDIUM => warn!("Severity: medium\n"),
+        gl::DEBUG_SEVERITY_LOW => warn!("Severity: low\n"),
+        other => warn!("Severity: Unknown 0x{:x}\t", other),
     };
-    eprintln!("\n------------------------------");
+    warn!("\n------------------------------");
 }
 
 pub fn load_opengl(

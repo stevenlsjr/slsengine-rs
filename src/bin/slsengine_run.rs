@@ -10,6 +10,10 @@ extern crate stb_image;
 extern crate toml;
 
 #[macro_use]
+extern crate log;
+extern crate env_logger;
+
+#[macro_use]
 extern crate failure;
 
 use cgmath::prelude::*;
@@ -51,7 +55,7 @@ fn get_or_create_config(
         Ok(conf) => {
             let parsed_conf =
                 toml::from_slice(&conf).map_err(&failure::Error::from)?;
-            println!("read configuration {:?}", parsed_conf);
+            info!("read configuration {:?}", parsed_conf);
             parsed_conf
         }
         Err(_) => {
@@ -64,7 +68,7 @@ fn get_or_create_config(
             f.write(&v).map_err(|e| {
                 format_err!("could not write default configuration!: {}", e)
             })?;
-            println!("wrote configuration to {:?}", f);
+            info!("wrote configuration to {:?}", f);
             default_conf
         }
     };
@@ -76,7 +80,10 @@ fn setup_materials(
     model: &renderer::model::Model,
     world: &mut EntityWorld<GlRenderer>,
 ) {
-    use renderer::backend_gl::textures::*;
+    use renderer::{
+        backend_gl::textures::*,
+        material::{Material, MaterialMapName},
+    };
     use slsengine::game::component::*;
     use std::sync::*;
     let mat = model.materials.values().next().unwrap();
@@ -111,6 +118,8 @@ fn main() {
     use std::path::*;
     use std::time::*;
     let config = get_or_create_config().unwrap();
+
+    env_logger::init();
 
     let (plt, gl_platform_builder) =
         platform().with_config(config).build_gl().unwrap();

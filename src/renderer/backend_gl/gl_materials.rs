@@ -4,7 +4,7 @@ use renderer::material::Material;
 
 /// Material ubo representation shared by shader memory
 /// uses GLSL std140 layout
-#[repr(C, align(16))]
+#[repr(C, packed)]
 #[derive(Copy, Clone, Debug)]
 pub struct MaterialBufferLayout {
     pub albedo_factor: [f32; 4],

@@ -1,30 +1,29 @@
 #![feature(duration_float)]
 
+#[macro_use]
+extern crate bitflags;
+
 extern crate cgmath;
 extern crate core;
 extern crate rand;
+
+#[macro_use]
+extern crate log;
 #[macro_use]
 extern crate failure;
 extern crate genmesh;
-
-#[macro_use]
-extern crate bitflags;
 extern crate gl;
-
+extern crate gltf;
 extern crate image;
 #[allow(unused_imports)]
 #[macro_use]
 extern crate memoffset;
 extern crate sdl2;
-
-#[cfg(feature = "with-vulkan")]
-extern crate vulkano;
-
-extern crate gltf;
-
 #[macro_use]
 extern crate serde_derive;
 extern crate serde;
+#[cfg(feature = "with-vulkan")]
+extern crate vulkano;
 
 pub mod config;
 pub mod game;
