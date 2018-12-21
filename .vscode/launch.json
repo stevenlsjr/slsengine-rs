@@ -5,6 +5,21 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "slsengine_run vsdbg",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceRoot}\\target\\debug\\slsengine_run.exe",
+      
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "externalConsole": false,
+      "logging": {
+        "engineLogging": false
+      }
+    },
+    {
       "type": "lldb",
       "request": "launch",
       "name": "Debug unit tests in library 'slsengine'",
@@ -17,20 +32,8 @@
       "args": [],
       "cwd": "${workspaceFolder}",
     },
-    {
-      "type": "cppvsdbg",
-      "name": "slsengine_run vsdbg",
-      "request": "launch",
-      "args": [],
-      "stopAtEntry": false,
-      "externalConsole": true,
-      "program": "${workspaceRoot}/target/debug/slsengine_run.exe",
+    
 
-      "cwd": "${workspaceRoot}",
-      "environment": [
-          {"name": "RUST_BACKTRACE", "value": "1"}
-      ]
-    },
     {
       "type": "lldb",
       "request": "launch",
