@@ -165,8 +165,8 @@ main()
     }
   }
 
-  vec3 emissive = texture(emissive_map, frag_uv).rgb * emissive_factor;
-  vec3 ambient = ambient_factor * albedo * get_occlusion(frag_uv);
+  vec3 emissive = texture(emissive_map, frag_uv).rgb ;
+  vec3 ambient = clamp(albedo * ambient_factor * get_occlusion(frag_uv), vec3(0.0), vec3(1.0));
   vec3 color = ambient + L_outgoing + emissive;
   // HDR tonemap
   color = color / (color + vec3(1));
