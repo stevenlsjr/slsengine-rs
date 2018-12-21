@@ -5,30 +5,37 @@ use cgmath;
 use failure;
 use log::*;
 use sdl2;
-use sdl2::video::Window;
-use sdl2::video::{Window as SdlWindow, WindowContext};
-use std::cell::{Ref, RefCell};
-use std::default::Default;
-use std::ffi::{CStr, CString};
-use std::rc::Rc;
-use std::sync::Arc;
-use std::{mem, ptr};
-use vulkano;
-use vulkano::device::{Device, Queue};
-use vulkano::image::SwapchainImage;
-use vulkano::instance::{Instance, PhysicalDevice};
-use vulkano::swapchain::{
-    Capabilities, ColorSpace, CompositeAlpha, PresentMode,
-    SupportedPresentModes, Surface, Swapchain,
+use sdl2::video::{Window, WindowContext};
+use std::{
+    cell::{Ref, RefCell},
+    default::Default,
+    ffi::{CStr, CString},
+    fmt,
+    rc::Rc,
+    sync::Arc,
+};
+use super::mesh::Vertex;
+use vulkano::{
+    self,
+    device::{Device, DeviceExtensions, Queue},
+    format::Format,
+    image::SwapchainImage,
+    instance::{Instance, PhysicalDevice},
+    swapchain::{
+        Capabilities, ColorSpace, PresentMode, Surface, SurfaceTransform,
+        Swapchain,
+    },
+    sync::SharingMode,
 };
 
-use std::fmt;
+vulkano::impl_vertex!(Vertex, position);
 
 pub mod sdl_vulkan;
 
 pub type VulkanWinType = Rc<WindowContext>;
 pub type SdlSurface = Surface<VulkanWinType>;
-
+pub type SdlSwapchain = Swapchain<VulkanWinType>;
+pub type SdlSwapchainImage = SwapchainImage<VulkanWinType>;
 /// Error Record for VkContext creation
 #[derive(Fail, Clone, Debug)]
 pub enum VkContextError {
@@ -46,6 +53,8 @@ pub enum VkContextError {
     Surface,
     #[fail(display = "could not create device")]
     Device,
+    #[fail(display = "could not create swapchain")]
+    Swapchain,
 
     #[fail(display = "Could not create vulkan rendering context: {:#?}", _0)]
     Other(String),
@@ -75,6 +84,9 @@ pub fn pick_physical_device(
 ) -> Result<PhysicalDevice, failure::Error> {
     let mut top_device = (0, None::<PhysicalDevice>);
     for dev in PhysicalDevice::enumerate(instance) {
+        if !device_extensions_supported(&dev) {
+            continue;
+        }
         let rating = rate_physical_device(dev);
         if top_device.1.is_none() || rating > top_device.0 {
             top_device = (rating, Some(dev));
@@ -107,6 +119,7 @@ impl QueueFamilyBuilder {
     }
 }
 
+#[derive(Debug, Copy, Clone)]
 pub struct QueueFamilies {
     graphics_family: u32,
     present_family: u32,
@@ -176,11 +189,7 @@ pub fn create_device<W>(
             .queue_family_by_id(i)
             .map(|fam| (fam, default_queue_priority as f32))
     });
-    let device_extensions = DeviceExtensions {
-        khr_swapchain: true,
-        //        khr_display_swapchain: true,
-        ..DeviceExtensions::none()
-    };
+    let device_extensions = required_device_extensions();
 
     let (device, mut queues) = Device::new(
         *physical_device,
@@ -201,18 +210,81 @@ pub fn create_device<W>(
     ))
 }
 
+fn required_device_extensions() -> DeviceExtensions {
+    DeviceExtensions {
+        khr_swapchain: true,
+        ..DeviceExtensions::none()
+    }
+}
+
+fn device_extensions_supported(dev: &PhysicalDevice) -> bool {
+    use vulkano::device::DeviceExtensions;
+    let availible_extensions = DeviceExtensions::supported_by_device(*dev);
+    let device_extensions = required_device_extensions();
+    availible_extensions.intersection(&device_extensions) == device_extensions
+}
+
+fn pick_surface_format(capabilities: &Capabilities) -> (Format, ColorSpace) {
+    use vulkano::format::Format;
+
+    *capabilities
+        .supported_formats
+        .iter()
+        .find(|(format, color_space)| {
+            *format == Format::B8G8R8A8Unorm
+                && *color_space == ColorSpace::SrgbNonLinear
+        })
+        .unwrap_or(&capabilities.supported_formats[0])
+}
+
 fn create_swapchain(
     _instance: &Arc<Instance>,
     surface: &Arc<Surface<VulkanWinType>>,
     physical_device: &PhysicalDevice,
-    _device: &Arc<Device>,
-    _queues: &VulkanQueues,
-) -> Result<(), failure::Error> {
-    let _capabilities = surface
-        .capabilities(*physical_device)
-        .map_err(&failure::Error::from)?;
+    device: &Arc<Device>,
+    queues: &VulkanQueues,
+) -> Result<(Arc<SdlSwapchain>, Vec<Arc<SdlSwapchainImage>>), failure::Error> {
+    use vulkano::swapchain::SurfaceTransform;
 
-    unimplemented!()
+    let capabilities = surface.capabilities(*physical_device)?;
+    let (format, _colorspace) = pick_surface_format(&capabilities);
+    let usage = capabilities.supported_usage_flags;
+    let alpha = capabilities
+        .supported_composite_alpha
+        .iter()
+        .next()
+        .unwrap();
+
+    let size = {
+        let window: &Window =
+            unsafe { &Window::from_ref(surface.window().clone()) };
+        window.vulkan_drawable_size()
+    };
+    let sharing: SharingMode =
+        if queues.graphics_queue.is_same(&queues.present_queue) {
+            (&queues.graphics_queue).into()
+        } else {
+            let slice: &[&Arc<Queue>] =
+                &[&queues.graphics_queue, &queues.present_queue];
+            slice.into()
+        };
+
+    Swapchain::new(
+        device.clone(),
+        surface.clone(),
+        capabilities.min_image_count,
+        format,
+        [size.0, size.1],
+        1,
+        usage,
+        sharing,
+        SurfaceTransform::Identity,
+        alpha,
+        PresentMode::Fifo,
+        true,
+        None,
+    )
+    .map_err(&failure::Error::from)
 }
 
 /// Renderer object for vulkan context
@@ -223,7 +295,7 @@ pub struct VulkanRenderer {
     pub queues: VulkanQueues,
     pub surface: Arc<Surface<VulkanWinType>>,
     pub swapchain: Arc<Swapchain<VulkanWinType>>,
-    pub swapchain_image: Arc<SwapchainImage<VulkanWinType>>,
+    pub swapchain_images: Vec<Arc<SwapchainImage<VulkanWinType>>>,
 }
 impl fmt::Debug for VulkanRenderer {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -245,7 +317,11 @@ impl VulkanRenderer {
                 .iter()
                 .map(|&v| CString::new(v).unwrap()),
         );
-        let layers = vec!["VK_LAYER_LUNARG_standard_validation"];
+        let layers = if cfg!(feature = "gl-debug-output") {
+            vec!["VK_LAYER_LUNARG_standard_validation"]
+        } else {
+            Vec::new()
+        };
         let instance = Instance::new(None, raw_instance_extensions, layers)
             .expect("failed to create vulkan instance");
         let surface: Arc<SdlSurface> = {
@@ -264,27 +340,28 @@ impl VulkanRenderer {
             .map_err(|_| VkContextError::Device)?;
         let (device, queues) = create_device(&physical_device, &surface)
             .map_err(|_| VkContextError::Device)?;
-        let _swapchain = create_swapchain(
+        let (swapchain, images) = create_swapchain(
             &instance,
             &surface,
             &physical_device,
             &device,
             &queues,
         )
-        .map_err(|e| VkContextError::Other(e.to_string()));
-        unimplemented!();
-        //        Ok(VulkanRenderer {
-        //            camera: RefCell::new(Camera::new(cgmath::PerspectiveFov {
-        //                fovy: cgmath::Deg(40.0).into(),
-        //                aspect: 1.0,
-        //                near: 0.1,
-        //                far: 100.0,
-        //            })),
-        //            instance: instance.clone(),
-        //            device,
-        //            queues,
-        //            surface,
-        //        })
+        .map_err(|_| VkContextError::Swapchain)?;
+        Ok(VulkanRenderer {
+            camera: RefCell::new(Camera::new(cgmath::PerspectiveFov {
+                fovy: cgmath::Deg(40.0).into(),
+                aspect: 1.0,
+                near: 0.1,
+                far: 100.0,
+            })),
+            instance: instance.clone(),
+            device,
+            queues,
+            surface,
+            swapchain,
+            swapchain_images: images,
+        })
     }
 }
 pub struct VkTexture;
