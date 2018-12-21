@@ -1,7 +1,14 @@
+pub use super::built_in_components::*;
 use cgmath::*;
 use math::*;
 use renderer::{material::*, traits::*};
 use std::{collections::HashMap, rc::Rc};
+use std::{fmt::Debug, ops::Index};
+
+pub trait Component: Debug {
+    /// The component mask bitflag identifying the given component
+    const MASK: ComponentMask;
+}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Hash)]
 pub struct EntityId(pub usize);
@@ -18,25 +25,6 @@ bitflags! {
 
 #[derive(Copy, Clone, Debug, PartialEq, PartialOrd, Hash)]
 pub struct ResourceId(pub usize);
-
-#[derive(Debug, Clone)]
-pub struct TransformComponent {
-    pub parent: Option<EntityId>,
-    pub transform: Decomposed<Vec3, Quaternion<f32>>,
-}
-
-impl Default for TransformComponent {
-    fn default() -> Self {
-        TransformComponent {
-            parent: None,
-            transform: Decomposed {
-                scale: 1.0,
-                rot: Quaternion::zero(),
-                disp: Vec3::zero(),
-            },
-        }
-    }
-}
 
 #[derive(Debug)]
 pub struct ComponentManager<R>

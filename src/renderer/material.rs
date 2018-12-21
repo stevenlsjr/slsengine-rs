@@ -2,8 +2,9 @@ use cgmath::*;
 use failure;
 use gltf;
 use math::*;
+use std::fmt;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Material<Tex> {
     pub albedo_factor: Vec4,
     pub albedo_map: Option<Tex>,
@@ -14,6 +15,20 @@ pub struct Material<Tex> {
     pub emissive_map: Option<Tex>,
     pub normal_map: Option<Tex>,
     pub occlusion_map: Option<Tex>,
+}
+
+impl<Tex> fmt::Debug for Material<Tex>{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let map: &[(&str, &fmt::Debug)] = &[
+            ("albedo_factor", &self.albedo_factor),
+            ("metallic_factor", &self.metallic_factor),
+            ("roughness_factor", &self.roughness_factor),
+            ("emissive_factor", &self.emissive_factor),
+        ];
+        write!(f, "Material<Tex>")?;
+        f.debug_map().entries(map.iter().map(|&(ref k, ref v)| (k, v))).finish()?;
+        Ok(())
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -46,7 +61,13 @@ impl<Tex> Material<Tex> {
         F: Fn(&Tex, MaterialMapName) -> Option<BTex>,
     {
         let f = &f;
-        let mut mat: Material<BTex> = Material::default();
+        let mut mat: Material<BTex> = Material { 
+            albedo_factor: self.albedo_factor,
+            metallic_factor: self.metallic_factor,
+            roughness_factor: self.roughness_factor,
+            emissive_factor: self.emissive_factor,
+            ..Material::default()
+        };
         mat.albedo_map = self.albedo_map.as_ref().and_then(|tex| f(tex, MaterialMapName::Albedo));
         mat.metallic_roughness_map =
             self.metallic_roughness_map.as_ref().and_then(|tex| f(tex, MaterialMapName::MetallicRoughness));

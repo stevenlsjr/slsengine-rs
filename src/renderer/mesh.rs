@@ -40,6 +40,11 @@ impl PartialEq for Vertex {
     }
 }
 
+pub trait RenderMesh {
+    fn vertices(&self)->&[Vertex];
+    fn indices(&self)->&[u32];
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct Mesh {
     pub vertices: Vec<Vertex>,
@@ -64,62 +69,11 @@ impl Mesh {
     }
 }
 
-pub struct MeshBuilder {
-    pub positions: Vec<[f32; 3]>,
-    pub normals: Vec<[f32; 3]>,
-    pub uvs: Vec<[f32; 2]>,
-    pub colors: Vec<[f32; 4]>,
-    pub indices: Vec<u32>,
+impl RenderMesh for Mesh {
+    fn vertices(&self)->&[Vertex] {&self.vertices}
+    fn indices(&self)->&[u32] {&self.indices}
 }
 
-impl MeshBuilder {
-    pub fn new() -> MeshBuilder {
-        MeshBuilder {
-            positions: vec![],
-            normals: vec![],
-            uvs: vec![],
-            colors: vec![],
-            indices: vec![],
-        }
-    }
-    pub fn build(&self) -> Result<Mesh, String> {
-        let len = self.positions.len();
-
-        let normals_len = self.normals.len();
-        let uvs_len = self.uvs.len();
-        let colors_len = self.colors.len();
-
-        let mut verts: Vec<Vertex> = Vec::new();
-        verts.reserve(len);
-        for i in 0..len {
-            let vertex = Vertex {
-                position: self.positions[i].clone(),
-                normal: if i < normals_len {
-                    self.normals[i].clone()
-                } else {
-                    [0.0, 0.0, 1.0]
-                },
-                uv: if i < uvs_len {
-                    self.uvs[i].clone()
-                } else {
-                    [0.0, 0.0]
-                },
-                color: if i < colors_len {
-                    self.colors[i].clone()
-                } else {
-                    [1.0, 1.0, 1.0, 1.0]
-                },
-            };
-            verts.push(vertex);
-        }
-        let indices = self.indices.clone();
-
-        Ok(Mesh {
-            indices,
-            vertices: verts,
-        })
-    }
-}
 
 #[derive(Clone, Copy, Debug)]
 pub struct Color {
