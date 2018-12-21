@@ -1,6 +1,6 @@
 use super::objects::{BufferObject, ObjectError, SingleBuffer, UboBindings};
-use gl;
 use crate::renderer::material::Material;
+use gl;
 
 /// Material ubo representation shared by shader memory
 /// uses GLSL std140 layout
@@ -114,4 +114,3 @@ impl MaterialUbo {
         Ok(())
     }
 }
-

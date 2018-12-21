@@ -1,9 +1,9 @@
+use crate::{game, renderer};
 use sdl2::event::{Event, WindowEvent};
 use sdl2::keyboard::Keycode;
 use sdl2::video::Window;
 use std::{cell::RefCell, error::Error, time::Instant};
-use crate::{game, renderer};
- 
+
 /// State object for main loop information, such as
 /// Event handlers and frame timers.
 #[derive(Debug)]

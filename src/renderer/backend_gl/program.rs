@@ -2,6 +2,7 @@ use super::errors::*;
 use cgmath::*;
 use gl;
 use gl::types::GLenum;
+use log::*;
 use std::borrow::Borrow;
 use std::cell::{BorrowMutError, Ref, RefCell};
 use std::collections::HashMap;
@@ -244,7 +245,6 @@ impl Program {
 
         {
             let _m = material.borrow();
-            
         }
 
         for (texture_opt, unit) in &units {

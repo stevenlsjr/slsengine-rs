@@ -1,9 +1,12 @@
+use failure;
+use log::*;
+use std::fmt;
+
 #[derive(Fail)]
 #[fail(display = "OpenGL errors: {:?}", errors)]
 pub struct GlErrors {
     pub errors: Vec<gl::types::GLenum>,
 }
-use std::fmt;
 impl fmt::Debug for GlErrors {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use std::fmt::Write;

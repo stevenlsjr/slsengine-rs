@@ -1,6 +1,7 @@
 GLSLANG:=glslc
 GLSLFLAGS:=-fauto-map-locations -std=450core
 
+REAL_COPY_DIR=$(realpath $(COPY_DIR))
 # FRAG_GLSL=vulkan/flat-shading.frag
 # VERT_GLSL=vulkan/flat-shading.vert
 IN_DIR=shaders/vulkan
@@ -17,8 +18,17 @@ COMP_SPV=$(COMP_GLSL:$(IN_DIR)/%.comp=$(OUT_DIR)/%.comp.spv)
 
 SPIRV_OUT=$(FRAG_SPV) $(VERT_SPV) $(COMP_SPV)
 
-.PHONY: all clean mkdirs
+.PHONY: all clean mkdirs copy-assets
 
+
+
+copy-assets:
+ifdef COPY_DIR
+	@echo "copying assets $(REAL_COPY_DIR)"
+else
+	@ printf "\e[31mno COPY_DIR specified\e[0m\n"
+	@ exit 1
+endif
 
 
 all: $(SPIRV_OUT)

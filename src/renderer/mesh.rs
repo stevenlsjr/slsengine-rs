@@ -12,8 +12,6 @@ pub struct Vertex {
     pub color: [f32; 4],
 }
 
-
-
 impl Default for Vertex {
     fn default() -> Self {
         Vertex {
@@ -41,8 +39,8 @@ impl PartialEq for Vertex {
 }
 
 pub trait RenderMesh {
-    fn vertices(&self)->&[Vertex];
-    fn indices(&self)->&[u32];
+    fn vertices(&self) -> &[Vertex];
+    fn indices(&self) -> &[u32];
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -70,10 +68,13 @@ impl Mesh {
 }
 
 impl RenderMesh for Mesh {
-    fn vertices(&self)->&[Vertex] {&self.vertices}
-    fn indices(&self)->&[u32] {&self.indices}
+    fn vertices(&self) -> &[Vertex] {
+        &self.vertices
+    }
+    fn indices(&self) -> &[u32] {
+        &self.indices
+    }
 }
-
 
 #[derive(Clone, Copy, Debug)]
 pub struct Color {

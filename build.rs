@@ -5,6 +5,10 @@ fn main() {
     use std::process::Command;
     let sdl_path = env::var("SDL_LIB_PATH");
 
+    if let Ok(path) = env::var("CARGO_MANIFEST_DIR") {
+        println!("cargo:rustc-env=SLSENGINE_ASSET_PATH={}", path);
+    }
+
     let vk_path = if cfg!(target_os = "macos") {
         env::var("VULKAN_SDK").map(|path_str| {
             let mut path = PathBuf::from(&path_str);

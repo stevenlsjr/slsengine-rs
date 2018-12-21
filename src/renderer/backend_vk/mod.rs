@@ -1,8 +1,9 @@
 // use super::ash;
 
+use crate::renderer::*;
 use cgmath;
 use failure;
-use crate::renderer::*;
+use log::*;
 use sdl2;
 use sdl2::video::Window;
 use sdl2::video::{Window as SdlWindow, WindowContext};

@@ -2,14 +2,14 @@
 // and scene presentation structure
 use crate::math::*;
 
-use cgmath::*;
-use gltf;
-use gltf::mesh;
 use crate::renderer::material;
 use crate::renderer::Mesh;
-use std::{cell::RefCell, collections::HashMap, path::Path};
-
+use cgmath::*;
 use failure;
+use gltf;
+use gltf::mesh;
+use log::*;
+use std::{cell::RefCell, collections::HashMap, path::Path};
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct MeshData {
@@ -91,8 +91,6 @@ impl Model {
                     .map(|i| i.texture().source().index())
                     .and_then(image_from_index),
             };
-
-            
 
             if mat.metallic_roughness_map.is_some() {
                 mat.roughness_factor = 1.0;
@@ -184,8 +182,6 @@ fn make_mesh(
                 let bitangent = t.cross(n);
                 vertices[i].tangent = t.into();
                 vertices[i].bitangent = bitangent.into();
-
-
             }
         }
 

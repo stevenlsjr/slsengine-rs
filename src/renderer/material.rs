@@ -1,7 +1,7 @@
+use crate::math::*;
 use cgmath::*;
 use failure;
 use gltf;
-use crate::math::*;
 use std::fmt;
 
 #[derive(Clone)]
@@ -17,7 +17,7 @@ pub struct Material<Tex> {
     pub occlusion_map: Option<Tex>,
 }
 
-impl<Tex> fmt::Debug for Material<Tex>{
+impl<Tex> fmt::Debug for Material<Tex> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let map: &[(&str, &fmt::Debug)] = &[
             ("albedo_factor", &self.albedo_factor),
@@ -26,7 +26,9 @@ impl<Tex> fmt::Debug for Material<Tex>{
             ("emissive_factor", &self.emissive_factor),
         ];
         write!(f, "Material<Tex>")?;
-        f.debug_map().entries(map.iter().map(|&(ref k, ref v)| (k, v))).finish()?;
+        f.debug_map()
+            .entries(map.iter().map(|&(ref k, ref v)| (k, v)))
+            .finish()?;
         Ok(())
     }
 }
@@ -37,7 +39,7 @@ pub enum MaterialMapName {
     MetallicRoughness,
     Emissive,
     Normal,
-    Occlusion
+    Occlusion,
 }
 
 impl<Tex> Material<Tex> {
@@ -61,19 +63,33 @@ impl<Tex> Material<Tex> {
         F: Fn(&Tex, MaterialMapName) -> Option<BTex>,
     {
         let f = &f;
-        let mut mat: Material<BTex> = Material { 
+        let mut mat: Material<BTex> = Material {
             albedo_factor: self.albedo_factor,
             metallic_factor: self.metallic_factor,
             roughness_factor: self.roughness_factor,
             emissive_factor: self.emissive_factor,
             ..Material::default()
         };
-        mat.albedo_map = self.albedo_map.as_ref().and_then(|tex| f(tex, MaterialMapName::Albedo));
-        mat.metallic_roughness_map =
-            self.metallic_roughness_map.as_ref().and_then(|tex| f(tex, MaterialMapName::MetallicRoughness));
-        mat.emissive_map = self.emissive_map.as_ref().and_then(|tex| f(tex, MaterialMapName::Emissive));
-        mat.occlusion_map = self.occlusion_map.as_ref().and_then(|tex| f(tex, MaterialMapName::Occlusion));
-        mat.normal_map = self.normal_map.as_ref().and_then(|tex| f(tex, MaterialMapName::Normal));
+        mat.albedo_map = self
+            .albedo_map
+            .as_ref()
+            .and_then(|tex| f(tex, MaterialMapName::Albedo));
+        mat.metallic_roughness_map = self
+            .metallic_roughness_map
+            .as_ref()
+            .and_then(|tex| f(tex, MaterialMapName::MetallicRoughness));
+        mat.emissive_map = self
+            .emissive_map
+            .as_ref()
+            .and_then(|tex| f(tex, MaterialMapName::Emissive));
+        mat.occlusion_map = self
+            .occlusion_map
+            .as_ref()
+            .and_then(|tex| f(tex, MaterialMapName::Occlusion));
+        mat.normal_map = self
+            .normal_map
+            .as_ref()
+            .and_then(|tex| f(tex, MaterialMapName::Normal));
         mat
     }
 }

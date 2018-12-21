@@ -41,12 +41,17 @@ impl GlTexture {
         if cfg!(feature = "gl-debug-output") && gl::ObjectLabel::is_loaded() {
             unsafe {
                 gl::BindTexture(gl::TEXTURE_2D, self.id);
-                gl::ObjectLabel(gl::TEXTURE, self.id, name.len() as i32, name.as_ptr() as *const _);
+                gl::ObjectLabel(
+                    gl::TEXTURE,
+                    self.id,
+                    name.len() as i32,
+                    name.as_ptr() as *const _,
+                );
             }
         }
         self.name = Some(name);
         super::drain_error_stack();
-        
+
         super::debug_error_stack(file!(), line!());
     }
 

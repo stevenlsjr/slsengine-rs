@@ -1,7 +1,8 @@
 use super::{camera::*, component::*};
-use cgmath::*;
 use crate::math::*;
 use crate::renderer::*;
+use cgmath::*;
+use log::*;
 use sdl2::{keyboard::KeyboardState, mouse::MouseState, EventPump};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};

@@ -1,4 +1,5 @@
 use gl;
+use log::*;
 use sdl2;
 use sdl2::video::{GLContext, Window, WindowBuilder};
 use sdl2::Sdl;

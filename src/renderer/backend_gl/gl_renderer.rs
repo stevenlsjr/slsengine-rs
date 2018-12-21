@@ -1,13 +1,14 @@
 pub use super::{errors::*, program::*};
 
 use super::{gl_materials::*, objects::*, textures::*};
+use crate::game;
+use crate::renderer::*;
 use cgmath::prelude::*;
 use cgmath::*;
 use core;
 use failure;
-use crate::game;
 use gl;
-use crate::renderer::*;
+use log::*;
 use sdl2::video::Window;
 use std::{
     cell::{Cell, Ref, RefCell},
@@ -48,22 +49,23 @@ pub struct GlMesh {
 }
 
 fn create_scene_shaders() -> Result<(Program, Program), ShaderError> {
+    use crate::system::asset_path;
     let scene_program = program_from_sources(
-        "./assets/shaders/brdf.vert",
-        "./assets/shaders/brdf.frag",
+        asset_path().join(Path::new("./assets/shaders/brdf.vert")),
+        asset_path().join(Path::new("./assets/shaders/brdf.frag")),
     )?;
 
     let envmap_program = program_from_sources(
-        "./assets/shaders/envmap.vert",
-        "./assets/shaders/envmap.frag",
+        asset_path().join(Path::new("./assets/shaders/envmap.vert")),
+        asset_path().join(Path::new("./assets/shaders/envmap.frag")),
     )?;
     Ok((scene_program, envmap_program))
 }
 
 impl GlMesh {
     fn skybox_mesh() -> Result<Self, failure::Error> {
-        use genmesh::*;
         use crate::renderer::Vertex;
+        use genmesh::*;
         let cube = generators::Cube::new();
         let vertices: Vec<Vertex> = cube
             .vertex(|v| Vertex {
@@ -122,7 +124,6 @@ impl GlRenderer {
                 reason: format!("could create skybox mesh"),
             })?;
 
-
         let mut renderer = GlRenderer {
             scene_program,
             envmap_program,
@@ -167,7 +168,7 @@ impl GlRenderer {
         let base_material: UntexturedMat = base::PLASTIC_RED;
 
         let default_material =
-            Arc::new(base_material.transform_textures(|_,_| None));
+            Arc::new(base_material.transform_textures(|_, _| None));
         let base_material_ubo = MaterialUbo::new().map_err(&Error::from)?;
 
         Ok(Materials {
@@ -279,10 +280,7 @@ impl GlRenderer {
                     self.scene_program
                         .bind_material_textures(material.borrow());
                 } else {
-                    warn!(
-                        "missing material for entity {:?}, {:?}",
-                        id, mask
-                    );
+                    warn!("missing material for entity {:?}, {:?}", id, mask);
                 }
             } else {
                 self.materials

@@ -1,9 +1,11 @@
 pub use super::built_in_components::*;
-use cgmath::*;
 use crate::math::*;
 use crate::renderer::{material::*, traits::*};
+use cgmath::*;
 use std::{collections::HashMap, rc::Rc};
 use std::{fmt::Debug, ops::Index};
+
+use bitflags::bitflags;
 
 pub trait Component: Debug {
     /// The component mask bitflag identifying the given component

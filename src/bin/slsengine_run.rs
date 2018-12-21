@@ -113,8 +113,9 @@ fn setup_materials(
 }
 
 fn main() {
-    use crate::renderer::model::*;
     use crate::sdl_platform::{platform, Platform};
+    use crate::{renderer::model::*, system::*};
+
     use std::path::*;
     use std::time::*;
     let config = get_or_create_config().unwrap();
@@ -129,7 +130,8 @@ fn main() {
         window, event_pump, ..
     } = plt;
     let mut loop_state = MainLoopState::new();
-    let path = Path::new("assets/models/DamagedHelmet.glb");
+    let path = system::asset_path().join("assets/models/DamagedHelmet.glb");
+    println!("{:?}, {:?}", system::asset_path(), path);
     let model = Model::from_gltf(&path).unwrap();
 
     let mut renderer = GlRenderer::new(&window, &model).unwrap();

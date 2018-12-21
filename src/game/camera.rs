@@ -1,6 +1,6 @@
 use super::*;
-use cgmath::*;
 use crate::math::*;
+use cgmath::*;
 ///
 /// Constructs the camera view matrix for the scene.
 #[derive(Debug)]
