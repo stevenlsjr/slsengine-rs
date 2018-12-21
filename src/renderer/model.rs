@@ -1,12 +1,12 @@
 // Gltf Model
 // and scene presentation structure
-use math::*;
+use crate::math::*;
 
 use cgmath::*;
 use gltf;
 use gltf::mesh;
-use renderer::material;
-use renderer::Mesh;
+use crate::renderer::material;
+use crate::renderer::Mesh;
 use std::{cell::RefCell, collections::HashMap, path::Path};
 
 use failure;
@@ -146,7 +146,7 @@ fn make_mesh(
     gltf_mesh: &gltf::Mesh,
     buffers: &[gltf::buffer::Data],
 ) -> Result<Vec<ParsedMesh>, failure::Error> {
-    use renderer::Vertex as SlsVertex;
+    use crate::renderer::Vertex as SlsVertex;
     let mut meshes = Vec::new();
     let get_buffer_data =
         |buffer: gltf::Buffer| Some(&*buffers[buffer.index()]);

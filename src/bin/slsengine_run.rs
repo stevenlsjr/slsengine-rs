@@ -80,7 +80,7 @@ fn setup_materials(
     model: &renderer::model::Model,
     world: &mut EntityWorld<GlRenderer>,
 ) {
-    use renderer::{
+    use crate::renderer::{
         backend_gl::textures::*,
         material::{Material, MaterialMapName},
     };
@@ -113,8 +113,8 @@ fn setup_materials(
 }
 
 fn main() {
-    use renderer::model::*;
-    use sdl_platform::{platform, Platform};
+    use crate::renderer::model::*;
+    use crate::sdl_platform::{platform, Platform};
     use std::path::*;
     use std::time::*;
     let config = get_or_create_config().unwrap();

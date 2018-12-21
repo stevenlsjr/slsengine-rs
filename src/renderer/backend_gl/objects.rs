@@ -4,8 +4,8 @@
 extern crate failure;
 use gl;
 use gl::types::*;
-use renderer;
-use renderer::Mesh;
+use crate::renderer;
+use crate::renderer::Mesh;
 use std::ops::*;
 
 #[derive(Fail, Debug)]
@@ -181,7 +181,7 @@ impl MeshBuffers {
     }
 
     pub fn bind_mesh(&self, mesh: &Mesh) -> Result<&Self, failure::Error> {
-        use renderer::Vertex;
+        use crate::renderer::Vertex;
         use std::mem::size_of;
         unsafe {
             gl::BindVertexArray(self.vertex_array.id());

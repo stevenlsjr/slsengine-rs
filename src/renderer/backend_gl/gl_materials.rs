@@ -1,6 +1,6 @@
 use super::objects::{BufferObject, ObjectError, SingleBuffer, UboBindings};
 use gl;
-use renderer::material::Material;
+use crate::renderer::material::Material;
 
 /// Material ubo representation shared by shader memory
 /// uses GLSL std140 layout
@@ -84,7 +84,7 @@ impl MaterialUbo {
 
     pub fn set_material<T>(
         &self,
-        material: &::renderer::material::Material<T>,
+        material: &crate::renderer::material::Material<T>,
     ) -> Result<(), super::GlErrors> {
         use super::gl_renderer::{drain_error_stack, dump_errors};
         use gl::types::*;

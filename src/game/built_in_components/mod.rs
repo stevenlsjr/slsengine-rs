@@ -1,7 +1,7 @@
 use super::component::*;
 use cgmath::*;
-use math::*;
-use renderer::{material::Material, mesh::RenderMesh};
+use crate::math::*;
+use crate::renderer::{material::Material, mesh::RenderMesh};
 use std::fmt::{self, Debug};
 
 #[derive(Debug, Clone)]

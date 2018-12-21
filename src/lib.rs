@@ -34,7 +34,7 @@ pub mod system;
 use std::error;
 
 // vulkan feature
-pub use game::main_loop::MainLoopState;
+pub use crate::game::main_loop::MainLoopState;
 
 
 pub fn get_error_desc<E: error::Error>(e: E) -> String {

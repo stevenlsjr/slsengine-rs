@@ -1,7 +1,7 @@
 use cgmath::*;
 use failure;
 use gltf;
-use math::*;
+use crate::math::*;
 use std::fmt;
 
 #[derive(Clone)]

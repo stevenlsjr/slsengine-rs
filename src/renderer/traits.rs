@@ -1,5 +1,5 @@
 use super::{camera::*, mesh::*};
-use game;
+use crate::game;
 use std::{cell::Ref, time::Duration};
 
 /// A trait encapsulating the game's rendering capabilities

@@ -1,7 +1,7 @@
 use super::{camera::*, component::*};
 use cgmath::*;
-use math::*;
-use renderer::*;
+use crate::math::*;
+use crate::renderer::*;
 use sdl2::{keyboard::KeyboardState, mouse::MouseState, EventPump};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
@@ -59,7 +59,7 @@ where
     }
 
     fn setup_game(&mut self) {
-        use renderer::material::*;
+        use crate::renderer::material::*;
         let spacing = 3.0;
         /// setup grid of drawable entities
         let n_rows = 5;

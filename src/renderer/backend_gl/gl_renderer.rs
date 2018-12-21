@@ -5,9 +5,9 @@ use cgmath::prelude::*;
 use cgmath::*;
 use core;
 use failure;
-use game;
+use crate::game;
 use gl;
-use renderer::*;
+use crate::renderer::*;
 use sdl2::video::Window;
 use std::{
     cell::{Cell, Ref, RefCell},
@@ -63,7 +63,7 @@ fn create_scene_shaders() -> Result<(Program, Program), ShaderError> {
 impl GlMesh {
     fn skybox_mesh() -> Result<Self, failure::Error> {
         use genmesh::*;
-        use renderer::Vertex;
+        use crate::renderer::Vertex;
         let cube = generators::Cube::new();
         let vertices: Vec<Vertex> = cube
             .vertex(|v| Vertex {
@@ -161,7 +161,7 @@ impl GlRenderer {
 
     fn make_materials() -> Result<Materials, ::failure::Error> {
         use super::objects::*;
-        use renderer::material::*;
+        use crate::renderer::material::*;
 
         use failure::Error;
         let base_material: UntexturedMat = base::PLASTIC_RED;
@@ -226,8 +226,8 @@ impl GlRenderer {
     }
 
     fn draw_entities(&self, scene: &game::EntityWorld<Self>) {
-        use game::component::*;
-        use math::*;
+        use crate::game::component::*;
+        use crate::math::*;
         use std::ptr;
         let program = &self.scene_program;
         let uniforms = program.uniforms();
@@ -373,7 +373,7 @@ impl Renderer for GlRenderer {
     fn render_scene(&self, scene: &game::EntityWorld<Self>) {
         use std::ptr;
 
-        use math::*;
+        use crate::math::*;
         let _program = self.scene_program();
         let cam_view = scene.main_camera.transform();
 

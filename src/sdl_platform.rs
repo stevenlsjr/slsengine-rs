@@ -10,7 +10,7 @@ use std::fmt;
 use std::ptr;
 use std::rc::Rc;
 
-use config::PlatformConfig;
+use crate::config::PlatformConfig;
 
 pub enum PlatformError {}
 

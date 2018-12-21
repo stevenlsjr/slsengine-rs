@@ -2,7 +2,7 @@
 
 use cgmath;
 use failure;
-use renderer::*;
+use crate::renderer::*;
 use sdl2;
 use sdl2::video::Window;
 use sdl2::video::{Window as SdlWindow, WindowContext};
