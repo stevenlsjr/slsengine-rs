@@ -264,7 +264,7 @@ impl GlRenderer {
         let entities: Vec<_> = scene
             .components
             .enumerate_entities()
-            .filter(|(k, v)| v.contains(mask))
+            .filter(|(_k, v)| v.contains(mask))
             .collect();
 
         for (id, mask) in entities {
@@ -374,10 +374,10 @@ impl Renderer for GlRenderer {
         use std::ptr;
 
         use math::*;
-        let program = self.scene_program();
+        let _program = self.scene_program();
         let cam_view = scene.main_camera.transform();
 
-        let uniforms = &self.scene_program.uniforms();
+        let _uniforms = &self.scene_program.uniforms();
 
         {
             let GlMesh {

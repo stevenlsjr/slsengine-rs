@@ -46,7 +46,7 @@ impl MaterialUbo {
         let ubo = SingleBuffer::new()?;
         unsafe {
             ubo.buffer().bind(gl::UNIFORM_BUFFER);
-            let id = ubo.0;
+            let _id = ubo.0;
             gl::BufferData(
                 gl::UNIFORM_BUFFER,
                 MATERIAL_UBO_SIZE as isize,
@@ -88,7 +88,7 @@ impl MaterialUbo {
     ) -> Result<(), super::GlErrors> {
         use super::gl_renderer::{drain_error_stack, dump_errors};
         use gl::types::*;
-        let buffer = MaterialBufferLayout::from_material(material);
+        let _buffer = MaterialBufferLayout::from_material(material);
         drain_error_stack();
         unsafe {
             self.buffer().bind(gl::UNIFORM_BUFFER);

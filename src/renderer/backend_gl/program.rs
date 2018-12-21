@@ -58,7 +58,7 @@ pub struct ShaderUniforms {
 impl ShaderUniforms {
     pub fn find_locations(&mut self, program: &Program) {
         {
-            let mut uniforms = &mut [
+            let uniforms = &mut [
                 (&mut self.modelview, "modelview"),
                 (&mut self.projection, "projection"),
                 (&mut self.normal_matrix, "normal_matrix"),
@@ -70,7 +70,7 @@ impl ShaderUniforms {
                 (&mut self.emissive_map, "emissive_map"),
             ];
             for (ref mut ptr, name) in uniforms {
-                **ptr = program.uniform_location(name).unwrap_or_else(|e| {
+                **ptr = program.uniform_location(name).unwrap_or_else(|_e| {
                     warn!("could not bind location '{}'", name);
                     None
                 });
@@ -78,7 +78,7 @@ impl ShaderUniforms {
         }
 
         for (key, value) in self.user_uniforms.iter_mut() {
-            *value = program.uniform_location(key).unwrap_or_else(|e| {
+            *value = program.uniform_location(key).unwrap_or_else(|_e| {
                 warn!("could not bind location '{}'", key);
                 None
             });
@@ -243,7 +243,7 @@ impl Program {
         ];
 
         {
-            let m = material.borrow();
+            let _m = material.borrow();
             
         }
 

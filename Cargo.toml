@@ -1,4 +1,4 @@
-cargo-features = ["profile-overrides"]
+# cargo-features = ["profile-overrides"]
 [package]
 name = "slsengine"
 version = "0.1.0"
@@ -9,11 +9,11 @@ default=["with-vulkan", "gl-debug-output"]
 with-vulkan = ["ash", "vulkano", "vulkano-shaders"]
 gl-debug-output = []
 
-# image is crazy slow on debug
-[profile.dev.overrides.image]
-opt-level = 3
-[profile.dev.overrides.jpeg-decoder]
-opt-level = 3
+# # image is crazy slow on debug
+# [profile.dev.overrides.image]
+# opt-level = 3
+# [profile.dev.overrides.jpeg-decoder]
+# opt-level = 3
 
 [profile.release]
 debug=true

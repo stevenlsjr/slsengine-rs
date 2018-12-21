@@ -113,7 +113,7 @@ pub struct QueueFamilies {
 
 impl QueueFamilies {
     pub fn new<W>(
-        instance: &Instance,
+        _instance: &Instance,
         physical_device: &PhysicalDevice,
         surface: &Surface<W>,
     ) -> Result<QueueFamilies, failure::Error> {
@@ -201,13 +201,13 @@ pub fn create_device<W>(
 }
 
 fn create_swapchain(
-    instance: &Arc<Instance>,
+    _instance: &Arc<Instance>,
     surface: &Arc<Surface<VulkanWinType>>,
     physical_device: &PhysicalDevice,
-    device: &Arc<Device>,
-    queues: &VulkanQueues,
+    _device: &Arc<Device>,
+    _queues: &VulkanQueues,
 ) -> Result<(), failure::Error> {
-    let capabilities = surface
+    let _capabilities = surface
         .capabilities(*physical_device)
         .map_err(&failure::Error::from)?;
 
@@ -263,7 +263,7 @@ impl VulkanRenderer {
             .map_err(|_| VkContextError::Device)?;
         let (device, queues) = create_device(&physical_device, &surface)
             .map_err(|_| VkContextError::Device)?;
-        let swapchain = create_swapchain(
+        let _swapchain = create_swapchain(
             &instance,
             &surface,
             &physical_device,
