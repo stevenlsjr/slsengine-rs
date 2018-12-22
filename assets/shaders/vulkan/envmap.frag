@@ -1,8 +1,8 @@
-#version 450
+#version 450 core
 
 layout(location = 0) in vec3 frag_cubemap_uv;
 
-layout(location = 4) out vec4 out_color;
+layout(location = 1) out vec4 out_color;
 
 void
 main()

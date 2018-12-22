@@ -43,17 +43,35 @@ mod vs {
 mod fs {
     vulkano_shaders::shader! {
     ty: "fragment",
-        src: "
-        #version 450
+    src: "#version 450
 
-        layout(location = 0) out vec4 out_color;
-        
-        void main(){
-            out_color = vec4(1.0, 1.0, 1.0, 1.0);
-        }
-        "
+    layout(location = 0) out vec4 out_color;
+    
+    void main(){
+        out_color = vec4(1.0, 1.0, 1.0, 1.0);
+    }
+    "
     }
 
+}
+
+mod comp_shader {
+    vulkano_shaders::shader! {
+    ty: "compute",
+    src: "#version 450
+
+layout(local_size_x=64, local_size_y = 1, local_size_z = 1) in;
+layout (set=0, binding=0) buffer Data {
+    uint data[];
+} buf; 
+
+
+void main() {
+    uint idx = gl_GlobalInvocationID.x;
+    buf.data[idx] *= 12;
+}
+        "
+    }
 }
 
 struct VulkanPlatformHooks;
@@ -80,25 +98,66 @@ impl PlatformBuilderHooks for VulkanPlatformHooks {
 
 fn main() {
     use env_logger;
+    use rand::{distributions::uniform::*, *};
     use slsengine::game;
-    use std::time::{Duration, Instant};
+    use std::{
+        sync::Arc,
+        time::{Duration, Instant},
+    };
     use test::black_box;
-    use vulkano::pipeline::*;
+    use vulkano::{
+        command_buffer::*, descriptor::descriptor_set::*, pipeline::*,
+        sync::GpuFuture,
+    };
+
     env_logger::init();
 
     let platform = platform().build(&VulkanPlatformHooks).unwrap();
 
-    let mut loop_state = slsengine::MainLoopState::new();
-    let timer = game::Timer::new(Duration::from_millis(100 / 6));
-
     let renderer = black_box(VulkanRenderer::new(&platform.window).unwrap());
-    let fs = black_box(fs::Shader::load(renderer.device.clone()).unwrap());
-    let vs = black_box(vs::Shader::load(renderer.device.clone()).unwrap());
+    let ref device = renderer.device;
+    use vulkano::buffer::{BufferUsage, CpuAccessibleBuffer};
+    let data: Vec<u32> = thread_rng()
+        .sample_iter(&Uniform::from(0..100))
+        .take(65537)
+        .collect();
 
-    info!(
-        "created renderer {:?}",
-        renderer
+    let data_buffer = CpuAccessibleBuffer::from_data(
+        device.clone(),
+        BufferUsage::all(),
+        data.clone(),
+    )
+    .unwrap();
+    let queue = &renderer.queues.present_queue;
+    let shader = comp_shader::Shader::load(device.clone())
+        .expect("could not load shader");
+    let compute_pipeline = Arc::new(
+        ComputePipeline::new(device.clone(), &shader.main_entry_point(), &())
+            .expect("failed to create compute pipeline"),
+    );
+    let set = Arc::new(
+        PersistentDescriptorSet::start(compute_pipeline.clone(), 0)
+            .add_buffer(data_buffer.clone())
+            .unwrap()
+            .build()
+            .unwrap(),
     );
 
-    loop_state.is_running = true;
+    let command_buffer =
+        AutoCommandBufferBuilder::new(device.clone(), queue.family())
+            .unwrap()
+            .dispatch([265, 1, 1], compute_pipeline.clone(), set.clone(), ())
+            .unwrap()
+            .build()
+            .unwrap();
+    {
+        let finished = command_buffer.execute(queue.clone()).unwrap();
+        finished
+            .then_signal_fence_and_flush()
+            .unwrap()
+            .wait(None)
+            .unwrap();
+        let content = data_buffer.read().unwrap();
+        eprintln!("first item: {}", content[0]);
+    }
 }
