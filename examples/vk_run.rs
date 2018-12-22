@@ -1,10 +1,13 @@
 #![allow(unused_imports)]
 #![allow(unused_variables)]
 #![cfg(feature = "with-vulkan")]
+#![feature(test)]
 
 #[macro_use]
 extern crate failure;
+extern crate test;
 
+use ::log::*;
 use cgmath::prelude::*;
 use sdl2::sys as sdl_sys;
 use sdl2::video::*;
@@ -12,15 +15,16 @@ use sdl2::*;
 use slsengine::renderer::backend_vk::*;
 use slsengine::renderer::Camera;
 use slsengine::sdl_platform::*;
-use std::cell::{Ref, RefCell};
-use std::ffi::{CStr, CString};
-use std::os::raw::c_char;
-use std::ptr;
-use std::rc::Rc;
-use std::sync::Arc;
+use std::{
+    cell::{Ref, RefCell},
+    ffi::{CStr, CString},
+    os::raw::c_char,
+    ptr,
+    rc::Rc,
+    sync::Arc,
+};
 use vulkano::{self, impl_vertex};
 use vulkano_shaders;
-
 mod vs {
     vulkano_shaders::shader! {
     ty: "vertex",
@@ -75,18 +79,26 @@ impl PlatformBuilderHooks for VulkanPlatformHooks {
 }
 
 fn main() {
+    use env_logger;
     use slsengine::game;
     use std::time::{Duration, Instant};
+    use test::black_box;
     use vulkano::pipeline::*;
+    env_logger::init();
 
     let platform = platform().build(&VulkanPlatformHooks).unwrap();
 
     let mut loop_state = slsengine::MainLoopState::new();
     let timer = game::Timer::new(Duration::from_millis(100 / 6));
 
-    let renderer = VulkanRenderer::new(&platform.window).unwrap();
-    let fs = fs::Shader::load(renderer.device.clone()).unwrap();
-    let vs = vs::Shader::load(renderer.device.clone()).unwrap();
+    let renderer = black_box(VulkanRenderer::new(&platform.window).unwrap());
+    let fs = black_box(fs::Shader::load(renderer.device.clone()).unwrap());
+    let vs = black_box(vs::Shader::load(renderer.device.clone()).unwrap());
+
+    info!(
+        "created renderer {:?}",
+        renderer
+    );
 
     loop_state.is_running = true;
 }

@@ -131,7 +131,7 @@ fn main() {
     } = plt;
     let mut loop_state = MainLoopState::new();
     let path = system::asset_path().join("assets/models/DamagedHelmet.glb");
-    println!("{:?}, {:?}", system::asset_path(), path);
+    info!("{:?}, {:?}", system::asset_path(), path);
     let model = Model::from_gltf(&path).unwrap();
 
     let mut renderer = GlRenderer::new(&window, &model).unwrap();

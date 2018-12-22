@@ -1,5 +1,6 @@
 // use super::ash;
 
+use super::mesh::Vertex;
 use crate::renderer::*;
 use cgmath;
 use failure;
@@ -14,7 +15,6 @@ use std::{
     rc::Rc,
     sync::Arc,
 };
-use super::mesh::Vertex;
 use vulkano::{
     self,
     device::{Device, DeviceExtensions, Queue},
