@@ -17,7 +17,7 @@ use std::{
 };
 use vulkano::{
     self,
-    device::{Device, DeviceExtensions, Queue},
+    device::{Device, DeviceExtensions, Queue, Features},
     format::Format,
     image::SwapchainImage,
     instance::{Instance, PhysicalDevice},
@@ -28,6 +28,7 @@ use vulkano::{
     sync::SharingMode,
 };
 
+#[allow(clippy::ref_in_deref)]
 vulkano::impl_vertex!(Vertex, position);
 
 pub mod sdl_vulkan;
@@ -168,7 +169,6 @@ pub fn create_device<W>(
     physical_device: &PhysicalDevice,
     surface: &Surface<W>,
 ) -> Result<(Arc<Device>, VulkanQueues), failure::Error> {
-    use vulkano::device::{DeviceExtensions, Features};
     let instance = physical_device.instance();
     let queue_families = QueueFamilies::new(instance, physical_device, surface)
         .map_err(|e| format_err!("could not find queue families: {:#?}", e))?;

@@ -49,7 +49,7 @@ impl Timer {
 /// Converts a duration to a floating point number.
 pub fn duration_as_f64(dur: Duration) -> f64 {
     let sec: u64 = dur.as_secs() * 1000;
-    let milli: u64 = dur.subsec_millis() as u64;
+    let milli= u64::from(dur.subsec_millis());
     let result = (sec + milli) as f64 / 1000f64;
     result
 }

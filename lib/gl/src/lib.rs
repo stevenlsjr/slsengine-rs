@@ -1,4 +1,5 @@
-#![allow(unused_parens, non_camel_case_types)]
+#![allow(unused_parens, non_camel_case_types, clippy::all)]
+
 
 /// include gl bindings file 
 /// 

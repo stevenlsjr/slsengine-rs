@@ -26,12 +26,11 @@ impl fmt::Debug for Camera {
 }
 
 impl Camera {
-    pub fn new(perspective: PerspectiveFov<f32>) -> Camera {
-        let cam = Camera {
+    pub fn new(perspective: PerspectiveFov<f32>) -> Self {
+        Camera {
             perspective,
             projection: perspective.into(),
-        };
-        cam
+        }
     }
 
     pub fn perspective(&self) -> PerspectiveFov<f32> {

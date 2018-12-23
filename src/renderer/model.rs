@@ -62,8 +62,7 @@ impl Model {
             let pbr = material.pbr_metallic_roughness();
             info!("found material {:?}", material.name());
             let image_from_index = |idx: usize| -> (Option<gltf::image::Data>) {
-                let img = imports.images.get(idx).map(|i| i.clone());
-                img
+                imports.images.get(idx).map(|i| i.clone())
             };
             let mut mat = Material {
                 albedo_factor: pbr.base_color_factor().into(),

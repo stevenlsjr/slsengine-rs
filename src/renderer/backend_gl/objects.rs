@@ -38,7 +38,7 @@ pub enum BufferObjectTarget {
 /// Because Buffer Object's lifetime is not tied
 /// to a given resource, its methods operating with the OpenGL
 /// api are unsafe.
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug)]
 pub struct BufferObject {
     id: u32,
 }

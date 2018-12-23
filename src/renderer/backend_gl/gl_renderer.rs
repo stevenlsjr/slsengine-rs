@@ -105,23 +105,23 @@ impl GlRenderer {
 
         let buffers =
             MeshBuffers::new().map_err(|_| RendererError::Lifecycle {
-                reason: format!("could not build gl objects for mesh"),
+                reason: "could not build gl objects for mesh".to_owned(),
             })?;
         buffers
             .bind_mesh(&mesh)
             .map_err(|_| RendererError::Lifecycle {
-                reason: format!("could not bind buffers to mesh"),
+                reason: "could not bind buffers to mesh".to_owned(),
             })?;
 
         let materials = GlRenderer::make_materials().map_err(|_| {
             RendererError::Lifecycle {
-                reason: format!("could create material_obo"),
+                reason: "could create material_obo".to_owned(),
             }
         })?;
 
         let env_cube =
             GlMesh::skybox_mesh().map_err(|_| RendererError::Lifecycle {
-                reason: format!("could create skybox mesh"),
+                reason: "could create skybox mesh".to_owned(),
             })?;
 
         let mut renderer = GlRenderer {
@@ -151,7 +151,7 @@ impl GlRenderer {
     }
 
     fn initialize(&mut self) -> Result<(), failure::Error> {
-        let ref ubo = self.materials.base_material_ubo;
+        let ubo = &self.materials.base_material_ubo;
         for i in [&self.envmap_program, &self.scene_program].iter() {
             ubo.bind_to_program(i)
                 .expect("could not set up program buffer");
@@ -212,7 +212,7 @@ impl GlRenderer {
             );
         }
 
-        let ref ubo = self.materials.base_material_ubo;
+        let ubo = &self.materials.base_material_ubo;
         for i in &[&self.envmap_program, &self.scene_program] {
             ubo.bind_to_program(i)
                 .unwrap_or_else(|e| println!("error {:?}", e));
@@ -291,7 +291,7 @@ impl GlRenderer {
                     });
             }
 
-            let transform = scene.components.transforms.get(&id).unwrap();
+            let transform = &scene.components.transforms[&id];
             let model_matrix = Mat4::from(transform.transform);
 
             let modelview = cam_view * model_matrix;
@@ -383,8 +383,8 @@ impl Renderer for GlRenderer {
                 ref mesh,
             } = self.env_cube;
 
-            let ref uniforms = self.envmap_program.uniforms();
-            let ref program = self.envmap_program;
+            let uniforms = self.envmap_program.uniforms();
+            let program = &self.envmap_program;
             let modelview = cam_view;
             program.use_program();
             program.bind_uniform(uniforms.modelview, &modelview);

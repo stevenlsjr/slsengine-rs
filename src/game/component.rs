@@ -60,7 +60,7 @@ impl<R: Renderer> ComponentManager<R> {
         id
     }
 
-    pub fn enumerate_entities<'a>(&'a self) -> EntityIter<'a, R> {
+    pub fn enumerate_entities(&self) -> EntityIter<R> {
         EntityIter {
             manager: self,
             i: 0,

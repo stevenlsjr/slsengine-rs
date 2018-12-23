@@ -73,7 +73,7 @@ pub fn dump_errors() -> Result<(), GlErrors> {
         }
         errors.push(err);
     }
-    if errors.len() < 1 {
+    if errors.is_empty() {
         Ok(())
     } else {
         Err(GlErrors { errors })

@@ -72,8 +72,7 @@ where
                 let mask = ComponentMask::TRANSFORM
                     | ComponentMask::STATIC_MESH
                     | ComponentMask::MATERIAL;
-                self.components.masks[eid.0] =
-                    self.components.masks[eid.0] | mask;
+                self.components.masks[eid.0] |= mask;
                 let mut xform = TransformComponent {
                     ..TransformComponent::default()
                 };

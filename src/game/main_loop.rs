@@ -12,12 +12,10 @@ pub struct MainLoopState {
     pub last_time: Instant,
 }
 
+
 impl MainLoopState {
-    pub fn new() -> MainLoopState {
-        MainLoopState {
-            is_running: false,
-            last_time: Instant::now(),
-        }
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn handle_events<R: renderer::Renderer>(
@@ -28,14 +26,14 @@ impl MainLoopState {
         world: &mut game::EntityWorld<R>,
     ) {
         use cgmath::*;
-        if let None = world.input_state {
+        if world.input_state.is_none() {
             let ep = event_pump.borrow();
             let mouse_state = ep.mouse_state();
             let mousepos =
                 Point2::new(mouse_state.x() as f32, mouse_state.y() as f32);
             world.input_state = Some(game::InputState {
                 mousepos,
-                last_mousepos: mousepos.clone(),
+                last_mousepos: mousepos,
             });
         }
         for event in event_pump.borrow_mut().poll_iter() {
@@ -47,13 +45,12 @@ impl MainLoopState {
                 } => {
                     self.is_running = false;
                 }
-                Event::Window { win_event, .. } => match win_event {
-                    WindowEvent::Resized(_width, _height) => {
+                Event::Window { win_event, .. } => 
+                    if let WindowEvent::Resized(_width, _height) = win_event {
                         let size = window.drawable_size();
                         renderer.on_resize(size);
                     }
-                    _ => {}
-                },
+                ,
                 Event::MouseMotion { x, y, .. } => {
                     if let Some(mut input_state) = world.input_state.clone() {
                         input_state.last_mousepos = input_state.mousepos;
@@ -79,6 +76,15 @@ impl MainLoopState {
                 }
                 _ => {}
             }
+        }
+    }
+}
+
+impl Default for MainLoopState{
+    fn default()->Self{
+        MainLoopState {
+            is_running: false,
+            last_time: Instant::now(),
         }
     }
 }
