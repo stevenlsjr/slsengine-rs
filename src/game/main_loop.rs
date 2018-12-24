@@ -12,7 +12,6 @@ pub struct MainLoopState {
     pub last_time: Instant,
 }
 
-
 impl MainLoopState {
     pub fn new() -> Self {
         Self::default()
@@ -45,12 +44,12 @@ impl MainLoopState {
                 } => {
                     self.is_running = false;
                 }
-                Event::Window { win_event, .. } => 
+                Event::Window { win_event, .. } => {
                     if let WindowEvent::Resized(_width, _height) = win_event {
                         let size = window.drawable_size();
                         renderer.on_resize(size);
                     }
-                ,
+                }
                 Event::MouseMotion { x, y, .. } => {
                     if let Some(mut input_state) = world.input_state.clone() {
                         input_state.last_mousepos = input_state.mousepos;
@@ -80,8 +79,8 @@ impl MainLoopState {
     }
 }
 
-impl Default for MainLoopState{
-    fn default()->Self{
+impl Default for MainLoopState {
+    fn default() -> Self {
         MainLoopState {
             is_running: false,
             last_time: Instant::now(),

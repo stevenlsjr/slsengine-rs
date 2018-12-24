@@ -23,18 +23,32 @@ use std::{
     rc::Rc,
     sync::Arc,
 };
-use vulkano::{self, impl_vertex};
+use vulkano;
+use vulkano::{
+    buffer::*,
+    command_buffer::*,
+    descriptor::descriptor_set::*,
+    device::Device,
+    framebuffer::{Framebuffer, FramebufferAbstract, RenderPassAbstract},
+    image::swapchain::SwapchainImage,
+    impl_vertex,
+    pipeline::*,
+    single_pass_renderpass,
+    swapchain::Swapchain,
+    sync::GpuFuture,
+};
 use vulkano_shaders;
+
 mod vs {
     vulkano_shaders::shader! {
     ty: "vertex",
         src: "
         #version 450
 
-        layout(location = 0) in vec3 position;
+        layout(location = 0) in vec2 position;
         
         void main(){
-            gl_Position = vec4(position, 1.0);
+            gl_Position = vec4(position, 0.0, 1.0);
         }
         "
     }
@@ -48,39 +62,41 @@ mod fs {
     layout(location = 0) out vec4 out_color;
     
     void main(){
-        out_color = vec4(1.0, 1.0, 1.0, 1.0);
+        out_color = vec4(1.0, 1.0, 0.0, 1.0);
     }
     "
     }
 
 }
 
-mod comp_shader {
-    vulkano_shaders::shader! {
-    ty: "compute",
-    src: "#version 450
-
-layout(local_size_x=64, local_size_y = 1, local_size_z = 1) in;
-layout (set=0, binding=0) buffer Data {
-    uint data[];
-} buf; 
-
-
-void main() {
-    uint idx = gl_GlobalInvocationID.x;
-    buf.data[idx] *= 12;
+#[derive(Debug, Clone, Copy)]
+struct SimpleVert {
+    position: [f32; 2],
 }
-        "
-    }
-}
+impl_vertex!(SimpleVert, position);
 
 struct VulkanPlatformHooks;
 
-// static FRAG_SPIRV: &[u8] =
-//     include_bytes!("../assets/shaders/spirv/brdf.frag.spv");
+fn create_renderpass<W>(
+    device: Arc<Device>,
+    swapchain: &Swapchain<W>,
+) -> Result<Arc<dyn RenderPassAbstract + Send + Sync>, failure::Error> {
+    let rp = single_pass_renderpass!(device,
+    attachments: {
+        color: {
+            load: Clear,
+            store: Store,
+            format: swapchain.format(),
+            samples: 1,
+        }
+    },
+    pass: {
+        color: [color],
+        depth_stencil: {}
 
-// static VERT_SPIRV: &[u8] =
-//     include_bytes!("../assets/shaders/spirv/brdf.vert.spv");
+    })?;
+    Ok(Arc::new(rp))
+}
 
 impl PlatformBuilderHooks for VulkanPlatformHooks {
     fn build_window(
@@ -105,59 +121,90 @@ fn main() {
         time::{Duration, Instant},
     };
     use test::black_box;
-    use vulkano::{
-        command_buffer::*, descriptor::descriptor_set::*, pipeline::*,
-        sync::GpuFuture,
-    };
 
     env_logger::init();
 
     let platform = platform().build(&VulkanPlatformHooks).unwrap();
 
     let renderer = black_box(VulkanRenderer::new(&platform.window).unwrap());
-    let ref device = renderer.device;
-    use vulkano::buffer::{BufferUsage, CpuAccessibleBuffer};
-    let data: Vec<u32> = thread_rng()
-        .sample_iter(&Uniform::from(0..100))
-        .take(65537)
-        .collect();
-
-    let data_buffer = CpuAccessibleBuffer::from_data(
+    let VulkanRenderer {
+        ref queues,
+        ref device,
+        ref instance,
+        ref swapchain,
+        ..
+    } = renderer;
+    let verts = [
+        SimpleVert {
+            position: [-0.5, -0.25],
+        },
+        SimpleVert {
+            position: [0.0, 0.5],
+        },
+        SimpleVert {
+            position: [0.25, -0.1],
+        },
+    ];
+    let vertex_buffer = CpuAccessibleBuffer::from_iter(
         device.clone(),
         BufferUsage::all(),
-        data.clone(),
+        verts.iter().cloned(),
+    )
+    .expect("failed to create vertex array buffer");
+    let vs =
+        vs::Shader::load(device.clone()).expect("failed to load vert shader");
+    let fs =
+        fs::Shader::load(device.clone()).expect("failed to load frag shader");
+    let render_pass = create_renderpass(device.clone(), swapchain).unwrap();
+    let pipeline = {
+        use vulkano::{framebuffer::*, pipeline::*};
+        Arc::new(
+            GraphicsPipeline::start()
+                .vertex_input_single_buffer::<SimpleVert>()
+                .vertex_shader(vs.main_entry_point(), ())
+                .triangle_list()
+                .viewports_dynamic_scissors_irrelevant(1)
+                .fragment_shader(fs.main_entry_point(), ())
+                .render_pass(Subpass::from(render_pass.clone(), 0).unwrap())
+                .build(device.clone())
+                .unwrap(),
+        )
+    };
+    let mut dynamic_state = DynamicState {
+        line_width: None,
+        viewports: None,
+        scissors: None,
+    };
+    let mut framebuffers = setup_framebuffers(
+        &renderer.swapchain_images,
+        render_pass.clone(),
+        &mut dynamic_state,
     )
     .unwrap();
-    let queue = &renderer.queues.present_queue;
-    let shader = comp_shader::Shader::load(device.clone())
-        .expect("could not load shader");
-    let compute_pipeline = Arc::new(
-        ComputePipeline::new(device.clone(), &shader.main_entry_point(), &())
-            .expect("failed to create compute pipeline"),
-    );
-    let set = Arc::new(
-        PersistentDescriptorSet::start(compute_pipeline.clone(), 0)
-            .add_buffer(data_buffer.clone())
-            .unwrap()
-            .build()
-            .unwrap(),
-    );
+}
 
-    let command_buffer =
-        AutoCommandBufferBuilder::new(device.clone(), queue.family())
-            .unwrap()
-            .dispatch([265, 1, 1], compute_pipeline.clone(), set.clone(), ())
-            .unwrap()
-            .build()
-            .unwrap();
-    {
-        let finished = command_buffer.execute(queue.clone()).unwrap();
-        finished
-            .then_signal_fence_and_flush()
-            .unwrap()
-            .wait(None)
-            .unwrap();
-        let content = data_buffer.read().unwrap();
-        eprintln!("first item: {}", content[0]);
+fn setup_framebuffers<W>(
+    images: &[Arc<SwapchainImage<W>>],
+    render_pass: Arc<dyn RenderPassAbstract + Send + Sync>,
+    dynamic_state: &mut DynamicState,
+) -> Result<Vec<Arc<dyn FramebufferAbstract>>, failure::Error> {
+    use vulkano::pipeline::viewport::Viewport;
+
+    let dimensions = images[0].dimensions();
+    let viewport = Viewport {
+        origin: [0.0, 0.0],
+        dimensions: [dimensions[0] as f32, dimensions[1] as f32],
+        depth_range: 0.0..1.0,
+    };
+    dynamic_state.viewports = Some(vec![viewport]);
+    let mut fbs: Vec<Arc<dyn FramebufferAbstract>> =
+        Vec::with_capacity(images.len());
+    for image in images {
+        let fb = Framebuffer::start(render_pass.clone())
+            .add(image.clone())
+            .and_then(|fbb| fbb.build())
+            .map(&Arc::new)?;
+        fbs.push(fb as Arc<FramebufferAbstract>);
     }
+    Ok(fbs)
 }

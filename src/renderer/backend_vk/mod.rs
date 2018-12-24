@@ -17,7 +17,7 @@ use std::{
 };
 use vulkano::{
     self,
-    device::{Device, DeviceExtensions, Queue, Features},
+    device::{Device, DeviceExtensions, Features, Queue},
     format::Format,
     image::SwapchainImage,
     instance::{Instance, PhysicalDevice},
@@ -30,8 +30,6 @@ use vulkano::{
 
 #[allow(clippy::ref_in_deref)]
 vulkano::impl_vertex!(Vertex, position);
-
-pub mod sdl_vulkan;
 
 pub type VulkanWinType = Rc<WindowContext>;
 pub type SdlSurface = Surface<VulkanWinType>;
@@ -107,9 +105,6 @@ struct QueueFamilyBuilder {
 }
 
 impl QueueFamilyBuilder {
-    fn is_complete(&self) -> bool {
-        self.graphics_family.is_some() && self.present_family.is_some()
-    }
     fn build(&self) -> Option<QueueFamilies> {
         self.graphics_family.and_then(|graphics_family| {
             self.present_family.map(|present_family| QueueFamilies {

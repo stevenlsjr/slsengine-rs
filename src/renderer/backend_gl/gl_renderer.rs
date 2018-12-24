@@ -179,7 +179,7 @@ impl GlRenderer {
 
     pub fn rebuild_program(&mut self) {
         let (scene, skybox) = match create_scene_shaders() {
-            Ok(mut programs) => programs,
+            Ok(programs) => programs,
             Err(e) => {
                 error!("could not rebuild shaders: {}", e);
                 return;
