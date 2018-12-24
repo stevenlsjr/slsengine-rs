@@ -14,12 +14,12 @@ out vec2 frag_uv;
 out vec3 frag_normal;
 out vec3 frag_pos;
 out vec3 frag_eye_normal;
-out mat3 tbn_matrix;
+out mat3 frag_tbn_matrix;
 
 mat3 make_tbn_matrix(vec3 eye_normal){
     vec3 eye_t = normalize(vec3(normal_matrix * vec4(v_tangent, 0.0)));
     vec3 eye_b = normalize(vec3(normal_matrix * vec4(v_bitangent, 0.0)));
-    return mat3(eye_t, eye_b, eye_normal);
+    return mat3(eye_t, eye_b, normalize(eye_normal));
 }
 
 void
@@ -31,5 +31,5 @@ main()
   vec4 eye = modelview * vec4(v_pos, 1.0);
   gl_Position = projection * eye;
   frag_pos = eye.xyz;
-  tbn_matrix = make_tbn_matrix(frag_eye_normal);
+  frag_tbn_matrix = make_tbn_matrix(frag_eye_normal);
 }

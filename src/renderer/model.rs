@@ -174,15 +174,7 @@ fn make_mesh(
             }
         }
 
-        if let Some(tangents) = reader.read_tangents() {
-            for (i, tan) in tangents.enumerate() {
-                let t: Vec3 = vec3(tan[0], tan[1], tan[2]);
-                let n: Vec3 = vertices[i].normal.into();
-                let bitangent = t.cross(n);
-                vertices[i].tangent = t.into();
-                vertices[i].bitangent = bitangent.into();
-            }
-        }
+        
 
         let indices: Vec<u32> = if let Some(index_enum) = reader.read_indices()
         {
@@ -191,8 +183,11 @@ fn make_mesh(
             panic!("model doesn't have indices");
         };
 
+        let mut mesh = Mesh { indices, vertices };
+        mesh.calculate_tangents();
+
         let mesh_data = ParsedMesh {
-            mesh: Mesh { indices, vertices },
+            mesh,
             mode: primitive.mode(),
             material: primitive.material().index(),
         };

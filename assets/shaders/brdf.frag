@@ -13,6 +13,8 @@ in vec3 frag_pos;
 in vec2 frag_uv;
 in vec3 frag_normal;
 in vec3 frag_eye_normal;
+in mat3 frag_tbn_matrix;
+
 
 uniform sampler2D albedo_map;
 uniform sampler2D metallic_roughness_map;
@@ -109,8 +111,10 @@ get_occlusion(vec2 uv)
 vec3
 get_normal()
 {
-  vec3 N = normalize(frag_eye_normal);
-  return N;
+  vec3 normal = texture(normal_map, frag_uv).rgb;
+  normal = normalize(normal * 2.0 - 1.0);
+  normal = normalize( frag_tbn_matrix * normal);
+  return normal;
 }
 
 void
