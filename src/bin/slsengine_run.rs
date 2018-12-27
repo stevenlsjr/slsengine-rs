@@ -87,19 +87,38 @@ fn setup_materials(
     use slsengine::game::component::*;
     use std::sync::*;
     let mat = model.materials.values().next().unwrap();
+    let imports = model.imports();
 
-    let gl_mat = mat.transform_textures(|img, name| {
-        let mut tex = GlTexture::new().unwrap();
-        let tex_id = tex.id;
+    let tex_images: Vec<Option<Arc<GlTexture>>> = imports
+        .document
+        .images()
+        .map(|i| -> Result<Arc<GlTexture>, failure::Error> {
+            let data = &imports.images[i.index()];
+            let mut tex = GlTexture::new()?;
+            tex.load_from_image(data)?;
 
-        {
-            tex.load_from_image(img).map(&Some).unwrap_or_else(|e| {
-                eprintln!("could not load image {:?}", e);
+            Ok(Arc::new(tex))
+        })
+        .map(|res| match res {
+            Ok(t) => Some(t),
+            Err(e) => {
+                error!("failed to create texture: {:?}", e);
                 None
-            })?;
-            tex.set_name(format!("tex.{}, '{:?}'", tex_id, name));
+            }
+        })
+        .collect();
+
+    let gl_mat = mat.transform_textures(|&img_index, name| {
+        match tex_images.get(img_index).unwrap_or(&None) {
+            Some(t) => Some(t.clone()),
+            None => {
+                error!(
+                    "could not load texture indexed {} for model",
+                    img_index
+                );
+                None
+            }
         }
-        Some(Arc::new(tex))
     });
 
     let entities = world

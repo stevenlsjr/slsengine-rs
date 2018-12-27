@@ -9,7 +9,7 @@ use failure;
 use gltf;
 use gltf::mesh;
 use log::*;
-use std::{cell::RefCell, collections::HashMap, path::Path};
+use std::{cell::{RefCell, Ref}, collections::HashMap, path::Path};
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct MeshData {
@@ -30,18 +30,17 @@ impl MeshData {
 }
 
 #[derive(Clone)]
-struct GltfImport {
-    document: gltf::Document,
-    buffers: Vec<gltf::buffer::Data>,
-    images: Vec<gltf::image::Data>,
+pub struct GltfImport {
+    pub document: gltf::Document,
+    pub buffers: Vec<gltf::buffer::Data>,
+    pub images: Vec<gltf::image::Data>,
 }
 
 #[derive(Clone)]
 pub struct Model {
     pub meshes: Vec<MeshData>,
     pub transforms: Vec<Mat4>,
-    pub materials:
-        HashMap<Option<usize>, material::Material<gltf::image::Data>>,
+    pub materials: HashMap<Option<usize>, material::Material<usize>>,
     imports: RefCell<GltfImport>,
 }
 
@@ -55,15 +54,17 @@ impl Model {
         }
     }
 
+    pub fn imports(&self) -> Ref<GltfImport> {
+        self.imports.borrow()
+    }
+
     fn load_materials(&mut self) {
         let imports = self.imports.borrow();
         for material in imports.document.materials() {
             use super::material::*;
             let pbr = material.pbr_metallic_roughness();
             info!("found material {:?}", material.name());
-            let image_from_index = |idx: usize| -> (Option<gltf::image::Data>) {
-                imports.images.get(idx).map(|i| i.clone())
-            };
+
             let mut mat = Material {
                 albedo_factor: pbr.base_color_factor().into(),
                 metallic_factor: pbr.metallic_factor(),
@@ -71,24 +72,19 @@ impl Model {
                 emissive_factor: material.emissive_factor().into(),
                 albedo_map: pbr
                     .base_color_texture()
-                    .map(|i| i.texture().source().index())
-                    .and_then(image_from_index),
+                    .map(|i| i.texture().source().index()),
                 metallic_roughness_map: pbr
                     .metallic_roughness_texture()
-                    .map(|i| i.texture().source().index())
-                    .and_then(image_from_index),
+                    .map(|i| i.texture().source().index()),
                 emissive_map: material
                     .emissive_texture()
-                    .map(|i| i.texture().source().index())
-                    .and_then(image_from_index),
+                    .map(|i| i.texture().source().index()),
                 occlusion_map: material
                     .occlusion_texture()
-                    .map(|i| i.texture().source().index())
-                    .and_then(image_from_index),
+                    .map(|i| i.texture().source().index()),
                 normal_map: material
                     .normal_texture()
-                    .map(|i| i.texture().source().index())
-                    .and_then(image_from_index),
+                    .map(|i| i.texture().source().index()),
             };
 
             if mat.metallic_roughness_map.is_some() {
@@ -173,8 +169,6 @@ fn make_mesh(
                 vertices[i].uv = uv.clone();
             }
         }
-
-        
 
         let indices: Vec<u32> = if let Some(index_enum) = reader.read_indices()
         {
