@@ -33,8 +33,8 @@ pub struct Materials {
 /// the renderer backend for openGL
 pub struct GlRenderer {
     camera: RefCell<Camera>,
-    scene_program: Program,
-    envmap_program: Program,
+    scene_program: PbrProgram,
+    envmap_program: PbrProgram,
     sample_mesh: Mesh,
     env_cube: GlMesh,
     buffers: MeshBuffers,
@@ -48,16 +48,18 @@ pub struct GlMesh {
     buffers: MeshBuffers,
 }
 
-fn create_scene_shaders() -> Result<(Program, Program), ShaderError> {
+fn create_scene_shaders() -> Result<(PbrProgram, PbrProgram), ShaderError> {
     use crate::system::asset_path;
     let scene_program = program_from_sources(
         asset_path().join(Path::new("./assets/shaders/brdf.vert")),
         asset_path().join(Path::new("./assets/shaders/brdf.frag")),
+        PbrShaderUniforms::default()
     )?;
 
     let envmap_program = program_from_sources(
         asset_path().join(Path::new("./assets/shaders/envmap.vert")),
         asset_path().join(Path::new("./assets/shaders/envmap.frag")),
+        PbrShaderUniforms::default()
     )?;
     Ok((scene_program, envmap_program))
 }
@@ -222,7 +224,7 @@ impl GlRenderer {
     }
 
     #[inline]
-    pub fn scene_program(&self) -> &Program {
+    pub fn scene_program(&self) -> &PbrProgram {
         &self.scene_program
     }
 

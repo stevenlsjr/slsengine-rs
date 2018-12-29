@@ -174,8 +174,6 @@ fn make_mesh(
             }
         }
 
-        
-
         let indices: Vec<u32> = if let Some(index_enum) = reader.read_indices()
         {
             index_enum.into_u32().collect()
