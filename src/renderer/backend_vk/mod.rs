@@ -1,5 +1,5 @@
 // use super::ash;
-
+pub mod shaders;
 use super::mesh::Vertex;
 use crate::renderer::*;
 use cgmath;
@@ -185,10 +185,11 @@ pub fn create_device<W>(
             .map(|fam| (fam, default_queue_priority as f32))
     });
     let device_extensions = required_device_extensions();
+    let features = physical_device.supported_features();
 
     let (device, mut queues) = Device::new(
         *physical_device,
-        &Features::none(),
+        features,
         &device_extensions,
         queue_families,
     )

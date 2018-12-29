@@ -1,0 +1,406 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 50;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		E29DD32721D6B795000771D4 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E29DD32621D6B795000771D4 /* Assets.xcassets */; };
+		E29DD32D21D6B795000771D4 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = E29DD32C21D6B795000771D4 /* main.m */; };
+		E2B88F2B21D6E6E1001101EE /* libSDL2.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E2B88F2A21D6E6E1001101EE /* libSDL2.a */; };
+		E2B88F2E21D6E75B001101EE /* GameController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E2B88F2D21D6E75B001101EE /* GameController.framework */; };
+		E2B88F3021D6E761001101EE /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E2B88F2F21D6E760001101EE /* AVFoundation.framework */; };
+		E2B88F3221D6E766001101EE /* CoreMotion.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E2B88F3121D6E766001101EE /* CoreMotion.framework */; };
+		E2B88F3421D6E76D001101EE /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E2B88F3321D6E76D001101EE /* CoreAudio.framework */; };
+		E2B88F3621D6E773001101EE /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E2B88F3521D6E773001101EE /* AudioToolbox.framework */; };
+		E2B88F3B21D6E7AE001101EE /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E2B88F3721D6E7AD001101EE /* CoreGraphics.framework */; };
+		E2B88F3C21D6E7AE001101EE /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E2B88F3821D6E7AD001101EE /* QuartzCore.framework */; };
+		E2B88F3D21D6E7AE001101EE /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E2B88F3921D6E7AE001101EE /* Metal.framework */; };
+		E2B88F3E21D6E7AE001101EE /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E2B88F3A21D6E7AE001101EE /* UIKit.framework */; };
+		E2B88F4121D6F29D001101EE /* libslsengine_run_ios.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E2B88F4021D6F29D001101EE /* libslsengine_run_ios.a */; };
+		E2B88F4321D70038001101EE /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = E2B88F4221D70038001101EE /* Main.storyboard */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		E29DD31A21D6B793000771D4 /* slsengine-run-ios.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "slsengine-run-ios.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		E29DD32621D6B795000771D4 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		E29DD32B21D6B795000771D4 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		E29DD32C21D6B795000771D4 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		E29DD33321D6B7A8000771D4 /* slsengine.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = slsengine.h; sourceTree = "<group>"; };
+		E29DD33521D6B815000771D4 /* libios_demo.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libios_demo.a; path = "../ios-demo/target/universal/debug/libios_demo.a"; sourceTree = "<group>"; };
+		E29DD33721D6B9CC000771D4 /* libresolv.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libresolv.tbd; path = usr/lib/libresolv.tbd; sourceTree = SDKROOT; };
+		E2B88F2A21D6E6E1001101EE /* libSDL2.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libSDL2.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		E2B88F2D21D6E75B001101EE /* GameController.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GameController.framework; path = System/Library/Frameworks/GameController.framework; sourceTree = SDKROOT; };
+		E2B88F2F21D6E760001101EE /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
+		E2B88F3121D6E766001101EE /* CoreMotion.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMotion.framework; path = System/Library/Frameworks/CoreMotion.framework; sourceTree = SDKROOT; };
+		E2B88F3321D6E76D001101EE /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
+		E2B88F3521D6E773001101EE /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
+		E2B88F3721D6E7AD001101EE /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
+		E2B88F3821D6E7AD001101EE /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
+		E2B88F3921D6E7AE001101EE /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
+		E2B88F3A21D6E7AE001101EE /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		E2B88F4021D6F29D001101EE /* libslsengine_run_ios.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libslsengine_run_ios.a; path = target/universal/debug/libslsengine_run_ios.a; sourceTree = "<group>"; };
+		E2B88F4221D70038001101EE /* Main.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = Main.storyboard; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		E29DD31721D6B793000771D4 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E2B88F4121D6F29D001101EE /* libslsengine_run_ios.a in Frameworks */,
+				E2B88F3B21D6E7AE001101EE /* CoreGraphics.framework in Frameworks */,
+				E2B88F3C21D6E7AE001101EE /* QuartzCore.framework in Frameworks */,
+				E2B88F3D21D6E7AE001101EE /* Metal.framework in Frameworks */,
+				E2B88F3E21D6E7AE001101EE /* UIKit.framework in Frameworks */,
+				E2B88F3621D6E773001101EE /* AudioToolbox.framework in Frameworks */,
+				E2B88F3421D6E76D001101EE /* CoreAudio.framework in Frameworks */,
+				E2B88F3221D6E766001101EE /* CoreMotion.framework in Frameworks */,
+				E2B88F3021D6E761001101EE /* AVFoundation.framework in Frameworks */,
+				E2B88F2E21D6E75B001101EE /* GameController.framework in Frameworks */,
+				E2B88F2B21D6E6E1001101EE /* libSDL2.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		E29DD31121D6B793000771D4 = {
+			isa = PBXGroup;
+			children = (
+				E29DD31C21D6B793000771D4 /* slsengine-run-ios */,
+				E29DD31B21D6B793000771D4 /* Products */,
+				E29DD33421D6B815000771D4 /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		E29DD31B21D6B793000771D4 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				E29DD31A21D6B793000771D4 /* slsengine-run-ios.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		E29DD31C21D6B793000771D4 /* slsengine-run-ios */ = {
+			isa = PBXGroup;
+			children = (
+				E29DD32621D6B795000771D4 /* Assets.xcassets */,
+				E29DD32B21D6B795000771D4 /* Info.plist */,
+				E29DD32C21D6B795000771D4 /* main.m */,
+				E29DD33321D6B7A8000771D4 /* slsengine.h */,
+				E2B88F4221D70038001101EE /* Main.storyboard */,
+			);
+			path = "slsengine-run-ios";
+			sourceTree = "<group>";
+		};
+		E29DD33421D6B815000771D4 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				E2B88F4021D6F29D001101EE /* libslsengine_run_ios.a */,
+				E2B88F3721D6E7AD001101EE /* CoreGraphics.framework */,
+				E2B88F3921D6E7AE001101EE /* Metal.framework */,
+				E2B88F3821D6E7AD001101EE /* QuartzCore.framework */,
+				E2B88F3A21D6E7AE001101EE /* UIKit.framework */,
+				E2B88F3521D6E773001101EE /* AudioToolbox.framework */,
+				E2B88F3321D6E76D001101EE /* CoreAudio.framework */,
+				E2B88F3121D6E766001101EE /* CoreMotion.framework */,
+				E2B88F2F21D6E760001101EE /* AVFoundation.framework */,
+				E2B88F2D21D6E75B001101EE /* GameController.framework */,
+				E2B88F2A21D6E6E1001101EE /* libSDL2.a */,
+				E29DD33721D6B9CC000771D4 /* libresolv.tbd */,
+				E29DD33521D6B815000771D4 /* libios_demo.a */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		E29DD31921D6B793000771D4 /* slsengine-run-ios */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E29DD33021D6B795000771D4 /* Build configuration list for PBXNativeTarget "slsengine-run-ios" */;
+			buildPhases = (
+				E2B88F3F21D6E8B8001101EE /* ShellScript */,
+				E29DD31621D6B793000771D4 /* Sources */,
+				E29DD31721D6B793000771D4 /* Frameworks */,
+				E29DD31821D6B793000771D4 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "slsengine-run-ios";
+			productName = "slsengine-run-ios";
+			productReference = E29DD31A21D6B793000771D4 /* slsengine-run-ios.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		E29DD31221D6B793000771D4 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 1010;
+				ORGANIZATIONNAME = "Steven Shea";
+				TargetAttributes = {
+					E29DD31921D6B793000771D4 = {
+						CreatedOnToolsVersion = 10.1;
+					};
+				};
+			};
+			buildConfigurationList = E29DD31521D6B793000771D4 /* Build configuration list for PBXProject "slsengine-run-ios" */;
+			compatibilityVersion = "Xcode 9.3";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = E29DD31121D6B793000771D4;
+			productRefGroup = E29DD31B21D6B793000771D4 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				E29DD31921D6B793000771D4 /* slsengine-run-ios */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		E29DD31821D6B793000771D4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E29DD32721D6B795000771D4 /* Assets.xcassets in Resources */,
+				E2B88F4321D70038001101EE /* Main.storyboard in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		E2B88F3F21D6E8B8001101EE /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 8;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+			shellPath = /bin/sh;
+			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\npushd $SRCROOT\n$cargo_flags = \"--targets x86_64\"\n$HOME/.cargo/bin/cargo lipo $cargo_flags\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		E29DD31621D6B793000771D4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E29DD32D21D6B795000771D4 /* main.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		E29DD32E21D6B795000771D4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+			};
+			name = Debug;
+		};
+		E29DD32F21D6B795000771D4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		E29DD33121D6B795000771D4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = P98J5M8L6T;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/vendor",
+				);
+				HEADER_SEARCH_PATHS = "/Users/Shea/Downloads/SDL2-2.0.9/include";
+				INFOPLIST_FILE = "slsengine-run-ios/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(PROJECT_DIR)/vendor",
+					"$(PROJECT_DIR)/target/universal/debug",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "dangerbird2.slsengine-run-ios";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		E29DD33221D6B795000771D4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = P98J5M8L6T;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/vendor",
+				);
+				HEADER_SEARCH_PATHS = "/Users/Shea/Downloads/SDL2-2.0.9/include";
+				INFOPLIST_FILE = "slsengine-run-ios/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(PROJECT_DIR)/vendor",
+					"$(PROJECT_DIR)/target/universal/release",
+					"$(PROJECT_DIR)/target/universal/debug",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "dangerbird2.slsengine-run-ios";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		E29DD31521D6B793000771D4 /* Build configuration list for PBXProject "slsengine-run-ios" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E29DD32E21D6B795000771D4 /* Debug */,
+				E29DD32F21D6B795000771D4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E29DD33021D6B795000771D4 /* Build configuration list for PBXNativeTarget "slsengine-run-ios" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E29DD33121D6B795000771D4 /* Debug */,
+				E29DD33221D6B795000771D4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = E29DD31221D6B793000771D4 /* Project object */;
+}

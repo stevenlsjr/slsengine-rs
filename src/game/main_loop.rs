@@ -16,7 +16,17 @@ impl MainLoopState {
     pub fn new() -> Self {
         Self::default()
     }
+    #[cfg(target_os = "ios")]
+    pub fn handle_events<R: renderer::Renderer>(
+        &mut self,
+        window: &Window,
+        event_pump: &RefCell<sdl2::EventPump>,
+        renderer: &R,
+        world: &mut game::EntityWorld<R>,
+    ) {
+    }
 
+    #[cfg(not(target_os = "ios"))]
     pub fn handle_events<R: renderer::Renderer>(
         &mut self,
         window: &Window,
@@ -64,10 +74,10 @@ impl MainLoopState {
                     ..
                 } => {
                     if let Some(code) = keycode {
-                        use sdl2::keyboard::{Keycode, LALTMOD};
+                        use sdl2::keyboard::{Keycode, Mod};
                         if code == Keycode::R
                             && !repeat
-                            && keymod.contains(LALTMOD)
+                            && keymod.contains(Mod::LALTMOD)
                         {
                             renderer.flag_shader_recompile();
                         }

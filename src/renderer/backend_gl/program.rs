@@ -6,15 +6,21 @@ use log::*;
 use std::borrow::Borrow;
 use std::cell::{BorrowMutError, Ref, RefCell};
 use std::collections::HashMap;
+use std::fmt::Debug;
 use std::path::Path;
 
 pub struct ShaderStage(pub u32);
 
 #[derive(Debug)]
-pub struct Program {
+pub struct Program<Uniforms>
+where
+    Uniforms: ShaderUniforms,
+{
     pub id: u32,
-    pub uniforms: RefCell<ShaderUniforms>,
+    pub uniforms: RefCell<Uniforms>,
 }
+
+pub type PbrProgram = Program<PbrShaderUniforms>;
 
 pub struct ProgramBuilder {
     frag_shader: Option<u32>,
@@ -39,11 +45,15 @@ impl TextureUnits {
     }
 }
 
+pub trait ShaderUniforms: Debug + Sized {
+    fn find_locations(&mut self, program: &Program<Self>);
+}
+
 //
 /// Stores uniform ids for the main
 /// scene shader
 #[derive(Clone, Debug)]
-pub struct ShaderUniforms {
+pub struct PbrShaderUniforms {
     pub modelview: Option<u32>,
     pub projection: Option<u32>,
     pub normal_matrix: Option<u32>,
@@ -56,8 +66,29 @@ pub struct ShaderUniforms {
     user_uniforms: HashMap<String, Option<u32>>,
 }
 
-impl ShaderUniforms {
-    pub fn find_locations(&mut self, program: &Program) {
+impl PbrShaderUniforms {
+    fn set_texture_units(&self, program: &Program<Self>) {
+        // set texture units
+        let units = [
+            (self.albedo_map, TextureUnits::Albedo),
+            (self.metallic_roughness_map, TextureUnits::MetallicRoughness),
+            (self.normal_map, TextureUnits::Normal),
+            (self.ao_map, TextureUnits::Ao),
+            (self.emissive_map, TextureUnits::Emissive),
+        ];
+        program.use_program();
+        for (location_opt, unit) in &units {
+            if let Some(location) = *location_opt {
+                unsafe {
+                    gl::Uniform1i(location as _, *unit as i32);
+                }
+            }
+        }
+    }
+}
+
+impl ShaderUniforms for PbrShaderUniforms {
+    fn find_locations(&mut self, program: &Program<Self>) {
         {
             let uniforms = &mut [
                 (&mut self.modelview, "modelview"),
@@ -87,30 +118,11 @@ impl ShaderUniforms {
 
         self.set_texture_units(program);
     }
-
-    fn set_texture_units(&self, program: &Program) {
-        // set texture units
-        let units = [
-            (self.albedo_map, TextureUnits::Albedo),
-            (self.metallic_roughness_map, TextureUnits::MetallicRoughness),
-            (self.normal_map, TextureUnits::Normal),
-            (self.ao_map, TextureUnits::Ao),
-            (self.emissive_map, TextureUnits::Emissive),
-        ];
-        program.use_program();
-        for (location_opt, unit) in &units {
-            if let Some(location) = *location_opt {
-                unsafe {
-                    gl::Uniform1i(location as _, *unit as i32);
-                }
-            }
-        }
-    }
 }
 
-impl Default for ShaderUniforms {
+impl Default for PbrShaderUniforms {
     fn default() -> Self {
-        ShaderUniforms {
+        PbrShaderUniforms {
             modelview: None,
             projection: None,
             normal_matrix: None,
@@ -203,7 +215,10 @@ pub fn get_program_info_log(program: u32) -> String {
     String::from_utf8_lossy(&buffer).to_string()
 }
 
-impl Program {
+impl<U> Program<U>
+where
+    U: ShaderUniforms,
+{
     pub fn id(&self) -> u32 {
         self.id
     }
@@ -214,8 +229,7 @@ impl Program {
     }
 
     #[inline]
-    pub fn uniforms(&self) -> Ref<ShaderUniforms> {
-        use std::borrow::Borrow;
+    pub fn uniforms(&self) -> Ref<U> {
         self.uniforms.borrow()
     }
 
@@ -276,7 +290,10 @@ impl Program {
     }
 }
 
-impl Drop for Program {
+impl<U> Drop for Program<U>
+where
+    U: ShaderUniforms,
+{
     fn drop(&mut self) {
         unsafe { gl::DeleteProgram(self.id) }
     }
@@ -287,7 +304,10 @@ pub trait BindUniform<T> {
     fn bind_uniform(&self, id: Self::Id, val: &T);
 }
 
-impl BindUniform<Matrix4<f32>> for Program {
+impl<U> BindUniform<Matrix4<f32>> for Program<U>
+where
+    U: ShaderUniforms,
+{
     type Id = Option<u32>;
     fn bind_uniform(&self, id: Self::Id, val: &Matrix4<f32>) {
         if let Some(id) = id {
@@ -316,11 +336,17 @@ impl ProgramBuilder {
         self
     }
 
-    pub fn build_program(&self) -> Result<Program, ShaderError> {
+    pub fn build_program<U>(
+        &self,
+        uniforms: U,
+    ) -> Result<Program<U>, ShaderError>
+    where
+        U: ShaderUniforms,
+    {
         let id = unsafe { self.link_program() }?;
         let prog = Program {
             id,
-            uniforms: RefCell::new(ShaderUniforms::default()),
+            uniforms: RefCell::new(uniforms),
         };
         prog.uniforms.borrow_mut().find_locations(&prog);
 
@@ -355,10 +381,15 @@ impl ProgramBuilder {
     }
 }
 
-pub fn program_from_sources<P: AsRef<Path> + ::std::fmt::Debug>(
+pub fn program_from_sources<P, U>(
     vs_path: P,
     fs_path: P,
-) -> Result<Program, ShaderError> {
+    uniforms: U,
+) -> Result<Program<U>, ShaderError>
+where
+    P: AsRef<Path> + Debug,
+    U: ShaderUniforms,
+{
     let header: &'static str = "#version 410\n";
     use std::fs;
     let vs_source = fs::read_to_string(&vs_path).map_err(|e| {
@@ -381,5 +412,5 @@ pub fn program_from_sources<P: AsRef<Path> + ::std::fmt::Debug>(
     ProgramBuilder::new()
         .frag_shader(fs.0)
         .vert_shader(vs.0)
-        .build_program()
+        .build_program(uniforms)
 }

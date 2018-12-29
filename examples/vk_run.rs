@@ -183,8 +183,8 @@ fn main() {
     .unwrap();
 }
 
-fn setup_framebuffers<W>(
-    images: &[Arc<SwapchainImage<W>>],
+fn setup_framebuffers(
+    images: &[Arc<SdlSwapchainImage>],
     render_pass: Arc<dyn RenderPassAbstract + Send + Sync>,
     dynamic_state: &mut DynamicState,
 ) -> Result<Vec<Arc<dyn FramebufferAbstract>>, failure::Error> {

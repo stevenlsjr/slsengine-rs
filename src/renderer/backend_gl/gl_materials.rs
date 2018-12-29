@@ -1,4 +1,5 @@
 use super::objects::{BufferObject, ObjectError, SingleBuffer, UboBindings};
+use crate::renderer::backend_gl::program::PbrProgram;
 use crate::renderer::material::Material;
 use gl;
 
@@ -62,7 +63,7 @@ impl MaterialUbo {
         self.ubo.buffer()
     }
 
-    pub fn setup_binding(&self, program: &super::gl_renderer::Program) {
+    pub fn setup_binding(&self, program: &super::gl_renderer::PbrProgram) {
         use std::ffi::CStr;
         let block_name = CStr::from_bytes_with_nul(b"Material\0").unwrap();
 
@@ -107,7 +108,7 @@ impl MaterialUbo {
 
     pub fn bind_to_program(
         &self,
-        program: &super::gl_renderer::Program,
+        program: &PbrProgram,
     ) -> Result<(), super::GlErrors> {
         self.setup_binding(program);
 
