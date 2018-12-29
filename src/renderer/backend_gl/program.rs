@@ -47,6 +47,7 @@ impl TextureUnits {
 
 pub trait ShaderUniforms: Debug + Sized {
     fn find_locations(&mut self, program: &Program<Self>);
+    // fn get_location_id(&self, name: &str) -> Option<u32>;
 }
 
 //
@@ -118,6 +119,22 @@ impl ShaderUniforms for PbrShaderUniforms {
 
         self.set_texture_units(program);
     }
+    // fn get_location_id(&self, name: &str) -> Option<u32> {
+    //     match name {
+    //         "modelview" => self.modelview,
+    //         "projection" => self.projection,
+    //         "normal_matrix" => self.normal_matrix ,
+    //         "light_positions" => self.modelview,
+    //         "albedo_map" => self.albedo_map,
+    //         "metallic_roughness_map" => self.metallic_roughness_map,
+    //         "normal_map" => self.normal_map,
+    //         "ao_map" => self.ao_map,
+    //         "emissive_map" => self.emissive_map,
+    //         other => self.user_uniforms.get(other).cloned().unwrap_or(None)
+            
+    //     }
+    // }
+    
 }
 
 impl Default for PbrShaderUniforms {

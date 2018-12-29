@@ -35,9 +35,8 @@ pub struct GlRenderer {
     camera: RefCell<Camera>,
     scene_program: PbrProgram,
     envmap_program: PbrProgram,
-    sample_mesh: Mesh,
+    sample_mesh: Option<GlMesh>,
     env_cube: GlMesh,
-    buffers: MeshBuffers,
     pub materials: Materials,
 
     recompile_flag: Cell<Option<Instant>>,
@@ -90,10 +89,8 @@ impl GlMesh {
 impl GlRenderer {
     pub fn new(
         window: &Window,
-        model: &model::Model,
     ) -> Result<GlRenderer, RendererError> {
         use super::objects::*;
-        let mesh = model.meshes[0].mesh.clone();
 
         let (width, height) = window.size();
         let perspective = PerspectiveFov {
@@ -105,15 +102,7 @@ impl GlRenderer {
         let (scene_program, envmap_program) =
             create_scene_shaders().map_err(RendererError::ShaderError)?;
 
-        let buffers =
-            MeshBuffers::new().map_err(|_| RendererError::Lifecycle {
-                reason: "could not build gl objects for mesh".to_owned(),
-            })?;
-        buffers
-            .bind_mesh(&mesh)
-            .map_err(|_| RendererError::Lifecycle {
-                reason: "could not bind buffers to mesh".to_owned(),
-            })?;
+        
 
         let materials = GlRenderer::make_materials().map_err(|_| {
             RendererError::Lifecycle {
@@ -130,8 +119,7 @@ impl GlRenderer {
             scene_program,
             envmap_program,
             env_cube,
-            sample_mesh: mesh,
-            buffers,
+            sample_mesh: None,
             materials,
             camera: RefCell::new(Camera::new(perspective)),
             recompile_flag: Cell::new(None),
@@ -234,8 +222,10 @@ impl GlRenderer {
         use std::ptr;
         let program = &self.scene_program;
         let uniforms = program.uniforms();
-        let buffers = &self.buffers;
-        let mesh = &self.sample_mesh;
+        let GlMesh {ref mesh,ref buffers} = match &self.sample_mesh {
+            Some(m) => m,
+            None => return
+        };
 
         program.use_program();
         unsafe { gl::Enable(gl::CULL_FACE) };

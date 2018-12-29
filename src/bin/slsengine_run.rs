@@ -23,6 +23,10 @@ use slsengine::{
     renderer::{backend_gl::*, *},
     *,
 };
+use std::{
+    sync::{Arc, RwLock},
+    thread,
+};
 
 // returns the [u, v] surface coordinates for a unit sphere.
 fn uv_for_unit_sphere(pos: Vector3<f32>) -> [f32; 2] {
@@ -74,6 +78,26 @@ fn get_or_create_config(
     };
     Ok(conf)
 }
+
+struct SceneAssets {
+    model: Arc<RwLock<Option<model::Model>>>,
+    worker: thread::JoinHandle<()>
+}
+
+impl SceneAssets {
+    fn load() -> Self {
+        let model = Arc::new(RwLock::new(None));
+        let worker = thread::spawn(move || {
+            
+        });
+        SceneAssets {
+            model,
+            worker
+        }
+    }
+}
+
+
 
 fn setup_materials(
     _renderer: &GlRenderer,
@@ -150,14 +174,14 @@ fn main() {
     let mut loop_state = MainLoopState::new();
     let path = system::asset_path().join("assets/models/DamagedHelmet.glb");
     info!("{:?}, {:?}", system::asset_path(), path);
-    let model = Model::from_gltf(&path).unwrap();
+    // let model = Model::from_gltf(&path).unwrap();
 
-    let mut renderer = GlRenderer::new(&window, &model).unwrap();
+    let mut renderer = GlRenderer::new(&window).unwrap();
 
     let mut timer = game::Timer::new(Duration::from_millis(1000 / 50));
     let mut world = game::EntityWorld::new(&renderer);
 
-    setup_materials(&renderer, &model, &mut world);
+    // setup_materials(&renderer, &model, &mut world);
 
     loop_state.is_running = true;
     let mut accumulator = Duration::from_secs(0);
