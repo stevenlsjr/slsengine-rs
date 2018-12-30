@@ -26,7 +26,7 @@ gl = {path ="lib/gl"}
 image = "0.20.1"
 log = "0.4"
 memoffset = "0.2.1"
-
+anymap = "0.12.1"
 serde = "1.0.79"
 serde_derive = "1.0.80"
 stb_image = "0.2.2"
