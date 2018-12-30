@@ -1,27 +1,35 @@
 pub use super::built_in_components::*;
 use crate::math::*;
 use crate::renderer::{material::*, traits::*};
+use bitflags::bitflags;
 use cgmath::*;
+use slsengine_entityalloc::*;
 use std::{collections::HashMap, rc::Rc};
 use std::{fmt::Debug, ops::Index};
-
-use bitflags::bitflags;
 
 pub trait Component: Debug {
     /// The component mask bitflag identifying the given component
     const MASK: ComponentMask;
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Hash)]
-pub struct EntityId(pub usize);
-
 bitflags! {
     pub struct ComponentMask: u32 {
+        const NONE = 0x0;
         const LIVE_ENTITY = 0x2;
         const TRANSFORM = 0x4;
-        const STATIC_MESH = 0x5;
+        const MESH = 0x5;
         const MATERIAL = 0x5;
 
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, PartialOrd, Hash)]
+pub struct Entity(pub GenerationalIndex);
+
+impl Entity {
+    #[inline]
+    pub fn index(&self) -> usize {
+        self.0.index()
     }
 }
 
@@ -33,56 +41,32 @@ pub struct ComponentManager<R>
 where
     R: Renderer,
 {
-    pub masks: Vec<ComponentMask>,
-    pub transforms: HashMap<EntityId, TransformComponent>,
-    pub static_meshes: HashMap<EntityId, Rc<R::Mesh>>,
-    pub materials: HashMap<EntityId, Material<R::Texture>>,
+    pub entity_alloc: GenerationalIndexAllocator,
+    pub masks: IndexArray<ComponentMask>,
+    pub transforms: IndexArray<TransformComponent>,
+    pub meshes: IndexArray<MeshComponent<R::Mesh>>,
+    pub materials: IndexArray<MaterialComponent<R::Texture>>,
 }
 
 impl<R: Renderer> ComponentManager<R> {
     pub fn new() -> Self {
+        let capacity = 255;
         ComponentManager {
-            masks: vec![ComponentMask::LIVE_ENTITY; 256],
-            transforms: HashMap::new(),
-            static_meshes: HashMap::new(),
-            materials: HashMap::new(),
+            entity_alloc: GenerationalIndexAllocator::with_capacity(capacity),
+            masks: IndexArray::with_capacity(capacity),
+            transforms: IndexArray::with_capacity(capacity),
+            meshes: IndexArray::with_capacity(capacity),
+            materials: IndexArray::with_capacity(capacity),
         }
     }
 
-    pub fn alloc_entity(&mut self) -> EntityId {
-        for (id, &mask) in self.masks.iter().enumerate() {
-            if (mask & ComponentMask::LIVE_ENTITY).is_empty() {
-                return EntityId(id);
-            }
-        }
-        let id = EntityId(self.masks.len());
-        self.masks.push(ComponentMask::LIVE_ENTITY);
-        id
+    pub fn alloc_entity(&mut self) -> Entity {
+        let idx = self.entity_alloc.allocate();
+        self.masks.insert(idx, ComponentMask::NONE);
+        Entity(idx)
     }
-
-    pub fn enumerate_entities(&self) -> EntityIter<R> {
-        EntityIter {
-            manager: self,
-            i: 0,
-        }
-    }
-}
-
-pub struct EntityIter<'a, R: Renderer> {
-    manager: &'a ComponentManager<R>,
-    i: usize,
-}
-
-impl<'a, R: Renderer> Iterator for EntityIter<'a, R> {
-    type Item = (EntityId, ComponentMask);
-    fn next(&mut self) -> Option<Self::Item> {
-        let i = self.i;
-        self.i += 1;
-        let masks = &self.manager.masks;
-        if i < masks.len() {
-            Some((EntityId(i), masks[i]))
-        } else {
-            None
-        }
+    pub fn dealloc_entity(&mut self, entity: Entity) {
+        self.entity_alloc.deallocate(entity.0);
+        self.masks.remove(entity.0);
     }
 }

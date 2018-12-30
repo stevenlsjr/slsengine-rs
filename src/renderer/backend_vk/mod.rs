@@ -360,12 +360,12 @@ impl VulkanRenderer {
         })
     }
 }
+#[derive(Debug)]
 pub struct VkTexture;
-pub struct VkMesh;
 
 impl Renderer for VulkanRenderer {
-    type Texture = VkTexture;
-    type Mesh = VkMesh;
+    type Texture = Arc<VkTexture>;
+    type Mesh = Mesh;
     fn camera(&self) -> Ref<Camera> {
         self.camera.borrow()
     }

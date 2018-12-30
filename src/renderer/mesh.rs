@@ -1,3 +1,4 @@
+use super::color::ColorRGBA;
 use cgmath::*;
 use genmesh::{
     generators::{IndexedPolygon, SharedVertex},
@@ -136,34 +137,5 @@ impl SharedVertex<Vertex> for Mesh {
     }
     fn shared_vertex_count(&self) -> usize {
         self.indices.len()
-    }
-}
-
-#[derive(Clone, Copy, Debug)]
-pub struct Color {
-    pub r: f32,
-    pub g: f32,
-    pub b: f32,
-    pub a: f32,
-}
-
-pub fn color4f(r: f32, g: f32, b: f32, a: f32) -> Color {
-    Color { r, g, b, a }
-}
-
-impl Into<Vector4<f32>> for Color {
-    fn into(self) -> Vector4<f32> {
-        ::cgmath::vec4(self.r, self.g, self.b, self.a)
-    }
-}
-
-impl From<Vector4<f32>> for Color {
-    fn from(v: Vector4<f32>) -> Self {
-        Color {
-            r: v.x,
-            g: v.y,
-            b: v.z,
-            a: v.w,
-        }
     }
 }

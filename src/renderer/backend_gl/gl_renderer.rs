@@ -1,6 +1,6 @@
 pub use super::{errors::*, program::*};
 
-use super::{gl_materials::*, objects::*, textures::*};
+use super::{gl_materials::*, gl_mesh::*, objects::*, textures::*};
 use crate::game;
 use crate::renderer::*;
 use cgmath::prelude::*;
@@ -43,23 +43,18 @@ pub struct GlRenderer {
     recompile_flag: Cell<Option<Instant>>,
 }
 
-pub struct GlMesh {
-    mesh: Mesh,
-    buffers: MeshBuffers,
-}
-
 fn create_scene_shaders() -> Result<(PbrProgram, PbrProgram), ShaderError> {
     use crate::system::asset_path;
     let scene_program = program_from_sources(
         asset_path().join(Path::new("./assets/shaders/brdf.vert")),
         asset_path().join(Path::new("./assets/shaders/brdf.frag")),
-        PbrShaderUniforms::default()
+        PbrShaderUniforms::default(),
     )?;
 
     let envmap_program = program_from_sources(
         asset_path().join(Path::new("./assets/shaders/envmap.vert")),
         asset_path().join(Path::new("./assets/shaders/envmap.frag")),
-        PbrShaderUniforms::default()
+        PbrShaderUniforms::default(),
     )?;
     Ok((scene_program, envmap_program))
 }
@@ -260,40 +255,41 @@ impl GlRenderer {
             })
             .unwrap_or(());
 
-        let mask = ComponentMask::LIVE_ENTITY
-            | ComponentMask::TRANSFORM
-            | ComponentMask::STATIC_MESH;
-
         let entities: Vec<_> = scene
             .components
-            .enumerate_entities()
-            .filter(|(_k, v)| v.contains(mask))
+            .entity_alloc
+            .iter_live()
+            .flat_map(|entity| {
+                let mask = scene.components.masks.get(entity);
+                let mesh = scene.components.meshes.get(entity);
+                let transform = scene.components.transforms.get(entity);
+                match (mask, mesh, transform) {
+                    (Some(a), Some(b), Some(c)) => Some((entity, a, b, c)),
+                    _ => None,
+                }
+            })
             .collect();
 
-        for (id, mask) in entities {
-            if mask.contains(ComponentMask::MATERIAL) {
-                if let Some(material) = scene.components.materials.get(&id) {
-                    self.materials
-                        .base_material_ubo
-                        .set_material(material.borrow())
-                        .unwrap_or_else(|e| {
-                            error!("error {:?}", e);
-                        });
-                    self.scene_program
-                        .bind_material_textures(material.borrow());
-                } else {
-                    warn!("missing material for entity {:?}, {:?}", id, mask);
-                }
-            } else {
-                self.materials
-                    .base_material_ubo
-                    .set_material(self.materials.default_material.borrow())
-                    .unwrap_or_else(|e| {
-                        error!("error {:?}", e);
-                    });
-            }
+        for (entity, mask, c_mesh, transform) in entities {
+            let material = scene
+                .components
+                .materials
+                .get(entity)
+                .map(|c| &c.material)
+                .unwrap_or(&self.materials.default_material);
+            self.materials
+                .base_material_ubo
+                .set_material(material.borrow())
+                .unwrap_or_else(|e| {
+                    error!("error {:?}", e);
+                });
 
-            let transform = &scene.components.transforms[&id];
+            let GlMesh {
+                ref mesh,
+                ref buffers,
+            } = c_mesh.mesh.borrow();
+            self.scene_program.bind_material_textures(material.borrow());
+
             let model_matrix = Mat4::from(transform.transform);
 
             let modelview = cam_view * model_matrix;
@@ -328,7 +324,7 @@ impl Renderer for GlRenderer {
         self.camera.borrow()
     }
 
-    fn set_clear_color(&mut self, color: Color) {
+    fn set_clear_color(&mut self, color: ColorRGBA) {
         unsafe {
             gl::ClearColor(color.r, color.g, color.b, color.a);
         }

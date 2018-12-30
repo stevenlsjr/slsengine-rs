@@ -20,9 +20,13 @@ use cgmath::prelude::*;
 use cgmath::*;
 use slsengine::{
     game::*,
-    renderer::{backend_gl::*, *},
+    renderer::{
+        backend_gl::{textures::*, *},
+        *,
+    },
     *,
 };
+use std::sync::Arc;
 
 // returns the [u, v] surface coordinates for a unit sphere.
 fn uv_for_unit_sphere(pos: Vector3<f32>) -> [f32; 2] {
@@ -75,21 +79,13 @@ fn get_or_create_config(
     Ok(conf)
 }
 
-fn setup_materials(
-    _renderer: &GlRenderer,
+/// Returns a vector of gl textures for the images
+/// associated with a gltf model
+fn model_textures_gl(
     model: &renderer::model::Model,
-    world: &mut EntityWorld<GlRenderer>,
-) {
-    use crate::renderer::{
-        backend_gl::textures::*,
-        material::{Material, MaterialMapName},
-    };
-    use slsengine::game::component::*;
-    use std::sync::*;
-    let mat = model.materials.values().next().unwrap();
+) -> Vec<Option<Arc<GlTexture>>> {
     let imports = model.imports();
-
-    let tex_images: Vec<Option<Arc<GlTexture>>> = imports
+    imports
         .document
         .images()
         .map(|i| -> Result<Arc<GlTexture>, failure::Error> {
@@ -106,29 +102,7 @@ fn setup_materials(
                 None
             }
         })
-        .collect();
-
-    let gl_mat = mat.transform_textures(|&img_index, name| {
-        match tex_images.get(img_index).unwrap_or(&None) {
-            Some(t) => Some(t.clone()),
-            None => {
-                error!(
-                    "could not load texture indexed {} for model",
-                    img_index
-                );
-                None
-            }
-        }
-    });
-
-    let entities = world
-        .components
-        .enumerate_entities()
-        .filter(|(_, mask)| mask.contains(ComponentMask::MATERIAL))
-        .collect::<Vec<_>>();
-    for (id, _mask) in entities.iter() {
-        world.components.materials.insert(*id, gl_mat.clone());
-    }
+        .collect()
 }
 
 fn main() {
@@ -156,8 +130,6 @@ fn main() {
 
     let mut timer = game::Timer::new(Duration::from_millis(1000 / 50));
     let mut world = game::EntityWorld::new(&renderer);
-
-    setup_materials(&renderer, &model, &mut world);
 
     loop_state.is_running = true;
     let mut accumulator = Duration::from_secs(0);

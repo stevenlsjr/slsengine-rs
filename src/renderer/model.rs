@@ -9,7 +9,11 @@ use failure;
 use gltf;
 use gltf::mesh;
 use log::*;
-use std::{cell::{RefCell, Ref}, collections::HashMap, path::Path};
+use std::{
+    cell::{Ref, RefCell},
+    collections::HashMap,
+    path::Path,
+};
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct MeshData {
