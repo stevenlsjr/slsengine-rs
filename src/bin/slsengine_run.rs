@@ -81,23 +81,83 @@ fn get_or_create_config(
 
 struct SceneAssets {
     model: Arc<RwLock<Option<model::Model>>>,
-    worker: thread::JoinHandle<()>
+    worker: thread::JoinHandle<()>,
+    pub is_loaded_by_renderer: bool,
 }
 
 impl SceneAssets {
-    fn load() -> Self {
+    fn new() -> Self {
+        use std::time::Duration;
         let model = Arc::new(RwLock::new(None));
-        let worker = thread::spawn(move || {
-            
-        });
+        let worker = {
+            let model = model.clone();
+
+            thread::spawn(move || {
+                let path = system::asset_path()
+                    .join("assets/models/DamagedHelmet.glb");
+
+                let loaded_model = model::Model::from_gltf(path).unwrap();
+
+                'write_lock: loop {
+                    match model.write() {
+                        Ok(mut m) => {
+                            *m = Some(loaded_model);
+                            info!("loaded model to memory");
+                            break 'write_lock;
+                        }
+                        Err(_) => thread::sleep(Duration::from_millis(10)),
+                    };
+                }
+            })
+        };
+
         SceneAssets {
-            model,
-            worker
+            model: model,
+            worker,
+            is_loaded_by_renderer: false,
+        }
+    }
+
+    fn try_load(
+        &mut self,
+        renderer: &mut GlRenderer,
+        world: &mut EntityWorld<GlRenderer>,
+    ) {
+        use log::*;
+        use slsengine::{
+            game::component::*, renderer::backend_gl::objects::*,
+        };
+        if self.is_loaded_by_renderer {
+            return;
+        }
+        let model_opt = match self.model.try_read() {
+            Ok(m) => m,
+            Err(_) => {
+                error!("could not read model");
+                return;
+            } //
+        };
+
+        if let Some(ref model) = *model_opt {
+            let mesh_data = &model.meshes[0];
+            let mesh = mesh_data.mesh.clone();
+            let gl_mesh = Arc::new(GlMesh::from_mesh(mesh).unwrap());
+
+            let entities = world.components
+                .enumerate_entities()
+                .filter(|(_, mask)| mask.contains(ComponentMask::STATIC_MESH)).collect::<Vec<_>>();
+            for (id, mask) in entities.iter(){
+                let mesh_component = world.components.static_meshes.get_mut(id).unwrap();
+                if mesh_component.name == "HELMET" {
+                    mesh_component.mesh = Some(gl_mesh.clone());
+                }
+
+            }
+            eprintln!("loaded meshes!");
+            self.is_loaded_by_renderer = true;
         }
     }
 }
-
-
 
 fn setup_materials(
     _renderer: &GlRenderer,
@@ -172,8 +232,7 @@ fn main() {
         window, event_pump, ..
     } = plt;
     let mut loop_state = MainLoopState::new();
-    let path = system::asset_path().join("assets/models/DamagedHelmet.glb");
-    info!("{:?}, {:?}", system::asset_path(), path);
+
     // let model = Model::from_gltf(&path).unwrap();
 
     let mut renderer = GlRenderer::new(&window).unwrap();
@@ -181,12 +240,18 @@ fn main() {
     let mut timer = game::Timer::new(Duration::from_millis(1000 / 50));
     let mut world = game::EntityWorld::new(&renderer);
 
+    let mut assets = SceneAssets::new();
+
     // setup_materials(&renderer, &model, &mut world);
 
     loop_state.is_running = true;
     let mut accumulator = Duration::from_secs(0);
     let fixed_dt = Duration::from_millis(100 / 6);
     while loop_state.is_running {
+        // if not yet loaded, try to get model from worker thread
+        {
+            assets.try_load(&mut renderer, &mut world);
+        };
         {
             loop_state.handle_events(
                 &window,
@@ -215,4 +280,5 @@ fn main() {
 
         window.gl_swap_window();
     }
+    assets.worker.join().unwrap();
 }

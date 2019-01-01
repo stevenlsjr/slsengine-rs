@@ -35,7 +35,7 @@ pub struct GlRenderer {
     camera: RefCell<Camera>,
     scene_program: PbrProgram,
     envmap_program: PbrProgram,
-    sample_mesh: Option<GlMesh>,
+    pub sample_mesh: Option<GlMesh>,
     env_cube: GlMesh,
     pub materials: Materials,
 
@@ -43,8 +43,17 @@ pub struct GlRenderer {
 }
 
 pub struct GlMesh {
-    mesh: Mesh,
-    buffers: MeshBuffers,
+    pub mesh: Mesh,
+    pub buffers: MeshBuffers,
+}
+
+impl RenderMesh for GlMesh {
+    fn vertices(&self) -> &[Vertex] {
+        &self.mesh.vertices
+    }
+    fn indices(&self) -> &[u32] {
+        &self.mesh.indices
+    }
 }
 
 fn create_scene_shaders() -> Result<(PbrProgram, PbrProgram), ShaderError> {
@@ -52,13 +61,13 @@ fn create_scene_shaders() -> Result<(PbrProgram, PbrProgram), ShaderError> {
     let scene_program = program_from_sources(
         asset_path().join(Path::new("./assets/shaders/brdf.vert")),
         asset_path().join(Path::new("./assets/shaders/brdf.frag")),
-        PbrShaderUniforms::default()
+        PbrShaderUniforms::default(),
     )?;
 
     let envmap_program = program_from_sources(
         asset_path().join(Path::new("./assets/shaders/envmap.vert")),
         asset_path().join(Path::new("./assets/shaders/envmap.frag")),
-        PbrShaderUniforms::default()
+        PbrShaderUniforms::default(),
     )?;
     Ok((scene_program, envmap_program))
 }
@@ -84,12 +93,16 @@ impl GlMesh {
 
         Ok(GlMesh { mesh, buffers })
     }
+
+    pub fn from_mesh(mesh: Mesh) -> Result<Self, failure::Error> {
+        let buffers = MeshBuffers::new()?;
+        buffers.bind_mesh(&mesh);
+        Ok(GlMesh { buffers, mesh })
+    }
 }
 
 impl GlRenderer {
-    pub fn new(
-        window: &Window,
-    ) -> Result<GlRenderer, RendererError> {
+    pub fn new(window: &Window) -> Result<GlRenderer, RendererError> {
         use super::objects::*;
 
         let (width, height) = window.size();
@@ -101,8 +114,6 @@ impl GlRenderer {
         };
         let (scene_program, envmap_program) =
             create_scene_shaders().map_err(RendererError::ShaderError)?;
-
-        
 
         let materials = GlRenderer::make_materials().map_err(|_| {
             RendererError::Lifecycle {
@@ -222,10 +233,6 @@ impl GlRenderer {
         use std::ptr;
         let program = &self.scene_program;
         let uniforms = program.uniforms();
-        let GlMesh {ref mesh,ref buffers} = match &self.sample_mesh {
-            Some(m) => m,
-            None => return
-        };
 
         program.use_program();
         unsafe { gl::Enable(gl::CULL_FACE) };
@@ -258,9 +265,23 @@ impl GlRenderer {
             .components
             .enumerate_entities()
             .filter(|(_k, v)| v.contains(mask))
+            .map(|(k, v)| {
+                let m = &scene.components.static_meshes[&k];
+                (k, v, m.mesh.clone())
+            })
             .collect();
 
-        for (id, mask) in entities {
+        for (id, mask, mesh) in entities {
+            let GlMesh {
+                ref mesh,
+                ref buffers,
+            } = match &mesh {
+                Some(m) => {
+                    eprintln!("mesh found");
+                    m
+                }
+                None => &self.env_cube,
+            };
             if mask.contains(ComponentMask::MATERIAL) {
                 if let Some(material) = scene.components.materials.get(&id) {
                     self.materials

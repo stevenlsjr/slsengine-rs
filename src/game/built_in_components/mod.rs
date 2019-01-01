@@ -3,6 +3,7 @@ use crate::math::*;
 use crate::renderer::{material::Material, mesh::RenderMesh};
 use cgmath::*;
 use std::fmt::{self, Debug};
+use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub struct TransformComponent {
@@ -41,10 +42,28 @@ impl<Tex> Component for MaterialComponent<Tex> {
     const MASK: ComponentMask = ComponentMask::MATERIAL;
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct MeshComponent<M>
 where
-    M: RenderMesh + Debug,
+    M: RenderMesh,
 {
-    mesh: M,
+    pub name: String,
+    pub mesh: Option<Arc<M>>,
+}
+
+
+
+impl<M> Component for MeshComponent<M>
+where
+    M: RenderMesh,
+{
+    const MASK: ComponentMask = ComponentMask::STATIC_MESH;
+}
+impl<M> Debug for MeshComponent<M>
+where
+    M: RenderMesh,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "MeshComponent {}", self.name)
+    }
 }

@@ -5,7 +5,7 @@ use super::program::*;
 pub struct EnvmapUniforms {
     pub projection: Option<u32>,
     pub modelview: Option<u32>,
-    pub cubemap_tex: Option<u32>
+    pub cubemap_tex: Option<u32>,
 }
 
 impl ShaderUniforms for EnvmapUniforms {

@@ -131,10 +131,9 @@ impl ShaderUniforms for PbrShaderUniforms {
     //         "ao_map" => self.ao_map,
     //         "emissive_map" => self.emissive_map,
     //         other => self.user_uniforms.get(other).cloned().unwrap_or(None)
-            
+
     //     }
     // }
-    
 }
 
 impl Default for PbrShaderUniforms {

@@ -6,7 +6,7 @@ use std::{cell::Ref, time::Duration};
 pub trait Renderer: Sized {
     /// The type parameter for the renderer's texture representation
     type Texture;
-    type Mesh;
+    type Mesh: RenderMesh;
 
     fn clear(&self) {}
     fn camera(&self) -> Ref<Camera>;

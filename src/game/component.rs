@@ -3,7 +3,7 @@ use crate::math::*;
 use crate::renderer::{material::*, traits::*};
 use cgmath::*;
 use std::{collections::HashMap, rc::Rc};
-use std::{fmt::Debug, ops::Index};
+use std::{fmt::{Debug, self}, ops::Index};
 
 use bitflags::bitflags;
 
@@ -28,16 +28,17 @@ bitflags! {
 #[derive(Copy, Clone, Debug, PartialEq, PartialOrd, Hash)]
 pub struct ResourceId(pub usize);
 
-#[derive(Debug)]
 pub struct ComponentManager<R>
 where
     R: Renderer,
 {
     pub masks: Vec<ComponentMask>,
     pub transforms: HashMap<EntityId, TransformComponent>,
-    pub static_meshes: HashMap<EntityId, Rc<R::Mesh>>,
+    pub static_meshes: HashMap<EntityId, MeshComponent<R::Mesh>>,
     pub materials: HashMap<EntityId, Material<R::Texture>>,
 }
+
+
 
 impl<R: Renderer> ComponentManager<R> {
     pub fn new() -> Self {
@@ -66,6 +67,8 @@ impl<R: Renderer> ComponentManager<R> {
             i: 0,
         }
     }
+
+    
 }
 
 pub struct EntityIter<'a, R: Renderer> {

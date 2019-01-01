@@ -9,7 +9,11 @@ use failure;
 use gltf;
 use gltf::mesh;
 use log::*;
-use std::{cell::{RefCell, Ref}, collections::HashMap, path::Path};
+use std::{
+    cell::{Ref, RefCell},
+    collections::HashMap,
+    path::Path,
+};
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct MeshData {
@@ -41,7 +45,7 @@ pub struct Model {
     pub meshes: Vec<MeshData>,
     pub transforms: Vec<Mat4>,
     pub materials: HashMap<Option<usize>, material::Material<usize>>,
-    imports: RefCell<GltfImport>,
+    imports: GltfImport,
 }
 
 impl Model {
@@ -50,16 +54,16 @@ impl Model {
             meshes: Vec::new(),
             transforms: Vec::new(),
             materials: HashMap::new(),
-            imports: RefCell::new(imports),
+            imports,
         }
     }
 
-    pub fn imports(&self) -> Ref<GltfImport> {
-        self.imports.borrow()
+    pub fn imports(&self) -> &GltfImport {
+        &self.imports
     }
 
     fn load_materials(&mut self) {
-        let imports = self.imports.borrow();
+        let imports = &self.imports;
         for material in imports.document.materials() {
             use super::material::*;
             let pbr = material.pbr_metallic_roughness();
@@ -108,7 +112,7 @@ impl Model {
                 ref document,
                 ref buffers,
                 ..
-            } = *model.imports.borrow();
+            } = model.imports;
 
             model.transforms.push(Mat4::identity());
             for ref g_mesh in document.meshes() {

@@ -86,6 +86,10 @@ where
                 xform.transform.rot = rotation.into();
 
                 self.components.transforms.insert(eid, xform);
+                self.components.static_meshes.insert(eid, MeshComponent {
+                    mesh: None,
+                    name: "HELMET".to_owned()
+                });
             }
         }
     }
