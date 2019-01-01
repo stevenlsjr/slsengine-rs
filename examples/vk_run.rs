@@ -1,20 +1,20 @@
 #![allow(unused_imports)]
 #![allow(unused_variables)]
 #![cfg(feature = "with-vulkan")]
-#![feature(test)]
 
 #[macro_use]
 extern crate failure;
-extern crate test;
 
 use ::log::*;
 use cgmath::prelude::*;
 use sdl2::sys as sdl_sys;
 use sdl2::video::*;
 use sdl2::*;
-use slsengine::renderer::backend_vk::*;
-use slsengine::renderer::Camera;
-use slsengine::sdl_platform::*;
+use slsengine::{
+    game,
+    renderer::{backend_vk::*, Camera},
+    sdl_platform::*,
+};
 use std::{
     cell::{Ref, RefCell},
     ffi::{CStr, CString},
@@ -23,8 +23,8 @@ use std::{
     rc::Rc,
     sync::Arc,
 };
-use vulkano;
 use vulkano::{
+    self,
     buffer::*,
     command_buffer::*,
     descriptor::descriptor_set::*,
@@ -75,8 +75,6 @@ struct SimpleVert {
 }
 impl_vertex!(SimpleVert, position);
 
-struct VulkanPlatformHooks;
-
 fn create_renderpass<W>(
     device: Arc<Device>,
     swapchain: &Swapchain<W>,
@@ -98,35 +96,19 @@ fn create_renderpass<W>(
     Ok(Arc::new(rp))
 }
 
-impl PlatformBuilderHooks for VulkanPlatformHooks {
-    fn build_window(
-        &self,
-        platform_builder: &PlatformBuilder,
-        video_subsystem: &VideoSubsystem,
-    ) -> PlatformResult<Window> {
-        let mut wb = make_window_builder(platform_builder, video_subsystem);
-        wb.vulkan();
-        wb.resizable();
-        let window = wb.build().unwrap();
-        Ok(window)
-    }
-}
-
 fn main() {
     use env_logger;
     use rand::{distributions::uniform::*, *};
-    use slsengine::game;
     use std::{
         sync::Arc,
         time::{Duration, Instant},
     };
-    use test::black_box;
 
     env_logger::init();
 
     let platform = platform().build(&VulkanPlatformHooks).unwrap();
 
-    let renderer = black_box(VulkanRenderer::new(&platform.window).unwrap());
+    let renderer = VulkanRenderer::new(&platform.window).unwrap();
     let VulkanRenderer {
         ref queues,
         ref device,

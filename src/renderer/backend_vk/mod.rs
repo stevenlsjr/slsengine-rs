@@ -1,5 +1,7 @@
-// use super::ash;
+/// vulkan-specific SDL platform utilities
+pub mod sdl_vulkan;
 pub mod shaders;
+
 use super::mesh::Vertex;
 use crate::renderer::*;
 use cgmath;
@@ -31,6 +33,7 @@ use vulkano::{
 #[allow(clippy::ref_in_deref)]
 vulkano::impl_vertex!(Vertex, position);
 
+pub use self::sdl_vulkan::VulkanPlatformHooks;
 pub type VulkanWinType = Rc<WindowContext>;
 pub type SdlSurface = Surface<VulkanWinType>;
 pub type SdlSwapchain = Swapchain<VulkanWinType>;

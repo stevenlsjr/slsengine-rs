@@ -35,9 +35,8 @@ pub struct GlRenderer {
     camera: RefCell<Camera>,
     scene_program: PbrProgram,
     envmap_program: PbrProgram,
-    sample_mesh: Mesh,
+    sample_mesh: GlMesh,
     env_cube: GlMesh,
-    buffers: MeshBuffers,
     pub materials: Materials,
 
     recompile_flag: Cell<Option<Instant>>,
@@ -83,12 +82,8 @@ impl GlMesh {
 }
 
 impl GlRenderer {
-    pub fn new(
-        window: &Window,
-        model: &model::Model,
-    ) -> Result<GlRenderer, RendererError> {
+    pub fn new(window: &Window) -> Result<GlRenderer, RendererError> {
         use super::objects::*;
-        let mesh = model.meshes[0].mesh.clone();
 
         let (width, height) = window.size();
         let perspective = PerspectiveFov {
@@ -99,16 +94,32 @@ impl GlRenderer {
         };
         let (scene_program, envmap_program) =
             create_scene_shaders().map_err(RendererError::ShaderError)?;
+        let mesh = {
+            use crate::renderer::Vertex as V;
+            use genmesh::{generators::*, *};
+            let icosphere = IcoSphere::new();
+            let vertices: Vec<V> = icosphere
+                .shared_vertex_iter()
+                .map(|v| V {
+                    position: v.pos.into(),
+                    normal: v.normal.into(),
+                    ..V::default()
+                })
+                .collect();
 
-        let buffers =
-            MeshBuffers::new().map_err(|_| RendererError::Lifecycle {
-                reason: "could not build gl objects for mesh".to_owned(),
-            })?;
-        buffers
-            .bind_mesh(&mesh)
-            .map_err(|_| RendererError::Lifecycle {
-                reason: "could not bind buffers to mesh".to_owned(),
-            })?;
+            let mesh = Mesh {
+                vertices,
+                indices: icosphere
+                    .indexed_polygon_iter()
+                    .flat_map(|tri| vec![tri.x, tri.y, tri.z])
+                    .map(|i| i as u32)
+                    .collect(),
+            };
+
+            GlMesh::with_mesh(mesh).map_err(|e| RendererError::Lifecycle {
+                reason: format!("could not create placeholder mesh: {:?}", e),
+            })?
+        };
 
         let materials = GlRenderer::make_materials().map_err(|_| {
             RendererError::Lifecycle {
@@ -126,7 +137,6 @@ impl GlRenderer {
             envmap_program,
             env_cube,
             sample_mesh: mesh,
-            buffers,
             materials,
             camera: RefCell::new(Camera::new(perspective)),
             recompile_flag: Cell::new(None),
@@ -229,8 +239,6 @@ impl GlRenderer {
         use std::ptr;
         let program = &self.scene_program;
         let uniforms = program.uniforms();
-        let buffers = &self.buffers;
-        let mesh = &self.sample_mesh;
 
         program.use_program();
         unsafe { gl::Enable(gl::CULL_FACE) };
@@ -270,7 +278,7 @@ impl GlRenderer {
             })
             .collect();
 
-        for (entity, mask, c_mesh, transform) in entities {
+        for (entity, _mask, c_mesh, transform) in entities {
             let material = scene
                 .components
                 .materials

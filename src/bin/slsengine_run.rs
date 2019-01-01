@@ -124,9 +124,8 @@ fn main() {
     let mut loop_state = MainLoopState::new();
     let path = system::asset_path().join("assets/models/DamagedHelmet.glb");
     info!("{:?}, {:?}", system::asset_path(), path);
-    let model = Model::from_gltf(&path).unwrap();
 
-    let mut renderer = GlRenderer::new(&window, &model).unwrap();
+    let mut renderer = GlRenderer::new(&window).unwrap();
 
     let mut timer = game::Timer::new(Duration::from_millis(1000 / 50));
     let mut world = game::EntityWorld::new(&renderer);
