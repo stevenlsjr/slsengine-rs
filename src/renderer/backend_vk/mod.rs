@@ -19,15 +19,19 @@ use std::{
 };
 use vulkano::{
     self,
-    device::{Device, DeviceExtensions, Features, Queue},
-    format::Format,
-    image::SwapchainImage,
-    instance::{Instance, PhysicalDevice},
-    swapchain::{
-        Capabilities, ColorSpace, PresentMode, Surface, SurfaceTransform,
-        Swapchain,
-    },
-    sync::SharingMode,
+    buffer::*,
+    command_buffer::*,
+    descriptor::descriptor_set::*,
+    device::*,
+    format::*,
+    framebuffer::*,
+    image::*,
+    impl_vertex,
+    instance::*,
+    pipeline::{viewport::*, *},
+    single_pass_renderpass,
+    swapchain::*,
+    sync::*,
 };
 
 #[allow(clippy::ref_in_deref)]
@@ -60,6 +64,8 @@ pub enum VkContextError {
 
     #[fail(display = "Could not create vulkan rendering context: {:#?}", _0)]
     Other(String),
+    #[fail(display = "could not create renderer, error caused by {:?}", _0)]
+    OtherError(#[fail(cause)] failure::Error),
 }
 
 fn rate_physical_device(phys_dev: PhysicalDevice) -> i32 {
@@ -286,6 +292,22 @@ fn create_swapchain(
     .map_err(&failure::Error::from)
 }
 
+fn create_renderpass(
+    device: Arc<Device>,
+) -> Result<Arc<RenderPassAbstract + Send + Sync>, failure::Error> {
+    single_pass_renderpass! (
+    device,
+    attachments: {
+        out_color: {load: Clear, store: Store, format: Format::R8G8B8A8Unorm,
+        samples: 1,}
+    },
+    pass: {color: [out_color],
+    depth_stencil: {}}
+    )
+    .map(&Arc::new)
+    .map_err(&failure::Error::from)
+}
+
 /// Renderer object for vulkan context
 pub struct VulkanRenderer {
     pub camera: RefCell<Camera>,
@@ -295,6 +317,8 @@ pub struct VulkanRenderer {
     pub surface: Arc<Surface<VulkanWinType>>,
     pub swapchain: Arc<Swapchain<VulkanWinType>>,
     pub swapchain_images: Vec<Arc<SwapchainImage<VulkanWinType>>>,
+    pub render_pass: Arc<RenderPassAbstract + Send + Sync>,
+    pub dynamic_state: RefCell<Option<DynamicState>>
 }
 impl fmt::Debug for VulkanRenderer {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -347,6 +371,9 @@ impl VulkanRenderer {
             &queues,
         )
         .map_err(|_| VkContextError::Swapchain)?;
+
+        let render_pass = create_renderpass(device.clone())
+            .map_err(&VkContextError::OtherError)?;
         Ok(VulkanRenderer {
             camera: RefCell::new(Camera::new(cgmath::PerspectiveFov {
                 fovy: cgmath::Deg(40.0).into(),
@@ -360,6 +387,8 @@ impl VulkanRenderer {
             surface,
             swapchain,
             swapchain_images: images,
+            render_pass,
+            dynamic_state: None
         })
     }
 }
@@ -372,4 +401,6 @@ impl Renderer for VulkanRenderer {
     fn camera(&self) -> Ref<Camera> {
         self.camera.borrow()
     }
+
+    fn on_resize(&self, _size: (u32, u32)) {}
 }
