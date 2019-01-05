@@ -1,6 +1,8 @@
+pub mod pipelines;
 /// vulkan-specific SDL platform utilities
 pub mod sdl_vulkan;
 pub mod shaders;
+pub mod vulkan_renderer;
 
 use super::mesh::Vertex;
 use crate::renderer::*;
@@ -11,11 +13,10 @@ use sdl2;
 use sdl2::video::{Window, WindowContext};
 use std::{
     cell::{Ref, RefCell},
-    default::Default,
-    ffi::{CStr, CString},
+    ffi::CString,
     fmt,
     rc::Rc,
-    sync::Arc,
+    sync::{Arc, RwLock},
 };
 use vulkano::{
     self,
@@ -43,7 +44,7 @@ pub type SdlSurface = Surface<VulkanWinType>;
 pub type SdlSwapchain = Swapchain<VulkanWinType>;
 pub type SdlSwapchainImage = SwapchainImage<VulkanWinType>;
 /// Error Record for VkContext creation
-#[derive(Fail, Clone, Debug)]
+#[derive(Fail, Debug)]
 pub enum VkContextError {
     #[fail(display = "could not create entry")]
     Entry,
@@ -53,19 +54,35 @@ pub enum VkContextError {
     Extensions(String),
     #[fail(display = "could not load Vulkan SurfaceKHR functions")]
     SurfaceLoader,
-    #[fail(display = "could not find Queue Families")]
-    QueueFamilies,
-    #[fail(display = "could not create surfaceKHR")]
-    Surface,
-    #[fail(display = "could not create device")]
-    Device,
-    #[fail(display = "could not create swapchain")]
-    Swapchain,
+
+    #[fail(
+        display = "could not create renederer component: {}, {:?}",
+        component, cause
+    )]
+    ComponentCreation {
+        component: String,
+        cause: Option<failure::Error>,
+    },
 
     #[fail(display = "Could not create vulkan rendering context: {:#?}", _0)]
     Other(String),
     #[fail(display = "could not create renderer, error caused by {:?}", _0)]
-    OtherError(#[fail(cause)] failure::Error),
+    OtherError(failure::Error),
+}
+
+impl VkContextError {
+    pub fn other_error<E: failure::Fail>(error: E) -> VkContextError {
+        VkContextError::OtherError(failure::Error::from(error))
+    }
+    pub fn component_creation<E: Into<failure::Error> + Send + Sync>(
+        comp_name: &str,
+        cause: Option<E>,
+    ) -> VkContextError {
+        VkContextError::ComponentCreation {
+            component: comp_name.to_owned(),
+            cause: cause.map(|e| e.into()),
+        }
+    }
 }
 
 fn rate_physical_device(phys_dev: PhysicalDevice) -> i32 {
@@ -115,12 +132,15 @@ struct QueueFamilyBuilder {
 
 impl QueueFamilyBuilder {
     fn build(&self) -> Option<QueueFamilies> {
-        self.graphics_family.and_then(|graphics_family| {
-            self.present_family.map(|present_family| QueueFamilies {
-                graphics_family,
-                present_family,
-            })
-        })
+        match (self.graphics_family, self.present_family) {
+            (Some(graphics_family), Some(present_family)) => {
+                Some(QueueFamilies {
+                    graphics_family,
+                    present_family,
+                })
+            }
+            _ => None,
+        }
     }
 }
 
@@ -294,18 +314,20 @@ fn create_swapchain(
 
 fn create_renderpass(
     device: Arc<Device>,
-) -> Result<Arc<RenderPassAbstract + Send + Sync>, failure::Error> {
-    single_pass_renderpass! (
+    swapchain: &Arc<SdlSwapchain>,
+) -> Result<Arc<RenderPassAbstract + Send + Sync>, VkContextError> {
+    let renderpass = single_pass_renderpass! (
     device,
     attachments: {
-        out_color: {load: Clear, store: Store, format: Format::R8G8B8A8Unorm,
+        out_color: {load: Clear, store: Store, format: swapchain.format(),
         samples: 1,}
     },
     pass: {color: [out_color],
     depth_stencil: {}}
     )
-    .map(&Arc::new)
-    .map_err(&failure::Error::from)
+    .map_err(|e| VkContextError::component_creation("render_pass", Some(e)))?;
+
+    Ok(Arc::new(renderpass))
 }
 
 /// Renderer object for vulkan context
@@ -318,7 +340,8 @@ pub struct VulkanRenderer {
     pub swapchain: Arc<Swapchain<VulkanWinType>>,
     pub swapchain_images: Vec<Arc<SwapchainImage<VulkanWinType>>>,
     pub render_pass: Arc<RenderPassAbstract + Send + Sync>,
-    pub dynamic_state: RefCell<Option<DynamicState>>
+    pub dynamic_state: RwLock<DynamicState>,
+    pub pipelines: pipelines::RendererPipelines,
 }
 impl fmt::Debug for VulkanRenderer {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -350,7 +373,12 @@ impl VulkanRenderer {
         let surface: Arc<SdlSurface> = {
             let handle = window
                 .vulkan_create_surface(instance.internal_object())
-                .map_err(|_| VkContextError::Surface)?;
+                .map_err(|e| {
+                    VkContextError::component_creation(
+                        "surface",
+                        Some(failure::err_msg(e)),
+                    )
+                })?;
             unsafe {
                 Arc::new(Surface::from_raw_surface(
                     instance.clone(),
@@ -359,10 +387,13 @@ impl VulkanRenderer {
                 ))
             }
         };
-        let physical_device = pick_physical_device(&instance)
-            .map_err(|_| VkContextError::Device)?;
+        let physical_device = pick_physical_device(&instance).map_err(|e| {
+            VkContextError::component_creation("physical device", Some(e))
+        })?;
         let (device, queues) = create_device(&physical_device, &surface)
-            .map_err(|_| VkContextError::Device)?;
+            .map_err(|e| {
+                VkContextError::component_creation("device", Some(e))
+            })?;
         let (swapchain, images) = create_swapchain(
             &instance,
             &surface,
@@ -370,10 +401,13 @@ impl VulkanRenderer {
             &device,
             &queues,
         )
-        .map_err(|_| VkContextError::Swapchain)?;
+        .map_err(|e| {
+            VkContextError::component_creation("swapchain", Some(e))
+        })?;
 
-        let render_pass = create_renderpass(device.clone())
-            .map_err(&VkContextError::OtherError)?;
+        let render_pass = create_renderpass(device.clone(), &swapchain)?;
+
+        let pipelines = pipelines::RendererPipelines::new(&device, &render_pass)?;
         Ok(VulkanRenderer {
             camera: RefCell::new(Camera::new(cgmath::PerspectiveFov {
                 fovy: cgmath::Deg(40.0).into(),
@@ -388,7 +422,8 @@ impl VulkanRenderer {
             swapchain,
             swapchain_images: images,
             render_pass,
-            dynamic_state: None
+            pipelines,
+            dynamic_state: RwLock::new(DynamicState::none()),
         })
     }
 }
