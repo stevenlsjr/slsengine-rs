@@ -17,6 +17,8 @@ debug=true
 
 
 [dependencies]
+slsengine_entityalloc = {path="slsengine_entityalloc"}
+slsengine_shaders = {path="slsengine_shaders"}
 bitflags = "1.0.4"
 cgmath = {version="0.16.1", features=["swizzle"]}
 env_logger = "0.6.0"
