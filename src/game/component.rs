@@ -2,9 +2,7 @@ pub use super::built_in_components::*;
 use crate::math::*;
 use crate::renderer::{material::*, traits::*};
 use bitflags::bitflags;
-use cgmath::*;
 use slsengine_entityalloc::*;
-use std::{collections::HashMap, rc::Rc};
 use std::{fmt::Debug, ops::Index};
 
 pub trait Component: Debug {

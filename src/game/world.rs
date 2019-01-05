@@ -4,8 +4,7 @@ use crate::renderer::*;
 use cgmath::*;
 use log::*;
 use sdl2::{keyboard::KeyboardState, mouse::MouseState, EventPump};
-use std::collections::HashMap;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct InputState {
@@ -41,7 +40,6 @@ where
     R: Renderer,
 {
     pub fn new(_renderer: &R) -> Self {
-        use rand::random;
         use std::f32::consts::PI;
         let main_camera = FpsCameraComponent::new(
             Point3::new(0.0, 0.0, 5.0),

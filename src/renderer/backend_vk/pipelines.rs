@@ -1,9 +1,10 @@
 use super::VkContextError;
-use std::sync::Arc;
-use vulkano::{device::*, framebuffer::*, pipeline::*, descriptor::pipeline_layout::PipelineLayoutAbstract};
 use super::*;
-pub type DynGraphicsPipeline = Arc<dyn GraphicsPipelineAbstract + Send + Sync>;
-pub type DynRenderPass = Arc<dyn RenderPassAbstract + Send + Sync>;
+use std::sync::Arc;
+use vulkano::{
+    descriptor::pipeline_layout::PipelineLayoutAbstract, device::*,
+    framebuffer::*, pipeline::*,
+};
 
 mod main_vs {
     vulkano_shaders::shader! {

@@ -12,9 +12,7 @@ use log::*;
 use sdl2::video::Window;
 use std::{
     cell::{Cell, Ref, RefCell},
-    collections::HashMap,
     path::Path,
-    rc::Rc,
     time::Instant,
 };
 
@@ -83,8 +81,6 @@ impl GlMesh {
 
 impl GlRenderer {
     pub fn new(window: &Window) -> Result<GlRenderer, RendererError> {
-        use super::objects::*;
-
         let (width, height) = window.size();
         let perspective = PerspectiveFov {
             fovy: Deg(40.0).into(),
@@ -96,7 +92,7 @@ impl GlRenderer {
             create_scene_shaders().map_err(RendererError::ShaderError)?;
         let mesh = {
             use crate::renderer::Vertex as V;
-            use genmesh::{generators::*, *};
+            use genmesh::generators::*;
             let icosphere = IcoSphere::new();
             let vertices: Vec<V> = icosphere
                 .shared_vertex_iter()
@@ -168,7 +164,6 @@ impl GlRenderer {
     }
 
     fn make_materials() -> Result<Materials, ::failure::Error> {
-        use super::objects::*;
         use crate::renderer::material::*;
 
         use failure::Error;
