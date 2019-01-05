@@ -9,7 +9,7 @@ void main(){
     vec2 c = (norm_coordinates - vec2(0.5)) * 2.0 - vec2(1.0, 0.0);
     vec2 z = vec2(0.0, 0.0);
     float i;
-    for (i=0.0; i< 1.0; i+= 0.005){
+    for (i=0.0; i< 1.0; i+= 0.05){
         z = vec2(
             z.x * z.x - z.y * z.y + c.x,
             z.y * z.x + z.x * z.y + c.y
