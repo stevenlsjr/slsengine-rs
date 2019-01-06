@@ -20,15 +20,18 @@ struct SimpleVertex {
 }
 impl_vertex!(SimpleVertex, position);
 
-fn triangle_verts() -> Vec<SimpleVertex> {
-    let vertex1 = SimpleVertex {
-        position: [-0.5, -0.5],
+fn triangle_verts() -> Vec<Vertex> {
+    let vertex1 = Vertex {
+        position: [-0.5, -0.5, 0.0],
+        ..Vertex::default()
     };
-    let vertex2 = SimpleVertex {
-        position: [0.0, 0.5],
+    let vertex2 = Vertex {
+        position: [0.0, 0.5, 0.0],
+        ..Vertex::default()
     };
-    let vertex3 = SimpleVertex {
-        position: [0.5, -0.25],
+    let vertex3 = Vertex {
+        position: [0.5, -0.25, 0.0],
+        ..Vertex::default()
     };
     vec![vertex1, vertex2, vertex3]
 }
@@ -91,7 +94,7 @@ fn main() {
         while main_loop.is_running() {
             main_loop.handle_events(window, event_pump, &r, &mut world);
             let FrameTick { delta, .. } = main_loop.tick_frame();
-            r.draw_frame(window);
+            r.draw_frame(window, &vertex_array);
         }
     }
 }

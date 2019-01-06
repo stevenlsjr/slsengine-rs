@@ -4,6 +4,8 @@ pub mod sdl_vulkan;
 pub mod shaders;
 pub mod vulkan_renderer;
 
+pub mod vk_mesh;
+
 pub use self::sdl_vulkan::VulkanPlatformHooks;
 pub use self::vulkan_renderer::{VkTexture, VulkanQueues, VulkanRenderer};
 
@@ -41,6 +43,12 @@ use vulkano::{
 #[allow(clippy::ref_in_deref)]
 vulkano::impl_vertex!(Vertex, position);
 pub type VkResult<T> = Result<T, VkContextError>;
+
+/// Type that vulkano objects use for tracking window for Surface<T> and
+/// types referencing it. Uses an empty tuple instead of a Window
+/// because SDL window handles are not thread-safe. For now, it will be the 
+/// responsibility of the user to ensure the SDL window lasts as long
+/// as any vulkan surfaces.
 pub type VulkanWinType = ();
 pub type SdlSurface = Surface<VulkanWinType>;
 pub type SdlSwapchain = Swapchain<VulkanWinType>;

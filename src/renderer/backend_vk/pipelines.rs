@@ -37,7 +37,7 @@ mod main_fs {
 /// Contains primary pipelines used by application
 #[derive(Clone)]
 pub struct RendererPipelines {
-    main_pipeline: DynGraphicsPipeline,
+    pub main_pipeline: DynGraphicsPipeline,
 }
 impl RendererPipelines {
     fn new_internal(

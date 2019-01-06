@@ -28,6 +28,8 @@ use vulkano::{
     sync::*,
 };
 
+use crate::renderer::mesh::*;
+
 use super::*;
 
 fn rate_physical_device(phys_dev: PhysicalDevice) -> i32 {
@@ -254,6 +256,7 @@ fn create_swapchain(
     .map_err(&failure::Error::from)
 }
 
+/// Helper type for constructing vulkan context.
 struct Builder<'a> {
     // Resources used in context build steps. Not builder params per-se
     // Instead, more like a traditional nullable+mutable initialization pattern
@@ -525,7 +528,11 @@ impl VulkanRenderer {
         Ok(())
     }
 
-    pub fn draw_frame(&self, window: &Window) {
+    pub fn draw_frame(
+        &self,
+        window: &Window,
+        vertex_buffer: &Arc<CpuAccessibleBuffer<[Vertex]>>,
+    ) {
         {
             let mut fut = self.previous_frame_end.borrow_mut();
             fut.cleanup_finished();
@@ -564,6 +571,7 @@ impl VulkanRenderer {
 
         {
             let mut state = self.state.borrow_mut();
+            let pipeline = &self.pipelines.main_pipeline;
             let (image_num, acquire_future) =
                 match acquire_next_image(state.swapchain.clone(), None) {
                     Ok(r) => r,
@@ -575,6 +583,7 @@ impl VulkanRenderer {
                 };
 
             let clear_values = vec![[0.0, 0.0, 1.0, 1.0].into()];
+
             let command_buffer =
                 AutoCommandBufferBuilder::primary_one_time_submit(
                     self.device.clone(),
@@ -586,6 +595,16 @@ impl VulkanRenderer {
                         state.framebuffers[image_num].clone(),
                         false,
                         clear_values,
+                    )
+                    .map_err(&failure::Error::from)
+                })
+                .and_then(|cb| {
+                    cb.draw(
+                        pipeline.clone(),
+                        &state.dynamic_state,
+                        vec![vertex_buffer.clone()],
+                        (),
+                        (),
                     )
                     .map_err(&failure::Error::from)
                 })
