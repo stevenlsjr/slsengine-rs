@@ -9,7 +9,7 @@ use std::{
     ffi::CString,
     fmt,
     rc::Rc,
-    sync::{Arc, RwLock},
+    sync::{Arc, RwLock, atomic::*},
 };
 use vulkano::{
     self,
@@ -321,7 +321,7 @@ impl<'a> Builder<'a> {
             let device = self.device.unwrap();
 
             let previous_frame_end =
-                Box::new(vulkano::sync::now(device.clone())) as Box<GpuFuture>;
+                RefCell::new(Box::new(vulkano::sync::now(device.clone())) as Box<GpuFuture>);
 
             Ok(VulkanRenderer {
                 camera: RefCell::new(Camera::new(cgmath::PerspectiveFov {
@@ -337,14 +337,17 @@ impl<'a> Builder<'a> {
                 pipelines,
 
                 render_pass: self.render_pass.unwrap(),
+                recreate_swapchain: AtomicBool::new(false),
+                previous_frame_end,
+
                 state: RefCell::new(RenderingState {
                     swapchain: self.swapchain.unwrap(),
                     swapchain_images: self.swapchain_images.unwrap(),
                     framebuffers: Vec::new(),
                     dynamic_state: DynamicState::none(),
-                    recreate_swapchain: false,
-                    previous_frame_end,
                 }),
+
+
             })
         }
     }
@@ -455,14 +458,14 @@ pub struct VulkanRenderer {
     pub surface: Arc<SdlSurface>,
     pub pipelines: pipelines::RendererPipelines,
     pub render_pass: Arc<RenderPassAbstract + Send + Sync>,
-    /// lock for managing renderer state, such as flagging swapchain recreation
-    /// or future to last frame end
+    /// or future for synchronizing last frame end
+    recreate_swapchain: AtomicBool,
+    previous_frame_end: RefCell<Box<GpuFuture>>,
+    /// lock for managing resources replaced during program's progress, such as flagging swapchain recreation
     pub state: RefCell<RenderingState>,
 }
 
 pub struct RenderingState {
-    recreate_swapchain: bool,
-    previous_frame_end: Box<GpuFuture>,
     pub swapchain: Arc<SdlSwapchain>,
     pub swapchain_images: Vec<Arc<SdlSwapchainImage>>,
     pub dynamic_state: DynamicState,
@@ -523,13 +526,14 @@ impl VulkanRenderer {
     }
 
     pub fn draw_frame(&self, window: &Window) {
+        let mut recreate_swapchain = self.recreate_swapchain.load(Ordering::Acquire);
         let mut rebuild_fbs = false;
         let device = &self.device;
         {
             let mut state = self.state.borrow_mut();
             // state.previous_frame_end.cleanup_finished();
-            if state.recreate_swapchain {
-                state.recreate_swapchain = false;
+            if recreate_swapchain {
+                recreate_swapchain = false;
                 rebuild_fbs = true;
                 let (width, height) = window.vulkan_drawable_size();
                 println!("rebuilding swapchain {}x{}", width, height);
@@ -548,7 +552,9 @@ impl VulkanRenderer {
             }
         }
         if rebuild_fbs {
-            self.window_size_fb_setup();
+            if let Err(e) = self.window_size_fb_setup() {
+                error!("Problem rebuilding framebuffers");
+            }
         }
         {
             let mut state = self.state.borrow_mut();
@@ -556,7 +562,7 @@ impl VulkanRenderer {
             //     match acquire_next_image(state.swapchain.clone(), None) {
             //         Ok(r) => r,
             //         Err(AcquireError::OutOfDate) => {
-            //             state.recreate_swapchain = true;
+            //             self.recreate_swapchain.store(true, Ordering::Release);
             //             return;
             //         }
             //         Err(e) => panic!("unexpected error: {:?}", e),
@@ -575,14 +581,16 @@ impl VulkanRenderer {
             //         state.previous_frame_end = Box::new(f) as Box<_>
             //     }
             //     Err(FlushError::OutOfDate) => {
-            //         state.recreate_swapchain = true;
+            //             self.recreate_swapchain.store(true, Ordering::Release);
             //     }
             //     Err(e) => {
             //         error!("vulkan error: {:?}", e);
             //     }
             // }
-            state.previous_frame_end = Box::new(vulkano::sync::now(device.clone())) as Box<_>;
+            self.previous_frame_end.replace( Box::new(vulkano::sync::now(device.clone())) as Box<_>);
         }
+
+        self.recreate_swapchain.store(recreate_swapchain, Ordering::Release);
     }
 }
 #[derive(Debug)]
@@ -597,6 +605,6 @@ impl Renderer for VulkanRenderer {
 
     fn on_resize(&self, _size: (u32, u32)) {
         let mut state = self.state.borrow_mut();
-        state.recreate_swapchain = true;
+        self.recreate_swapchain.store(true, Ordering::Relaxed);
     }
 }
