@@ -2,7 +2,7 @@ use super::VkContextError;
 use super::*;
 use std::sync::Arc;
 use vulkano::{
-    descriptor::pipeline_layout::PipelineLayoutAbstract, device::*,
+     device::*,
     framebuffer::*, pipeline::*,
 };
 

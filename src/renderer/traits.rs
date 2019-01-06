@@ -10,6 +10,10 @@ pub trait Renderer: Sized {
     type Texture: Clone + fmt::Debug;
     type Mesh: RenderMesh + fmt::Debug;
 
+    /// Optional method. Callback for cleaning up resources, especially GPU resources
+    /// sent to a free list rather than released immediately
+    fn cleanup(&self) {}
+
     fn clear(&self) {}
     fn camera(&self) -> Ref<Camera>;
     fn set_clear_color(&mut self, _color: ColorRGBA) {}

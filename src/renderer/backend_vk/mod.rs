@@ -40,7 +40,7 @@ use vulkano::{
 
 #[allow(clippy::ref_in_deref)]
 vulkano::impl_vertex!(Vertex, position);
-
+pub type VkResult<T> = Result<T, VkContextError>;
 pub type VulkanWinType = Rc<WindowContext>;
 pub type SdlSurface = Surface<VulkanWinType>;
 pub type SdlSwapchain = Swapchain<VulkanWinType>;
@@ -48,6 +48,7 @@ pub type SdlSwapchainImage = SwapchainImage<VulkanWinType>;
 
 pub type DynGraphicsPipeline = Arc<dyn GraphicsPipelineAbstract + Send + Sync>;
 pub type DynRenderPass = Arc<dyn RenderPassAbstract + Send + Sync>;
+pub type DynFramebuffer = Arc<dyn FramebufferAbstract>;
 /// Error Record for VkContext creation
 #[derive(Fail, Debug)]
 pub enum VkContextError {

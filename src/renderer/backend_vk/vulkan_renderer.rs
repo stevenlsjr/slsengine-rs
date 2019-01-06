@@ -3,7 +3,7 @@ use cgmath;
 use failure;
 use log::*;
 use sdl2;
-use sdl2::video::{Window, WindowContext};
+use sdl2::video::{Window};
 use std::{
     cell::{Ref, RefCell},
     ffi::CString,
@@ -28,10 +28,7 @@ use vulkano::{
     sync::*,
 };
 
-use super::{
-    pipelines, DynGraphicsPipeline, DynRenderPass, SdlSurface, SdlSwapchain,
-    SdlSwapchainImage, VkContextError, VulkanPlatformHooks, VulkanWinType,
-};
+use super::*;
 
 fn rate_physical_device(phys_dev: PhysicalDevice) -> i32 {
     use vulkano::instance::PhysicalDeviceType;
@@ -260,25 +257,9 @@ fn create_swapchain(
     .map_err(&failure::Error::from)
 }
 
-fn create_renderpass(
-    device: Arc<Device>,
-    swapchain: &Arc<SdlSwapchain>,
-) -> Result<Arc<RenderPassAbstract + Send + Sync>, VkContextError> {
-    let renderpass = single_pass_renderpass! (
-    device,
-    attachments: {
-        out_color: {load: Clear, store: Store, format: swapchain.format(),
-        samples: 1,}
-    },
-    pass: {color: [out_color],
-    depth_stencil: {}}
-    )
-    .map_err(|e| VkContextError::component_creation("render_pass", Some(e)))?;
-
-    Ok(Arc::new(renderpass))
-}
-
 struct Builder<'a> {
+    // Resources used in context build steps. Not builder params per-se
+    // Instead, more like a traditional nullable+mutable initialization pattern
     window: &'a Window,
     instance: Option<Arc<Instance>>,
     device: Option<Arc<Device>>,
@@ -306,7 +287,7 @@ impl<'a> Builder<'a> {
         }
     }
 
-    fn build(&mut self) -> Result<VulkanRenderer, VkContextError> {
+    fn build(mut self) -> Result<VulkanRenderer, VkContextError> {
         let window = self.window;
         let instance_extensions = window.vulkan_instance_extensions().unwrap();
         let raw_instance_extensions = RawInstanceExtensions::new(
@@ -325,67 +306,78 @@ impl<'a> Builder<'a> {
             })?;
         self.instance = Some(instance.clone());
         self.create_surface()?;
-        let surface = self.surface.unwrap().clone();
 
         self.create_device()?;
-        let device = self.device.unwrap();
-        let physical_device = device.physical_device();
+        self.create_swapchain()?;
 
-        let (swapchain, images) = create_swapchain(
-            &instance,
-            &surface,
-            &physical_device,
-            &device,
-            &queues,
-        )
-        .map_err(|e| {
-            VkContextError::component_creation("swapchain", Some(e))
-        })?;
+        self.create_renderpass()?;
+        let render_pass = self.render_pass.as_ref().unwrap();
 
-        let render_pass = create_renderpass(device.clone(), &swapchain)?;
+        let pipelines = pipelines::RendererPipelines::new(
+            self.device.as_ref().unwrap(),
+            &render_pass,
+        )?;
+        {
+            let device = self.device.unwrap();
 
-        let pipelines =
-            pipelines::RendererPipelines::new(&device, &render_pass)?;
-        Ok(VulkanRenderer {
-            camera: RefCell::new(Camera::new(cgmath::PerspectiveFov {
-                fovy: cgmath::Deg(40.0).into(),
-                aspect: 1.0,
-                near: 0.1,
-                far: 100.0,
-            })),
-            instance: instance.clone(),
-            device,
-            queues,
-            surface,
-            swapchain,
-            swapchain_images: images,
-            render_pass,
-            pipelines,
-            dynamic_state: RwLock::new(DynamicState::none()),
-        })
+            let previous_frame_end =
+                Box::new(vulkano::sync::now(device.clone())) as Box<GpuFuture>;
+
+            Ok(VulkanRenderer {
+                camera: RefCell::new(Camera::new(cgmath::PerspectiveFov {
+                    fovy: cgmath::Deg(40.0).into(),
+                    aspect: 1.0,
+                    near: 0.1,
+                    far: 100.0,
+                })),
+                instance: instance,
+                device,
+                queues: self.queues.unwrap(),
+                surface: self.surface.unwrap(),
+                pipelines,
+
+                render_pass: self.render_pass.unwrap(),
+                state: RefCell::new(RenderingState {
+                    swapchain: self.swapchain.unwrap(),
+                    swapchain_images: self.swapchain_images.unwrap(),
+                    framebuffers: Vec::new(),
+                    dynamic_state: DynamicState::none(),
+                    recreate_swapchain: false,
+                    previous_frame_end,
+                }),
+            })
+        }
     }
 
     fn create_device(&mut self) -> Result<(), VkContextError> {
-        let instance = self.instance.unwrap();
-        let physical_device = pick_physical_device(&instance).map_err(|e| {
-            VkContextError::component_creation("physical device", Some(e))
-        })?;
-        let (device, queues) = create_device(&physical_device, &surface)
-            .map_err(|e| {
-                VkContextError::component_creation("device", Some(e))
-            })?;
+        if let (Some(surface), Some(instance)) = (&self.surface, &self.instance)
+        {
+            let physical_device =
+                pick_physical_device(&instance).map_err(|e| {
+                    VkContextError::component_creation(
+                        "physical device",
+                        Some(e),
+                    )
+                })?;
+            let (device, queues) = create_device(&physical_device, &surface)
+                .map_err(|e| {
+                    VkContextError::component_creation("device", Some(e))
+                })?;
 
-        self.device = device;
-        self.queues = queues;
-        
+            self.device = Some(device);
+            self.queues = Some(queues);
 
-        Ok(())
+            Ok(())
+        } else {
+            panic!("device, surface, and instance must first be created");
+        }
     }
     fn create_surface(&mut self) -> Result<(), VkContextError> {
         let window = self.window;
         use vulkano::VulkanObject;
         let instance = self
             .instance
+            .clone()
             .expect("instance should have already been created");
         let surface: Arc<SdlSurface> = {
             let handle = window
@@ -407,6 +399,51 @@ impl<'a> Builder<'a> {
         self.surface = Some(surface);
         Ok(())
     }
+
+    fn create_swapchain(&mut self) -> Result<(), VkContextError> {
+        let instance = self.instance.as_ref().unwrap();
+        let device = self.device.as_ref().unwrap();
+        let physical_device = device.physical_device();
+        let queues = self.queues.as_ref().unwrap();
+        let surface = self.surface.as_ref().unwrap();
+        let (swapchain, images) = create_swapchain(
+            &instance,
+            surface,
+            &physical_device,
+            device,
+            queues,
+        )
+        .map_err(|e| {
+            VkContextError::component_creation("swapchain", Some(e))
+        })?;
+
+        self.swapchain = Some(swapchain);
+        self.swapchain_images = Some(images);
+
+        Ok(())
+    }
+
+    fn create_renderpass(&mut self) -> Result<(), VkContextError> {
+        let swapchain = self.swapchain.as_ref().unwrap();
+        let device = self.device.as_ref().unwrap();
+        let format = swapchain.format();
+        let renderpass = Arc::new(
+            single_pass_renderpass! (
+            device.clone(),
+            attachments: {
+                out_color: {load: Clear, store: Store, format: format,
+                samples: 1,}
+            },
+            pass: {color: [out_color],
+            depth_stencil: {}}
+            )
+            .map_err(|e| {
+                VkContextError::component_creation("render_pass", Some(e))
+            })?,
+        );
+        self.render_pass = Some(renderpass);
+        Ok(())
+    }
 }
 
 /// Renderer object for vulkan context
@@ -416,12 +453,22 @@ pub struct VulkanRenderer {
     pub device: Arc<Device>,
     pub queues: VulkanQueues,
     pub surface: Arc<SdlSurface>,
+    pub pipelines: pipelines::RendererPipelines,
+    pub render_pass: Arc<RenderPassAbstract + Send + Sync>,
+    /// lock for managing renderer state, such as flagging swapchain recreation
+    /// or future to last frame end
+    pub state: RefCell<RenderingState>,
+}
+
+pub struct RenderingState {
+    recreate_swapchain: bool,
+    previous_frame_end: Box<GpuFuture>,
     pub swapchain: Arc<SdlSwapchain>,
     pub swapchain_images: Vec<Arc<SdlSwapchainImage>>,
-    pub render_pass: Arc<RenderPassAbstract + Send + Sync>,
-    pub dynamic_state: RwLock<DynamicState>,
-    pub pipelines: pipelines::RendererPipelines,
+    pub dynamic_state: DynamicState,
+    pub framebuffers: Vec<DynFramebuffer>,
 }
+
 impl fmt::Debug for VulkanRenderer {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "VulkanRenderer {:?}", self.device)
@@ -431,11 +478,112 @@ impl fmt::Debug for VulkanRenderer {
 impl VulkanRenderer {
     /// Creates a new Renderer from an SDL window
     pub fn new(window: &Window) -> Result<Self, VkContextError> {
-        let mut builder = Builder::new(window);
-        builder.build()
+        let builder = Builder::new(window);
+        let renderer = builder.build()?;
+        renderer.window_size_fb_setup()?;
+        Ok(renderer)
     }
 
-    fn window_size_fb_setup(&self) {}
+    fn window_size_fb_setup(&self) -> VkResult<()> {
+        let (viewport, new_fbs) = {
+            let state = self.state.borrow();
+            let images = &state.swapchain_images;
+            let dimensions = SdlSwapchainImage::dimensions(&images[0]);
+            let viewport = Viewport {
+                origin: [0.0, 0.0],
+                dimensions: [dimensions[0] as f32, dimensions[1] as f32],
+                depth_range: 0.0..1.0,
+            };
+            let new_fbs = {
+                images
+                    .iter()
+                    .map(|image| {
+                        Framebuffer::start(self.render_pass.clone())
+                            .add(image.clone())
+                            .and_then(|fb| fb.build())
+                            .map(|fb| Arc::new(fb) as DynFramebuffer)
+                    })
+                    .collect::<Result<Vec<_>, _>>()
+                    .map_err(|e| {
+                        VkContextError::component_creation(
+                            "framebuffer creation",
+                            Some(e),
+                        )
+                    })?
+            };
+            (viewport, new_fbs)
+        };
+        {
+            let mut state = self.state.borrow_mut();
+            state.dynamic_state.viewports = Some(vec![viewport]);
+
+            state.framebuffers = new_fbs;
+        }
+        Ok(())
+    }
+
+    pub fn draw_frame(&self, window: &Window) {
+        let mut rebuild_fbs = false;
+        let device = &self.device;
+        {
+            let mut state = self.state.borrow_mut();
+            // state.previous_frame_end.cleanup_finished();
+            if state.recreate_swapchain {
+                state.recreate_swapchain = false;
+                rebuild_fbs = true;
+                let (width, height) = window.vulkan_drawable_size();
+                println!("rebuilding swapchain {}x{}", width, height);
+                let (new_swapchain, new_images) = match state
+                    .swapchain
+                    .recreate_with_dimension([width, height])
+                {
+                    Ok(r) => r,
+                    Err(SwapchainCreationError::UnsupportedDimensions) => {
+                        return;
+                    }
+                    Err(err) => panic!("unexpected error: {:?}", err),
+                };
+                state.swapchain = new_swapchain;
+                state.swapchain_images = new_images;
+            }
+        }
+        if rebuild_fbs {
+            self.window_size_fb_setup();
+        }
+        {
+            let mut state = self.state.borrow_mut();
+            // let (image_num, acquire_future) =
+            //     match acquire_next_image(state.swapchain.clone(), None) {
+            //         Ok(r) => r,
+            //         Err(AcquireError::OutOfDate) => {
+            //             state.recreate_swapchain = true;
+            //             return;
+            //         }
+            //         Err(e) => panic!("unexpected error: {:?}", e),
+            //     };
+
+            // let previous_frame = std::mem::replace(
+            //     &mut state.previous_frame_end,
+            //     Box::new(vulkano::sync::now(device.clone())) as Box<_>,
+            // );
+            // let future =
+            // .join(acquire_future)
+            // .then_signal_fence_and_flush();
+
+            // match future {
+            //     Ok(f) => {
+            //         state.previous_frame_end = Box::new(f) as Box<_>
+            //     }
+            //     Err(FlushError::OutOfDate) => {
+            //         state.recreate_swapchain = true;
+            //     }
+            //     Err(e) => {
+            //         error!("vulkan error: {:?}", e);
+            //     }
+            // }
+            state.previous_frame_end = Box::new(vulkano::sync::now(device.clone())) as Box<_>;
+        }
+    }
 }
 #[derive(Debug)]
 pub struct VkTexture;
@@ -447,5 +595,8 @@ impl Renderer for VulkanRenderer {
         self.camera.borrow()
     }
 
-    fn on_resize(&self, _size: (u32, u32)) {}
+    fn on_resize(&self, _size: (u32, u32)) {
+        let mut state = self.state.borrow_mut();
+        state.recreate_swapchain = true;
+    }
 }
