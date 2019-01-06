@@ -1,10 +1,7 @@
 use super::VkContextError;
 use super::*;
 use std::sync::Arc;
-use vulkano::{
-     device::*,
-    framebuffer::*, pipeline::*,
-};
+use vulkano::{device::*, framebuffer::*, pipeline::*};
 
 mod main_vs {
     vulkano_shaders::shader! {

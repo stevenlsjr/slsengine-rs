@@ -4,7 +4,6 @@ use gl;
 use gl::types::GLenum;
 use image::{self, DynamicImage};
 
-
 pub trait FromImage<Image> {
     fn load_from_image(&mut self, image: &Image) -> Result<(), failure::Error>;
 }

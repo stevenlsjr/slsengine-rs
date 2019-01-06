@@ -56,7 +56,10 @@ fn main() {
             debug: true,
         },
         |msg| {
-            eprintln!("vulkan {:?} message, layer {} callback: '{}'", msg.ty, msg.layer_prefix, msg.description);
+            eprintln!(
+                "vulkan {:?} message, layer {} callback: '{}'",
+                msg.ty, msg.layer_prefix, msg.description
+            );
         },
     );
 

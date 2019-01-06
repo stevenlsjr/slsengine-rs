@@ -2,7 +2,10 @@ use crate::{game, renderer};
 use sdl2::event::{Event, WindowEvent};
 use sdl2::keyboard::Keycode;
 use sdl2::video::Window;
-use std::{cell::RefCell, time::{Instant, Duration}};
+use std::{
+    cell::RefCell,
+    time::{Duration, Instant},
+};
 
 /// State object for main loop information, such as
 /// Event handlers and frame timers.
@@ -15,7 +18,6 @@ pub struct MainLoopState {
 pub struct FrameTick {
     pub delta: Duration,
     pub last_time: Instant,
-
 }
 
 impl MainLoopState {
@@ -23,7 +25,7 @@ impl MainLoopState {
         Self::default()
     }
 
-    pub fn is_running(&self) ->bool {
+    pub fn is_running(&self) -> bool {
         self.is_running
     }
     pub fn set_is_running(&mut self, is_running: bool) {
@@ -34,23 +36,18 @@ impl MainLoopState {
         self.last_time = Instant::now();
         self.is_running = true;
         eprintln!("starting loop {:?}", self);
-
     }
 
-    /// updates time on game loop clock. Returns a FrameTick struct, which provides 
+    /// updates time on game loop clock. Returns a FrameTick struct, which provides
     /// the delta time as a duration, as well as the last_time value tick_frame reset
     pub fn tick_frame(&mut self) -> FrameTick {
         let last_time = self.last_time;
         let now = Instant::now();
         let delta = now - last_time;
         self.last_time = now;
-        FrameTick {
-            delta, last_time
-        }
-
-
+        FrameTick { delta, last_time }
     }
-    
+
     pub fn handle_events<R: renderer::Renderer>(
         &mut self,
         window: &Window,
@@ -78,10 +75,13 @@ impl MainLoopState {
                 } => {
                     self.is_running = false;
                 }
-                
-                Event::Window { win_event: WindowEvent::Resized(_width, _height), .. } => {
-                        let size = window.drawable_size();
-                        renderer.on_resize(size);
+
+                Event::Window {
+                    win_event: WindowEvent::Resized(_width, _height),
+                    ..
+                } => {
+                    let size = window.drawable_size();
+                    renderer.on_resize(size);
                 }
                 Event::MouseMotion { x, y, .. } => {
                     if let Some(mut input_state) = world.input_state.clone() {

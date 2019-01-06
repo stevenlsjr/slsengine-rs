@@ -3,13 +3,13 @@ use cgmath;
 use failure;
 use log::*;
 use sdl2;
-use sdl2::video::{Window};
+use sdl2::video::Window;
 use std::{
     cell::{Ref, RefCell},
     ffi::CString,
     fmt,
     rc::Rc,
-    sync::{Arc, RwLock, atomic::*},
+    sync::{atomic::*, Arc, RwLock},
 };
 use vulkano::{
     self,
@@ -213,6 +213,7 @@ fn create_swapchain(
     physical_device: &PhysicalDevice,
     device: &Arc<Device>,
     queues: &VulkanQueues,
+    window: &Window,
 ) -> Result<(Arc<SdlSwapchain>, Vec<Arc<SdlSwapchainImage>>), failure::Error> {
     use vulkano::swapchain::SurfaceTransform;
 
@@ -225,11 +226,7 @@ fn create_swapchain(
         .next()
         .unwrap();
 
-    let size = {
-        let window: &Window =
-            unsafe { &Window::from_ref(surface.window().clone()) };
-        window.vulkan_drawable_size()
-    };
+    let size = window.vulkan_drawable_size();
     let sharing: SharingMode =
         if queues.graphics_queue.is_same(&queues.present_queue) {
             (&queues.graphics_queue).into()
@@ -308,7 +305,7 @@ impl<'a> Builder<'a> {
         self.create_surface()?;
 
         self.create_device()?;
-        self.create_swapchain()?;
+        self.create_swapchain(self.window)?;
 
         self.create_renderpass()?;
         let render_pass = self.render_pass.as_ref().unwrap();
@@ -321,7 +318,8 @@ impl<'a> Builder<'a> {
             let device = self.device.unwrap();
 
             let previous_frame_end =
-                RefCell::new(Box::new(vulkano::sync::now(device.clone())) as Box<GpuFuture>);
+                RefCell::new(Box::new(vulkano::sync::now(device.clone()))
+                    as Box<GpuFuture>);
 
             Ok(VulkanRenderer {
                 camera: RefCell::new(Camera::new(cgmath::PerspectiveFov {
@@ -346,8 +344,6 @@ impl<'a> Builder<'a> {
                     framebuffers: Vec::new(),
                     dynamic_state: DynamicState::none(),
                 }),
-
-
             })
         }
     }
@@ -395,7 +391,7 @@ impl<'a> Builder<'a> {
                 Arc::new(Surface::from_raw_surface(
                     instance.clone(),
                     handle,
-                    window.context().clone(),
+                    (),
                 ))
             }
         };
@@ -403,7 +399,10 @@ impl<'a> Builder<'a> {
         Ok(())
     }
 
-    fn create_swapchain(&mut self) -> Result<(), VkContextError> {
+    fn create_swapchain(
+        &mut self,
+        window: &Window,
+    ) -> Result<(), VkContextError> {
         let instance = self.instance.as_ref().unwrap();
         let device = self.device.as_ref().unwrap();
         let physical_device = device.physical_device();
@@ -415,6 +414,7 @@ impl<'a> Builder<'a> {
             &physical_device,
             device,
             queues,
+            window,
         )
         .map_err(|e| {
             VkContextError::component_creation("swapchain", Some(e))
@@ -526,7 +526,12 @@ impl VulkanRenderer {
     }
 
     pub fn draw_frame(&self, window: &Window) {
-        let mut recreate_swapchain = self.recreate_swapchain.load(Ordering::Acquire);
+        {
+            let mut fut = self.previous_frame_end.borrow_mut();
+            fut.cleanup_finished();
+        }
+        let mut recreate_swapchain =
+            self.recreate_swapchain.load(Ordering::Acquire);
         let mut rebuild_fbs = false;
         let device = &self.device;
         {
@@ -556,41 +561,76 @@ impl VulkanRenderer {
                 error!("Problem rebuilding framebuffers");
             }
         }
+
         {
             let mut state = self.state.borrow_mut();
-            // let (image_num, acquire_future) =
-            //     match acquire_next_image(state.swapchain.clone(), None) {
-            //         Ok(r) => r,
-            //         Err(AcquireError::OutOfDate) => {
-            //             self.recreate_swapchain.store(true, Ordering::Release);
-            //             return;
-            //         }
-            //         Err(e) => panic!("unexpected error: {:?}", e),
-            //     };
+            let (image_num, acquire_future) =
+                match acquire_next_image(state.swapchain.clone(), None) {
+                    Ok(r) => r,
+                    Err(AcquireError::OutOfDate) => {
+                        self.recreate_swapchain.store(true, Ordering::Release);
+                        return;
+                    }
+                    Err(e) => panic!("unexpected error: {:?}", e),
+                };
 
-            // let previous_frame = std::mem::replace(
-            //     &mut state.previous_frame_end,
-            //     Box::new(vulkano::sync::now(device.clone())) as Box<_>,
-            // );
-            // let future =
-            // .join(acquire_future)
-            // .then_signal_fence_and_flush();
+            let clear_values = vec![[0.0, 0.0, 1.0, 1.0].into()];
+            let command_buffer =
+                AutoCommandBufferBuilder::primary_one_time_submit(
+                    self.device.clone(),
+                    self.queues.graphics_queue.family(),
+                )
+                .map_err(&failure::Error::from)
+                .and_then(|cb| {
+                    cb.begin_render_pass(
+                        state.framebuffers[image_num].clone(),
+                        false,
+                        clear_values,
+                    )
+                    .map_err(&failure::Error::from)
+                })
+                .and_then(|cb| {
+                    cb.end_render_pass().map_err(&failure::Error::from)
+                })
+                .and_then(|cb| cb.build().map_err(&failure::Error::from))
+                .unwrap_or_else(|e| {
+                    panic!("could not create command buffer: {:?}", e)
+                });
 
-            // match future {
-            //     Ok(f) => {
-            //         state.previous_frame_end = Box::new(f) as Box<_>
-            //     }
-            //     Err(FlushError::OutOfDate) => {
-            //             self.recreate_swapchain.store(true, Ordering::Release);
-            //     }
-            //     Err(e) => {
-            //         error!("vulkan error: {:?}", e);
-            //     }
-            // }
-            self.previous_frame_end.replace( Box::new(vulkano::sync::now(device.clone())) as Box<_>);
+            let prev_frame =
+                self.previous_frame_end.replace(Box::new(vulkano::sync::now(
+                    device.clone(),
+                )) as Box<_>);
+
+            let future = prev_frame
+                .join(acquire_future)
+                .then_execute(
+                    self.queues.graphics_queue.clone(),
+                    command_buffer,
+                )
+                .unwrap()
+                .then_swapchain_present(
+                    self.queues.present_queue.clone(),
+                    state.swapchain.clone(),
+                    image_num,
+                )
+                .then_signal_fence_and_flush();
+
+            match future {
+                Ok(f) => {
+                    self.previous_frame_end.replace(Box::new(f) as Box<_>);
+                }
+                Err(FlushError::OutOfDate) => {
+                    self.recreate_swapchain.store(true, Ordering::Release);
+                }
+                Err(e) => {
+                    error!("vulkan error: {:?}", e);
+                }
+            }
         }
 
-        self.recreate_swapchain.store(recreate_swapchain, Ordering::Release);
+        self.recreate_swapchain
+            .store(recreate_swapchain, Ordering::Release);
     }
 }
 #[derive(Debug)]
