@@ -311,14 +311,16 @@ impl<'a> Builder<'a> {
         self.create_swapchain(self.window)?;
 
         self.create_renderpass()?;
-        let render_pass = self.render_pass.as_ref().unwrap();
-
-        let pipelines = pipelines::RendererPipelines::new(
-            self.device.as_ref().unwrap(),
-            &render_pass,
-        )?;
         {
             let device = self.device.unwrap();
+
+            let render_pass = self.render_pass.as_ref().unwrap();
+
+            let matrix_ubo =
+                CpuBufferPool::new(device.clone(), BufferUsage::all());
+
+            let pipelines =
+                pipelines::RendererPipelines::new(&device, &render_pass, matrix_ubo.clone())?;
 
             let previous_frame_end =
                 RefCell::new(Box::new(vulkano::sync::now(device.clone()))
@@ -437,11 +439,21 @@ impl<'a> Builder<'a> {
             single_pass_renderpass! (
             device.clone(),
             attachments: {
-                out_color: {load: Clear, store: Store, format: format,
-                samples: 1,}
+                out_color: {
+                    load: Clear,
+                    store: Store,
+                    format: format,
+                    samples: 1,
+                    },
+                depth: {
+                    load: Clear,
+                    store: DontCare,
+                    format: Format::D16Unorm,
+                    samples: 1,
+                }
             },
             pass: {color: [out_color],
-            depth_stencil: {}}
+            depth_stencil: {depth}}
             )
             .map_err(|e| {
                 VkContextError::component_creation("render_pass", Some(e))
@@ -495,17 +507,31 @@ impl VulkanRenderer {
             let state = self.state.borrow();
             let images = &state.swapchain_images;
             let dimensions = SdlSwapchainImage::dimensions(&images[0]);
+
             let viewport = Viewport {
                 origin: [0.0, 0.0],
                 dimensions: [dimensions[0] as f32, dimensions[1] as f32],
                 depth_range: 0.0..1.0,
             };
+
+            let depth_buffer = AttachmentImage::transient(
+                self.device.clone(),
+                dimensions,
+                Format::D16Unorm,
+            )
+            .map_err(|e| {
+                VkContextError::component_creation(
+                    "depth image buffer",
+                    Some(e),
+                )
+            })?;
             let new_fbs = {
                 images
                     .iter()
                     .map(|image| {
                         Framebuffer::start(self.render_pass.clone())
                             .add(image.clone())
+                            .and_then(|fb| fb.add(depth_buffer.clone()))
                             .and_then(|fb| fb.build())
                             .map(|fb| Arc::new(fb) as DynFramebuffer)
                     })
@@ -582,7 +608,10 @@ impl VulkanRenderer {
                     Err(e) => panic!("unexpected error: {:?}", e),
                 };
 
-            let clear_values = vec![[0.0, 0.0, 1.0, 1.0].into()];
+            let clear_values = vec![
+                [0.0, 0.0, 1.0, 1.0].into(), // color buffer
+                1f32.into(),                 // depth buffer
+            ];
 
             let command_buffer =
                 AutoCommandBufferBuilder::primary_one_time_submit(
