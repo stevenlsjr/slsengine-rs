@@ -1,3 +1,4 @@
+use crate::game::EntityWorld;
 use crate::renderer::*;
 use cgmath;
 use failure;
@@ -319,8 +320,11 @@ impl<'a> Builder<'a> {
             let matrix_ubo =
                 CpuBufferPool::new(device.clone(), BufferUsage::all());
 
-            let pipelines =
-                pipelines::RendererPipelines::new(&device, &render_pass, matrix_ubo.clone())?;
+            let pipelines = pipelines::RendererPipelines::new(
+                &device,
+                &render_pass,
+                matrix_ubo.clone(),
+            )?;
 
             let previous_frame_end =
                 RefCell::new(Box::new(vulkano::sync::now(device.clone()))
@@ -557,8 +561,11 @@ impl VulkanRenderer {
     pub fn draw_frame(
         &self,
         window: &Window,
+        state: &EntityWorld<Self>,
         vertex_buffer: &Arc<CpuAccessibleBuffer<[Vertex]>>,
     ) {
+        use crate::game::*;
+        let camera_view = state.main_camera.transform();
         {
             let mut fut = self.previous_frame_end.borrow_mut();
             fut.cleanup_finished();
@@ -570,6 +577,7 @@ impl VulkanRenderer {
         {
             let mut state = self.state.borrow_mut();
             // state.previous_frame_end.cleanup_finished();
+
             if recreate_swapchain {
                 recreate_swapchain = false;
                 rebuild_fbs = true;
@@ -598,6 +606,26 @@ impl VulkanRenderer {
         {
             let mut state = self.state.borrow_mut();
             let pipeline = &self.pipelines.main_pipeline;
+            let ubo_subbuffer = {
+                use cgmath::*;
+                let modelview = camera_view
+                    * Matrix4::from_translation(vec3(0.0, 0.0, -5.0));
+                let data = pipelines::MatrixUniformData::new(
+                    modelview,
+                    self.camera().projection,
+                )
+                .unwrap();
+                self.pipelines.matrix_ubo.next(data.into()).unwrap()
+            };
+            let desc_set = PersistentDescriptorSet::start(
+                self.pipelines.main_pipeline.clone(),
+                0,
+            )
+            .add_buffer(ubo_subbuffer)
+            .map_err(&failure::Error::from)
+            .and_then(|pds| pds.build().map_err(&failure::Error::from))
+            .map(|pds| Arc::new(pds))
+            .expect("could not create descriptor set");
             let (image_num, acquire_future) =
                 match acquire_next_image(state.swapchain.clone(), None) {
                     Ok(r) => r,
@@ -632,7 +660,7 @@ impl VulkanRenderer {
                         pipeline.clone(),
                         &state.dynamic_state,
                         vec![vertex_buffer.clone()],
-                        (),
+                        desc_set.clone(),
                         (),
                     )
                     .map_err(&failure::Error::from)

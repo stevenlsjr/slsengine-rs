@@ -8,35 +8,15 @@ use vulkano::{device::*, framebuffer::*, pipeline::*};
 pub mod main_vs {
     vulkano_shaders::shader! {
     ty: "vertex",
-        src: "
-        #version 450
-
-        layout(location = 0) in vec3 position;
-        layout (set=0, binding=0) uniform MatrixData {
-            mat4 modelview;
-            mat4 projection;
-            mat4 normal;
-        } m;
-        
-        
-        void main(){
-            gl_Position = m.projection * m.modelview * vec4(position, 1.0);
-        }
-        "
+    path: "assets/shaders/vulkan/flat.vert",
     }
 }
 
 mod main_fs {
     vulkano_shaders::shader! {
     ty: "fragment",
-    src: "#version 450
+    path: "assets/shaders/vulkan/flat.frag",
 
-    layout(location = 0) out vec4 out_color;
-    
-    void main(){
-        out_color = vec4(1.0, 1.0, 0.0, 1.0);
-    }
-    "
     }
 
 }
@@ -73,7 +53,6 @@ impl RendererPipelines {
             main
         };
 
-        
         // let main_matrix_set =
         //     PersistentDescriptorSet::start(main_pipeline.clone(), 0)
         //         .add_buffer(matrix_uniform_buffer)
@@ -104,7 +83,7 @@ pub struct MatrixUniformData {
 }
 
 impl MatrixUniformData {
-    fn new(
+    pub fn new(
         modelview: Matrix4<f32>,
         projection: Matrix4<f32>,
     ) -> Result<Self, failure::Error> {
@@ -120,17 +99,17 @@ impl MatrixUniformData {
         }
     }
 
-    fn modelview(&self) -> &Matrix4<f32> {
+    pub fn modelview(&self) -> &Matrix4<f32> {
         &self.modelview
     }
-    fn normal(&self) -> &Matrix4<f32> {
+    pub fn normal(&self) -> &Matrix4<f32> {
         &self.normal
     }
-    fn projection(&self) -> &Matrix4<f32> {
+    pub fn projection(&self) -> &Matrix4<f32> {
         &self.projection
     }
 
-    fn set_modelview(
+    pub fn set_modelview(
         &mut self,
         modelview: Matrix4<f32>,
     ) -> Result<(), failure::Error> {
@@ -141,6 +120,16 @@ impl MatrixUniformData {
                 Ok(())
             }
             None => bail!("modelview matrix is not inversible"),
+        }
+    }
+}
+
+impl From<MatrixUniformData> for main_vs::ty::MatrixData {
+    fn from(data: MatrixUniformData) -> Self {
+        main_vs::ty::MatrixData {
+            modelview: data.modelview.into(),
+            projection: data.projection.into(),
+            normal: data.normal.into(),
         }
     }
 }

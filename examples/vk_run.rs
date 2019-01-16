@@ -2,7 +2,7 @@ use failure;
 use image::{ImageBuffer, Rgba};
 use slsengine::{
     self,
-    game::{main_loop::*, world::*},
+    game::{self, main_loop::*, world::*, *},
     renderer::backend_vk::*,
     renderer::*,
     sdl_platform::*,
@@ -26,7 +26,7 @@ fn triangle_verts() -> Vec<Vertex> {
         ..Vertex::default()
     };
     let vertex2 = Vertex {
-        position: [0.0, 0.5, 0.0],
+        position: [0.0, 0.5, 1.0],
         ..Vertex::default()
     };
     let vertex3 = Vertex {
@@ -42,7 +42,7 @@ fn main() {
 
     let platform = platform().build(&VulkanPlatformHooks).unwrap();
 
-    let mut r = VulkanRenderer::new(&platform.window).unwrap();
+    let r = VulkanRenderer::new(&platform.window).unwrap();
     let VulkanRenderer {
         ref instance,
         ref device,
@@ -66,14 +66,6 @@ fn main() {
         },
     );
 
-    let image = StorageImage::new(
-        r.device.clone(),
-        Dimensions::Dim2d { width, height },
-        Format::R8G8B8A8Unorm,
-        Some(q.graphics_queue.family()),
-    )
-    .unwrap();
-
     let vertex_array = {
         CpuAccessibleBuffer::from_iter(
             device.clone(),
@@ -87,25 +79,22 @@ fn main() {
             ref window,
             ref event_pump,
             ..
-        } = &platform;
+        } = platform;
         let mut main_loop = MainLoopState::new();
         let mut world = EntityWorld::new(&r);
         main_loop.start();
         while main_loop.is_running() {
-            main_loop.handle_events(window, event_pump, &r, &mut world);
+            main_loop.handle_events(window, &event_pump, &r, &mut world);
+            if !main_loop.is_running() {
+                break;
+            }
             let FrameTick { delta, .. } = main_loop.tick_frame();
-            r.draw_frame(window, &vertex_array);
+            {
+                let ep = event_pump.borrow();
+
+                world.update(delta, game::InputSources::from_event_pump(&ep));
+            }
+            r.draw_frame(window, &world, &vertex_array);
         }
     }
-}
-
-fn save_img_buffer(buf: &CpuAccessibleBuffer<[u8]>, size: (u32, u32)) {
-    use std::path::*;
-    let content = buf.read().unwrap();
-    let path = Path::new(env!("OUT_DIR")).join("vk_run.png");
-    let (width, height) = size;
-    let img = ImageBuffer::<Rgba<u8>, _>::from_raw(width, height, &content[..])
-        .unwrap();
-    img.save(&path).unwrap();
-    println!("image saved to {}", path.to_string_lossy())
 }
