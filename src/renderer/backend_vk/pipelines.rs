@@ -68,8 +68,9 @@ impl RendererPipelines {
     pub fn new(
         device: &Arc<Device>,
         render_pass: &Arc<dyn RenderPassAbstract + Send + Sync>,
-        matrix_ubo: CpuBufferPool<main_vs::ty::MatrixData>,
     ) -> Result<Self, VkContextError> {
+        let matrix_ubo =
+                CpuBufferPool::new(device.clone(), BufferUsage::all());
         Self::new_internal(device, render_pass, matrix_ubo).map_err(|e| {
             VkContextError::component_creation("pipelines", Some(e))
         })

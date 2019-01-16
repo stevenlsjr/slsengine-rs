@@ -317,14 +317,8 @@ impl<'a> Builder<'a> {
 
             let render_pass = self.render_pass.as_ref().unwrap();
 
-            let matrix_ubo =
-                CpuBufferPool::new(device.clone(), BufferUsage::all());
-
-            let pipelines = pipelines::RendererPipelines::new(
-                &device,
-                &render_pass,
-                matrix_ubo.clone(),
-            )?;
+            let pipelines =
+                pipelines::RendererPipelines::new(&device, &render_pass)?;
 
             let previous_frame_end =
                 RefCell::new(Box::new(vulkano::sync::now(device.clone()))
@@ -558,12 +552,14 @@ impl VulkanRenderer {
         Ok(())
     }
 
-    pub fn draw_frame(
+    pub fn draw_frame<T>(
         &self,
         window: &Window,
         state: &EntityWorld<Self>,
-        vertex_buffer: &Arc<CpuAccessibleBuffer<[Vertex]>>,
-    ) {
+        vertex_buffer: Arc<T>,
+    ) where
+        T: TypedBufferAccess<Content = [Vertex]> + Send + Sync + 'static,
+    {
         use crate::game::*;
         let camera_view = state.main_camera.transform();
         {
@@ -659,7 +655,7 @@ impl VulkanRenderer {
                     cb.draw(
                         pipeline.clone(),
                         &state.dynamic_state,
-                        vec![vertex_buffer.clone()],
+                        vec![vertex_buffer],
                         desc_set.clone(),
                         (),
                     )

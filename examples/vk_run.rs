@@ -66,13 +66,39 @@ fn main() {
         },
     );
 
-    let vertex_array = {
+    let staging_vb = {
         CpuAccessibleBuffer::from_iter(
             device.clone(),
             BufferUsage::all(),
             triangle_verts().into_iter(),
         )
         .unwrap()
+    };
+    let vertex_array = {
+        let vbo = DeviceLocalBuffer::<[Vertex]>::array(
+            device.clone(),
+            3,
+            BufferUsage::all(),
+            vec![q.graphics_queue.family()],
+        )
+        .unwrap();
+        let cb = AutoCommandBufferBuilder::new(
+            device.clone(),
+            q.graphics_queue.family(),
+        )
+        .unwrap()
+        .copy_buffer(staging_vb.clone(), vbo.clone())
+        .unwrap()
+        .build()
+        .unwrap();
+
+        cb.execute(q.graphics_queue.clone())
+            .unwrap()
+            .then_signal_fence_and_flush()
+            .unwrap()
+            .wait(None)
+            .unwrap();
+        vbo
     };
     {
         let Platform {
@@ -94,7 +120,7 @@ fn main() {
 
                 world.update(delta, game::InputSources::from_event_pump(&ep));
             }
-            r.draw_frame(window, &world, &vertex_array);
+            r.draw_frame(window, &world, vertex_array.clone());
         }
     }
 }
