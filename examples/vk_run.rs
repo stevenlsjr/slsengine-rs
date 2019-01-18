@@ -48,15 +48,12 @@ fn main() {
         queues: ref q,
         ..
     } = r;
-    let _dbg_callback = DebugCallback::errors_and_warnings(
-        instance,
-        |msg| {
-            eprintln!(
-                "vulkan {:?} message, layer {} callback: '{}'",
-                msg.ty, msg.layer_prefix, msg.description
-            );
-        },
-    );
+    let _dbg_callback = DebugCallback::errors_and_warnings(instance, |msg| {
+        eprintln!(
+            "vulkan {:?} message, layer {} callback: '{}'",
+            msg.ty, msg.layer_prefix, msg.description
+        );
+    });
 
     let staging_vb = {
         CpuAccessibleBuffer::from_iter(

@@ -33,6 +33,10 @@ use crate::renderer::mesh::*;
 
 use super::*;
 
+struct Foo {
+    f: FenceSignalFuture<Box<GpuFuture>>
+}
+
 fn rate_physical_device(phys_dev: PhysicalDevice) -> i32 {
     use vulkano::instance::PhysicalDeviceType;
     let mut score = 0;
@@ -320,9 +324,7 @@ impl<'a> Builder<'a> {
             let pipelines =
                 pipelines::RendererPipelines::new(&device, &render_pass)?;
 
-            let previous_frame_end =
-                RefCell::new(Box::new(vulkano::sync::now(device.clone()))
-                    as Box<GpuFuture>);
+            let previous_frame_end = RefCell::new(None);
 
             Ok(VulkanRenderer {
                 camera: RefCell::new(Camera::new(cgmath::PerspectiveFov {
@@ -473,7 +475,7 @@ pub struct VulkanRenderer {
     pub render_pass: Arc<RenderPassAbstract + Send + Sync>,
     /// or future for synchronizing last frame end
     recreate_swapchain: AtomicBool,
-    previous_frame_end: RefCell<Box<GpuFuture>>,
+    previous_frame_end: RefCell<Option<FenceSignalFuture<Box<dyn GpuFuture>>>>,
     /// lock for managing resources replaced during program's progress, such as flagging swapchain recreation
     pub state: RefCell<RenderingState>,
 }
@@ -563,8 +565,11 @@ impl VulkanRenderer {
         use crate::game::*;
         let camera_view = state.main_camera.transform();
         {
-            let mut fut = self.previous_frame_end.borrow_mut();
-            fut.cleanup_finished();
+            let mut prev_frame = self.previous_frame_end.replace(None);
+            if let Some(mut fence_fut) = prev_frame {
+                fence_fut.cleanup_finished();
+                fence_fut.wait(None).unwrap();
+            }
         }
         let mut recreate_swapchain =
             self.recreate_swapchain.load(Ordering::Acquire);
@@ -669,15 +674,9 @@ impl VulkanRenderer {
                     panic!("could not create command buffer: {:?}", e)
                 });
 
-            let prev_frame =
-                self.previous_frame_end.replace(Box::new(vulkano::sync::now(
-                    device.clone(),
-                )) as Box<_>);
-
-            let fut = acquire_future
+            let future: Box<dyn GpuFuture> = Box::new(acquire_future
                 .then_execute(
                     self.queues.graphics_queue.clone(),
-
                     command_buffer,
                 )
                 .unwrap()
@@ -685,35 +684,21 @@ impl VulkanRenderer {
                     self.queues.graphics_queue.clone(),
                     state.swapchain.clone(),
                     image_num,
-                )
-                .then_signal_fence_and_flush().unwrap().wait(None).unwrap();
+                ));
+                
 
-            // let future = prev_frame
-            //     .join(acquire_future)
-            //     .then_execute(
-            //         self.queues.graphics_queue.clone(),
-
-            //         command_buffer,
-            //     )
-            //     .unwrap()
-            //     .then_swapchain_present(
-            //         self.queues.graphics_queue.clone(),
-            //         state.swapchain.clone(),
-            //         image_num,
-            //     )
-            //     .then_signal_fence_and_flush();
-
-            // match future {
-            //     Ok(f) => {
-            //         self.previous_frame_end.replace(Box::new(f) as Box<_>);
-            //     }
-            //     Err(FlushError::OutOfDate) => {
-            //         self.recreate_swapchain.store(true, Ordering::Release);
-            //     }
-            //     Err(e) => {
-            //         error!("vulkan error: {:?}", e);
-            //     }
-            // }
+            match future.then_signal_fence_and_flush() {
+                Ok(f) => {
+                    self.previous_frame_end
+                        .replace(Some(f));
+                }
+                Err(FlushError::OutOfDate) => {
+                    self.recreate_swapchain.store(true, Ordering::Release);
+                }
+                Err(e) => {
+                    error!("vulkan error: {:?}", e);
+                }
+            }
         }
 
         self.recreate_swapchain
