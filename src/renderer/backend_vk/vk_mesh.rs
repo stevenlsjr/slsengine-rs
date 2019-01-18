@@ -7,3 +7,4 @@ pub struct VkMesh {
     vertex_buffer: Arc<DeviceLocalBuffer<[Vertex]>>,
     index_buffer: Arc<DeviceLocalBuffer<[u32]>>,
 }
+

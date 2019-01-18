@@ -107,7 +107,6 @@ fn model_textures_gl(
 
 fn main() {
     use crate::sdl_platform::{platform, Platform};
-    use crate::{renderer::model::*, system::*};
 
     use std::time::*;
     let config = get_or_create_config().unwrap();

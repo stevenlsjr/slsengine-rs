@@ -38,7 +38,6 @@ fn triangle_verts() -> Vec<Vertex> {
 
 fn main() {
     env_logger::init();
-    let (width, height) = (1024, 1024);
 
     let platform = platform().build(&VulkanPlatformHooks).unwrap();
 
@@ -49,15 +48,8 @@ fn main() {
         queues: ref q,
         ..
     } = r;
-    let dbg_callback = DebugCallback::new(
+    let _dbg_callback = DebugCallback::errors_and_warnings(
         instance,
-        MessageTypes {
-            error: true,
-            warning: true,
-            performance_warning: true,
-            information: true,
-            debug: true,
-        },
         |msg| {
             eprintln!(
                 "vulkan {:?} message, layer {} callback: '{}'",

@@ -674,31 +674,46 @@ impl VulkanRenderer {
                     device.clone(),
                 )) as Box<_>);
 
-            let future = prev_frame
-                .join(acquire_future)
+            let fut = acquire_future
                 .then_execute(
                     self.queues.graphics_queue.clone(),
+
                     command_buffer,
                 )
                 .unwrap()
                 .then_swapchain_present(
-                    self.queues.present_queue.clone(),
+                    self.queues.graphics_queue.clone(),
                     state.swapchain.clone(),
                     image_num,
                 )
-                .then_signal_fence_and_flush();
+                .then_signal_fence_and_flush().unwrap().wait(None).unwrap();
 
-            match future {
-                Ok(f) => {
-                    self.previous_frame_end.replace(Box::new(f) as Box<_>);
-                }
-                Err(FlushError::OutOfDate) => {
-                    self.recreate_swapchain.store(true, Ordering::Release);
-                }
-                Err(e) => {
-                    error!("vulkan error: {:?}", e);
-                }
-            }
+            // let future = prev_frame
+            //     .join(acquire_future)
+            //     .then_execute(
+            //         self.queues.graphics_queue.clone(),
+
+            //         command_buffer,
+            //     )
+            //     .unwrap()
+            //     .then_swapchain_present(
+            //         self.queues.graphics_queue.clone(),
+            //         state.swapchain.clone(),
+            //         image_num,
+            //     )
+            //     .then_signal_fence_and_flush();
+
+            // match future {
+            //     Ok(f) => {
+            //         self.previous_frame_end.replace(Box::new(f) as Box<_>);
+            //     }
+            //     Err(FlushError::OutOfDate) => {
+            //         self.recreate_swapchain.store(true, Ordering::Release);
+            //     }
+            //     Err(e) => {
+            //         error!("vulkan error: {:?}", e);
+            //     }
+            // }
         }
 
         self.recreate_swapchain
