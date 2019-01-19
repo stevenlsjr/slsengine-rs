@@ -11,13 +11,12 @@ use vulkano::{
 
 pub struct VkMesh {
     mesh: Mesh,
-    vertex_buffer: Arc<DeviceLocalBuffer<[Vertex]>>,
-    index_buffer: Arc<DeviceLocalBuffer<[u32]>>,
-    device: Arc<Device>,
+    pub vertex_buffer: Arc<DeviceLocalBuffer<[Vertex]>>,
+    pub index_buffer: Arc<DeviceLocalBuffer<[u32]>>,
 }
 
 impl VkMesh {
-    fn new(renderer: &VulkanRenderer, mesh: Mesh) -> Result<VkMesh, f::Error> {
+    pub fn new(renderer: &VulkanRenderer, mesh: Mesh) -> Result<VkMesh, f::Error> {
         let device = renderer.device.clone();
         let staging_queue = renderer.queues.graphics_queue.clone();
         let staging_vbo = CpuAccessibleBuffer::from_iter(
@@ -37,14 +36,14 @@ impl VkMesh {
         let vertices = DeviceLocalBuffer::<[Vertex]>::array(
             device.clone(),
             mesh.vertices.len(),
-            BufferUsage::vertex_buffer(),
+            BufferUsage::all(),
             Some(staging_queue.family()),
         )
         .map_err(&f::Error::from)?;
         let indices = DeviceLocalBuffer::<[u32]>::array(
             device.clone(),
             mesh.indices.len(),
-            BufferUsage::index_buffer(),
+            BufferUsage::all(),
             Some(staging_queue.family()),
         )
         .map_err(&f::Error::from)?;
@@ -62,7 +61,6 @@ impl VkMesh {
             vertex_buffer: vertices,
             index_buffer: indices,
             mesh,
-            device,
         })
     }
 }

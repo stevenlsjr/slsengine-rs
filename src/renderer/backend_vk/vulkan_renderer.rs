@@ -545,22 +545,11 @@ impl VulkanRenderer {
         Ok(())
     }
 
-    pub fn draw_frame<T>(
-        &self,
-        window: &Window,
-        state: &EntityWorld<Self>,
-        vertex_buffer: Arc<T>,
-    ) where
-        T: TypedBufferAccess<Content = [Vertex]> + Send + Sync + 'static,
-    {
-        let camera_view = state.main_camera.transform();
-        {
-            let mut prev_frame = self.previous_frame_end.replace(None);
-            if let Some(mut fence_fut) = prev_frame {
-                fence_fut.cleanup_finished();
-                fence_fut.wait(None).unwrap();
-            }
-        }
+
+    /// checks whether the swapchain and/or framebuffers must be
+    /// rebuilt. Returns a Result with Ok value representing
+    /// state of the recreate swapchain flag
+    fn check_swapchain_validity(&self, window: &Window) -> Result<bool, failure::Error> {
         let mut recreate_swapchain =
             self.recreate_swapchain.load(Ordering::Acquire);
         let mut rebuild_fbs = false;
@@ -573,17 +562,17 @@ impl VulkanRenderer {
                 recreate_swapchain = false;
                 rebuild_fbs = true;
                 let (width, height) = window.vulkan_drawable_size();
-                println!("rebuilding swapchain {}x{}", width, height);
+                info!("rebuilding swapchain {}x{}", width, height);
                 let (new_swapchain, new_images) = match state
                     .swapchain
                     .recreate_with_dimension([width, height])
-                {
-                    Ok(r) => r,
-                    Err(SwapchainCreationError::UnsupportedDimensions) => {
-                        return;
-                    }
-                    Err(err) => panic!("unexpected error: {:?}", err),
-                };
+                    {
+                        Ok(r) => r,
+                        Err(SwapchainCreationError::UnsupportedDimensions) => {
+                            return Err(failure::Error::from(SwapchainCreationError::UnsupportedDimensions));
+                        }
+                        Err(err) => panic!("unexpected error: {:?}", err),
+                    };
                 state.swapchain = new_swapchain;
                 state.swapchain_images = new_images;
             }
@@ -593,6 +582,29 @@ impl VulkanRenderer {
                 error!("Problem rebuilding framebuffers");
             }
         }
+        Ok(recreate_swapchain)
+    }
+
+    pub fn draw_frame(
+        &self,
+        window: &Window,
+        state: &EntityWorld<Self>,
+        mesh: &VkMesh,
+    )
+    {
+        let mut recreate_swapchain = match self.check_swapchain_validity(window){
+            Ok(t) => t,
+            Err(_) => return
+        };
+        let camera_view = state.main_camera.transform();
+        {
+            let mut prev_frame = self.previous_frame_end.replace(None);
+            if let Some(mut fence_fut) = prev_frame {
+                fence_fut.cleanup_finished();
+                fence_fut.wait(None).unwrap();
+            }
+        }
+
 
         {
             let mut state = self.state.borrow_mut();
@@ -608,6 +620,8 @@ impl VulkanRenderer {
                 .unwrap();
                 self.pipelines.matrix_ubo.next(data.into()).unwrap()
             };
+
+            // TODO: should not create a set every frame
             let desc_set = PersistentDescriptorSet::start(
                 self.pipelines.main_pipeline.clone(),
                 0,
@@ -632,6 +646,8 @@ impl VulkanRenderer {
                 1f32.into(),                 // depth buffer
             ];
 
+            let VkMesh{ref vertex_buffer, ref index_buffer,..} = &mesh;
+
             let command_buffer =
                 AutoCommandBufferBuilder::primary_one_time_submit(
                     self.device.clone(),
@@ -647,10 +663,11 @@ impl VulkanRenderer {
                     .map_err(&failure::Error::from)
                 })
                 .and_then(|cb| {
-                    cb.draw(
+                    cb.draw_indexed(
                         pipeline.clone(),
                         &state.dynamic_state,
-                        vec![vertex_buffer],
+                        vec![vertex_buffer.clone()],
+                        index_buffer.clone(),
                         desc_set.clone(),
                         (),
                     )

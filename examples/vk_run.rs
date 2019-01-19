@@ -2,9 +2,9 @@ use failure;
 use image::{ImageBuffer, Rgba};
 use slsengine::{
     self,
-    game::{self, main_loop::*, world::*, *},
-    renderer::backend_vk::*,
+    game::{self, *, main_loop::*, world::*},
     renderer::*,
+    renderer::backend_vk::*,
     sdl_platform::*,
 };
 use std::sync::Arc;
@@ -55,40 +55,16 @@ fn main() {
         );
     });
 
-    let staging_vb = {
-        CpuAccessibleBuffer::from_iter(
-            device.clone(),
-            BufferUsage::all(),
-            triangle_verts().into_iter(),
-        )
-        .unwrap()
-    };
-    let vertex_array = {
-        let vbo = DeviceLocalBuffer::<[Vertex]>::array(
-            device.clone(),
-            3,
-            BufferUsage::all(),
-            vec![q.graphics_queue.family()],
-        )
-        .unwrap();
-        let cb = AutoCommandBufferBuilder::new(
-            device.clone(),
-            q.graphics_queue.family(),
-        )
-        .unwrap()
-        .copy_buffer(staging_vb.clone(), vbo.clone())
-        .unwrap()
-        .build()
-        .unwrap();
 
-        cb.execute(q.graphics_queue.clone())
-            .unwrap()
-            .then_signal_fence_and_flush()
-            .unwrap()
-            .wait(None)
-            .unwrap();
-        vbo
+    let tri_mesh = {
+        let mesh = Mesh {
+            vertices: triangle_verts(),
+            indices: vec![0, 1, 2],
+        };
+        VkMesh::new(&r, mesh).unwrap()
     };
+
+
     {
         let Platform {
             ref window,
@@ -109,7 +85,7 @@ fn main() {
 
                 world.update(delta, game::InputSources::from_event_pump(&ep));
             }
-            r.draw_frame(window, &world, vertex_array.clone());
+            r.draw_frame(window, &world, &tri_mesh);
         }
     }
 }

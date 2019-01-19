@@ -8,6 +8,7 @@ pub mod vk_mesh;
 
 pub use self::sdl_vulkan::VulkanPlatformHooks;
 pub use self::vulkan_renderer::{VkTexture, VulkanQueues, VulkanRenderer};
+pub use self::vk_mesh::VkMesh;
 
 use super::mesh::Vertex;
 use cgmath;
