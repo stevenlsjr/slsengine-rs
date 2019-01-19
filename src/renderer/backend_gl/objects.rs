@@ -108,7 +108,7 @@ impl SingleBuffer {
 impl Drop for SingleBuffer {
     fn drop(&mut self) {
         unsafe {
-            gl::DeleteBuffers(1, &mut self.0);
+            gl::DeleteBuffers(1, & self.0);
         }
     }
 }
@@ -142,7 +142,7 @@ impl BufferObjects {
             gl::GenBuffers(n_objects as i32, ptr);
         }
 
-        BufferObjects { objects: objects }
+        BufferObjects { objects }
     }
 }
 
@@ -268,7 +268,7 @@ impl Drop for MeshBuffers {
         let mut vao = self.vertex_array.0;
         unsafe {
             gl::DeleteBuffers(2, buff_objs.as_mut_ptr());
-            gl::DeleteVertexArrays(1, &mut vao);
+            gl::DeleteVertexArrays(1, &vao);
         }
     }
 }

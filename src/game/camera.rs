@@ -25,7 +25,7 @@ impl FpsCameraComponent {
         pitch: Rad<f32>,
     ) -> Self {
         use cgmath::{prelude::*, *};
-        let world_up = up.clone();
+        let world_up = up;
         let zero = vec3(0.0, 0.0, 0.0);
         let mut cmp = FpsCameraComponent {
             pos: position,
@@ -37,8 +37,8 @@ impl FpsCameraComponent {
             mouse_sensitivity: 0.1,
             // other fields given default values
             transform: Mat4::identity(),
-            front: zero.clone(),
-            right: zero.clone(),
+            front: zero,
+            right: zero,
         };
 
         cmp.update_vectors();

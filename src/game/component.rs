@@ -1,6 +1,5 @@
 pub use super::built_in_components::*;
-use crate::math::*;
-use crate::renderer::{material::*, traits::*};
+use crate::renderer::traits::*;
 use bitflags::bitflags;
 use slsengine_entityalloc::*;
 use std::{fmt::Debug, ops::Index};

@@ -1,4 +1,6 @@
+use super::*;
 use crate::game::EntityWorld;
+use crate::renderer::mesh::*;
 use crate::renderer::*;
 use cgmath;
 use failure;
@@ -13,28 +15,13 @@ use std::{
     sync::{atomic::*, Arc, RwLock},
 };
 use vulkano::{
-    self,
-    buffer::*,
-    command_buffer::*,
-    descriptor::descriptor_set::*,
-    device::*,
-    format::*,
-    framebuffer::*,
-    image::*,
-    impl_vertex,
-    instance::*,
-    pipeline::{viewport::*, *},
-    single_pass_renderpass,
-    swapchain::*,
-    sync::*,
+    self, buffer::*, command_buffer::*, descriptor::descriptor_set::*,
+    device::*, format::*, framebuffer::*, image::*, instance::*,
+    pipeline::viewport::*, single_pass_renderpass, swapchain::*, sync::*,
 };
 
-use crate::renderer::mesh::*;
-
-use super::*;
-
 struct Foo {
-    f: FenceSignalFuture<Box<GpuFuture>>
+    f: FenceSignalFuture<Box<GpuFuture>>,
 }
 
 fn rate_physical_device(phys_dev: PhysicalDevice) -> i32 {
@@ -119,12 +106,15 @@ impl QueueFamilies {
                 builder.graphics_family = Some(family.id());
             }
 
-            if surface.is_supported(family).expect(&format!(
-                "{:#?} could not check for queue family support!",
-                surface
-            )) {
-                builder.present_family = Some(family.id())
-            }
+            builder.present_family = surface
+                .is_supported(family)
+                .map(|b| if b { Some(family.id()) } else { None })
+                .unwrap_or_else(|e| {
+                    panic!(
+                        "{:#?} could not check for queue family support! {:?}",
+                        surface, e
+                    )
+                });
 
             if let Some(families) = builder.build() {
                 return Ok(families);
@@ -276,10 +266,11 @@ struct Builder<'a> {
     dynamic_state: Option<RwLock<DynamicState>>,
     pipelines: Option<pipelines::RendererPipelines>,
 }
+
 impl<'a> Builder<'a> {
     fn new(window: &'a Window) -> Self {
         Builder {
-            window: window,
+            window,
             instance: None,
             device: None,
             queues: None,
@@ -333,7 +324,7 @@ impl<'a> Builder<'a> {
                     near: 0.1,
                     far: 100.0,
                 })),
-                instance: instance,
+                instance,
                 device,
                 queues: self.queues.unwrap(),
                 surface: self.surface.unwrap(),
@@ -436,7 +427,7 @@ impl<'a> Builder<'a> {
         let device = self.device.as_ref().unwrap();
         let format = swapchain.format();
         let renderpass = Arc::new(
-            single_pass_renderpass! (
+            single_pass_renderpass!(
             device.clone(),
             attachments: {
                 out_color: {
@@ -562,7 +553,6 @@ impl VulkanRenderer {
     ) where
         T: TypedBufferAccess<Content = [Vertex]> + Send + Sync + 'static,
     {
-        use crate::game::*;
         let camera_view = state.main_camera.transform();
         {
             let mut prev_frame = self.previous_frame_end.replace(None);
@@ -674,23 +664,23 @@ impl VulkanRenderer {
                     panic!("could not create command buffer: {:?}", e)
                 });
 
-            let future: Box<dyn GpuFuture> = Box::new(acquire_future
-                .then_execute(
-                    self.queues.graphics_queue.clone(),
-                    command_buffer,
-                )
-                .unwrap()
-                .then_swapchain_present(
-                    self.queues.graphics_queue.clone(),
-                    state.swapchain.clone(),
-                    image_num,
-                ));
-                
+            let future: Box<dyn GpuFuture> = Box::new(
+                acquire_future
+                    .then_execute(
+                        self.queues.graphics_queue.clone(),
+                        command_buffer,
+                    )
+                    .unwrap()
+                    .then_swapchain_present(
+                        self.queues.graphics_queue.clone(),
+                        state.swapchain.clone(),
+                        image_num,
+                    ),
+            );
 
             match future.then_signal_fence_and_flush() {
                 Ok(f) => {
-                    self.previous_frame_end
-                        .replace(Some(f));
+                    self.previous_frame_end.replace(Some(f));
                 }
                 Err(FlushError::OutOfDate) => {
                     self.recreate_swapchain.store(true, Ordering::Release);
@@ -705,6 +695,7 @@ impl VulkanRenderer {
             .store(recreate_swapchain, Ordering::Release);
     }
 }
+
 #[derive(Debug)]
 pub struct VkTexture;
 

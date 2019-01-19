@@ -28,7 +28,7 @@ pub enum AntiAliasing {
 }
 
 impl AntiAliasing {
-    pub fn n_samples(&self) -> usize {
+    pub fn n_samples(self) -> usize {
         match self {
             AntiAliasing::None => 0,
             AntiAliasing::MSAAx2 => 2,

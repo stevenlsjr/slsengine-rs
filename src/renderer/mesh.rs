@@ -45,8 +45,13 @@ impl PartialEq for Vertex {
 }
 
 pub trait RenderMesh {
-    fn vertices(&self) -> &[Vertex];
-    fn indices(&self) -> &[u32];
+    fn mesh(&self) -> &Mesh;
+    fn vertices(&self) -> &[Vertex] {
+        &self.mesh().vertices
+    }
+    fn indices(&self) -> &[u32] {
+        &self.mesh().indices
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -123,11 +128,8 @@ impl Mesh {
 }
 
 impl RenderMesh for Mesh {
-    fn vertices(&self) -> &[Vertex] {
-        &self.vertices
-    }
-    fn indices(&self) -> &[u32] {
-        &self.indices
+    fn mesh(&self) -> &Mesh {
+        self
     }
 }
 

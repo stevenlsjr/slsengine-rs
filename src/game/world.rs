@@ -48,12 +48,11 @@ where
             Rad(0.0),
         );
 
-        let mut world = EntityWorld {
+        EntityWorld {
             main_camera,
             input_state: None,
             components: ComponentManager::new(),
-        };
-        world
+        }
     }
 
     pub fn update(&mut self, delta: Duration, input: InputSources) {

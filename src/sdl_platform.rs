@@ -137,7 +137,7 @@ impl PlatformBuilder {
 
             let render_backend = self.render_backend.clone();
             Ok(Platform {
-                window: window,
+                window,
                 video_subsystem,
                 sdl_context,
                 event_pump: Rc::new(RefCell::new(event_pump)),

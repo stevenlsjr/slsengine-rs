@@ -18,14 +18,15 @@ mod main_fs {
     path: "assets/shaders/vulkan/flat.frag",
 
     }
-
 }
+
 /// Contains primary pipelines used by application
 #[derive(Clone)]
 pub struct RendererPipelines {
     pub main_pipeline: DynGraphicsPipeline,
     pub matrix_ubo: CpuBufferPool<main_vs::ty::MatrixData>,
 }
+
 impl RendererPipelines {
     fn new_internal(
         device: &Arc<Device>,
@@ -39,8 +40,8 @@ impl RendererPipelines {
             None => bail!("could not find render pass subpass"),
         };
 
-        let main_pipeline: Arc<GraphicsPipelineAbstract + Send + Sync> = {
-            let main = GraphicsPipeline::start()
+        let main_pipeline: Arc<GraphicsPipelineAbstract + Send + Sync> =
+            GraphicsPipeline::start()
                 .vertex_input_single_buffer::<Vertex>()
                 .vertex_shader(vs.main_entry_point(), ())
                 .triangle_list()
@@ -50,8 +51,6 @@ impl RendererPipelines {
                 .render_pass(subpass)
                 .build(device.clone())
                 .map(&Arc::new)?;
-            main
-        };
 
         // let main_matrix_set =
         //     PersistentDescriptorSet::start(main_pipeline.clone(), 0)

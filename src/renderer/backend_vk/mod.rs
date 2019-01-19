@@ -10,19 +10,10 @@ pub use self::sdl_vulkan::VulkanPlatformHooks;
 pub use self::vulkan_renderer::{VkTexture, VulkanQueues, VulkanRenderer};
 
 use super::mesh::Vertex;
-use crate::renderer::*;
 use cgmath;
 use failure;
-use log::*;
 use sdl2;
-use sdl2::video::{Window, WindowContext};
-use std::{
-    cell::{Ref, RefCell},
-    ffi::CString,
-    fmt,
-    rc::Rc,
-    sync::{Arc, RwLock},
-};
+use std::sync::{Arc, RwLock};
 use vulkano::{
     self,
     buffer::*,

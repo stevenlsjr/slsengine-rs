@@ -229,7 +229,6 @@ impl GlRenderer {
     }
 
     fn draw_entities(&self, scene: &game::EntityWorld<Self>) {
-        use crate::game::component::*;
         use crate::math::*;
         use std::ptr;
         let program = &self.scene_program;

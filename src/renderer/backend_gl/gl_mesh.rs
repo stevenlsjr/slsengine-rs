@@ -15,10 +15,7 @@ impl GlMesh {
 }
 
 impl RenderMesh for GlMesh {
-    fn vertices(&self) -> &[Vertex] {
-        self.mesh.vertices()
-    }
-    fn indices(&self) -> &[u32] {
-        self.mesh.indices()
+    fn mesh(&self) -> &Mesh {
+        &self.mesh
     }
 }
