@@ -6,7 +6,6 @@ pub mod color;
 pub mod material;
 pub mod mesh;
 pub mod model;
-pub mod resources;
 pub mod traits;
 
 pub use self::color::{color4f, ColorRGBA};

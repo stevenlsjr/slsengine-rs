@@ -263,7 +263,11 @@ impl GlRenderer {
             .iter_live()
             .flat_map(|entity| {
                 let mask = scene.components.masks.get(entity);
-                let mesh = scene.components.meshes.get(entity);
+                let mesh = scene
+                    .components
+                    .meshes
+                    .get(entity)
+                    .and_then(|c| scene.resources.meshes.get(&c.mesh));
                 let transform = scene.components.transforms.get(entity);
                 match (mask, mesh, transform) {
                     (Some(a), Some(b), Some(c)) => Some((entity, a, b, c)),
@@ -273,12 +277,7 @@ impl GlRenderer {
             .collect();
 
         for (entity, _mask, c_mesh, transform) in entities {
-            let material = scene
-                .components
-                .materials
-                .get(entity)
-                .map(|c| &c.material)
-                .unwrap_or(&self.materials.default_material);
+            let material = self.materials.default_material.clone();
             self.materials
                 .base_material_ubo
                 .set_material(material.borrow())
@@ -289,7 +288,8 @@ impl GlRenderer {
             let GlMesh {
                 ref mesh,
                 ref buffers,
-            } = c_mesh.mesh.borrow();
+            } = c_mesh;
+
             self.scene_program.bind_material_textures(material.borrow());
 
             let model_matrix = Mat4::from(transform.transform);

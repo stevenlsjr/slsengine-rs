@@ -316,11 +316,15 @@ impl<'a> Builder<'a> {
                 pipelines::RendererPipelines::new(&device, &render_pass)?;
 
             let previous_frame_end = RefCell::new(None);
+            let aspect = {
+                let (width, height) = window.size();
+                (width as f32) / (height as f32)
+            };
 
             Ok(VulkanRenderer {
                 camera: RefCell::new(Camera::new(cgmath::PerspectiveFov {
                     fovy: cgmath::Deg(40.0).into(),
-                    aspect: 1.0,
+                    aspect: aspect,
                     near: 0.1,
                     far: 100.0,
                 })),
@@ -504,6 +508,11 @@ impl VulkanRenderer {
                 dimensions: [dimensions[0] as f32, dimensions[1] as f32],
                 depth_range: 0.0..1.0,
             };
+            {
+                let mut perspective = self.camera().perspective();
+                perspective.aspect = dimensions[0] as f32 / dimensions[1] as f32;
+                self.camera.replace(Camera::new(perspective));
+            }
 
             let depth_buffer = AttachmentImage::transient(
                 self.device.clone(),
@@ -545,11 +554,13 @@ impl VulkanRenderer {
         Ok(())
     }
 
-
     /// checks whether the swapchain and/or framebuffers must be
     /// rebuilt. Returns a Result with Ok value representing
     /// state of the recreate swapchain flag
-    fn check_swapchain_validity(&self, window: &Window) -> Result<bool, failure::Error> {
+    fn check_swapchain_validity(
+        &self,
+        window: &Window,
+    ) -> Result<bool, failure::Error> {
         let mut recreate_swapchain =
             self.recreate_swapchain.load(Ordering::Acquire);
         let mut rebuild_fbs = false;
@@ -566,13 +577,15 @@ impl VulkanRenderer {
                 let (new_swapchain, new_images) = match state
                     .swapchain
                     .recreate_with_dimension([width, height])
-                    {
-                        Ok(r) => r,
-                        Err(SwapchainCreationError::UnsupportedDimensions) => {
-                            return Err(failure::Error::from(SwapchainCreationError::UnsupportedDimensions));
-                        }
-                        Err(err) => panic!("unexpected error: {:?}", err),
-                    };
+                {
+                    Ok(r) => r,
+                    Err(SwapchainCreationError::UnsupportedDimensions) => {
+                        return Err(failure::Error::from(
+                            SwapchainCreationError::UnsupportedDimensions,
+                        ));
+                    }
+                    Err(err) => panic!("unexpected error: {:?}", err),
+                };
                 state.swapchain = new_swapchain;
                 state.swapchain_images = new_images;
             }
@@ -590,11 +603,11 @@ impl VulkanRenderer {
         window: &Window,
         state: &EntityWorld<Self>,
         mesh: &VkMesh,
-    )
-    {
-        let mut recreate_swapchain = match self.check_swapchain_validity(window){
+    ) {
+        let mut recreate_swapchain = match self.check_swapchain_validity(window)
+        {
             Ok(t) => t,
-            Err(_) => return
+            Err(_) => return,
         };
         let camera_view = state.main_camera.transform();
         {
@@ -604,7 +617,6 @@ impl VulkanRenderer {
                 fence_fut.wait(None).unwrap();
             }
         }
-
 
         {
             let mut state = self.state.borrow_mut();
@@ -646,7 +658,11 @@ impl VulkanRenderer {
                 1f32.into(),                 // depth buffer
             ];
 
-            let VkMesh{ref vertex_buffer, ref index_buffer,..} = &mesh;
+            let VkMesh {
+                ref vertex_buffer,
+                ref index_buffer,
+                ..
+            } = &mesh;
 
             let command_buffer =
                 AutoCommandBufferBuilder::primary_one_time_submit(
@@ -713,12 +729,12 @@ impl VulkanRenderer {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct VkTexture;
 
 impl Renderer for VulkanRenderer {
-    type Texture = Arc<VkTexture>;
-    type Mesh = Mesh;
+    type Texture = VkTexture;
+    type Mesh = VkMesh;
     fn camera(&self) -> Ref<Camera> {
         self.camera.borrow()
     }

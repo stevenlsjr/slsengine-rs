@@ -1,4 +1,4 @@
-use super::{camera::*, component::*};
+use super::{camera::*, component::*, resource::ResourceManager};
 use crate::math::*;
 use crate::renderer::*;
 use cgmath::*;
@@ -32,7 +32,8 @@ where
 {
     pub input_state: Option<InputState>,
     pub main_camera: FpsCameraComponent,
-    pub components: ComponentManager<R>,
+    pub components: ComponentManager,
+    pub resources: ResourceManager<R>,
 }
 
 impl<R> EntityWorld<R>
@@ -52,6 +53,7 @@ where
             main_camera,
             input_state: None,
             components: ComponentManager::new(),
+            resources: ResourceManager::new(),
         }
     }
 

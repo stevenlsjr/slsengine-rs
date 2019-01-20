@@ -33,6 +33,7 @@ impl Camera {
         }
     }
 
+
     pub fn perspective(&self) -> PerspectiveFov<f32> {
         self.perspective
     }

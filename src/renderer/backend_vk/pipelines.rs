@@ -48,6 +48,8 @@ impl RendererPipelines {
                 .viewports_dynamic_scissors_irrelevant(1)
                 .fragment_shader(fs.main_entry_point(), ())
                 .depth_stencil_simple_depth()
+                .front_face_counter_clockwise()
+                .cull_mode_front_and_back()
                 .render_pass(subpass)
                 .build(device.clone())
                 .map(&Arc::new)?;

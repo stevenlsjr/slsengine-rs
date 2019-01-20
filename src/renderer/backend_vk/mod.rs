@@ -7,8 +7,8 @@ pub mod vulkan_renderer;
 pub mod vk_mesh;
 
 pub use self::sdl_vulkan::VulkanPlatformHooks;
-pub use self::vulkan_renderer::{VkTexture, VulkanQueues, VulkanRenderer};
 pub use self::vk_mesh::VkMesh;
+pub use self::vulkan_renderer::{VkTexture, VulkanQueues, VulkanRenderer};
 
 use super::mesh::Vertex;
 use cgmath;
@@ -33,7 +33,7 @@ use vulkano::{
 };
 
 #[allow(clippy::ref_in_deref)]
-vulkano::impl_vertex!(Vertex, position);
+vulkano::impl_vertex!(Vertex, position, normal);
 pub type VkResult<T> = Result<T, VkContextError>;
 
 /// Type that vulkano objects use for tracking window for Surface<T> and

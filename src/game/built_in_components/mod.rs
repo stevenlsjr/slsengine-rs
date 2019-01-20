@@ -1,4 +1,5 @@
 use super::component::*;
+use super::resource::{MeshHandle, ResourceManager, TextureHandle};
 use crate::math::*;
 use crate::renderer::{material::Material, mesh::RenderMesh};
 use cgmath::*;
@@ -28,34 +29,20 @@ impl Default for TransformComponent {
     }
 }
 
-#[derive(Clone)]
-pub struct MaterialComponent<Tex> {
-    pub material: Material<Tex>,
-}
-impl<T> fmt::Debug for MaterialComponent<T> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "MaterialComponent {{material: {:?}}}", self.material)
-    }
+#[derive(Clone, Debug)]
+pub struct MaterialComponent {
+    pub material: Material<TextureHandle>,
 }
 
-impl<Tex> Component for MaterialComponent<Tex> {
+impl Component for MaterialComponent {
     const MASK: ComponentMask = ComponentMask::MATERIAL;
 }
 
-#[derive(Debug)]
-pub struct MeshComponent<M>
-where
-    M: RenderMesh + Debug,
-{
-    pub mesh: Arc<M>,
+#[derive(Debug, Clone)]
+pub struct MeshComponent {
+    pub mesh: MeshHandle,
 }
-impl<M> Clone for MeshComponent<M>
-where
-    M: RenderMesh + Debug,
-{
-    fn clone(&self) -> Self {
-        MeshComponent {
-            mesh: self.mesh.clone(),
-        }
-    }
+
+impl Component for MeshComponent {
+    const MASK: ComponentMask = ComponentMask::MESH;
 }

@@ -9,6 +9,7 @@ use vulkano::{
     sync::GpuFuture,
 };
 
+#[derive(Debug)]
 pub struct VkMesh {
     mesh: Mesh,
     pub vertex_buffer: Arc<DeviceLocalBuffer<[Vertex]>>,
@@ -16,7 +17,10 @@ pub struct VkMesh {
 }
 
 impl VkMesh {
-    pub fn new(renderer: &VulkanRenderer, mesh: Mesh) -> Result<VkMesh, f::Error> {
+    pub fn new(
+        renderer: &VulkanRenderer,
+        mesh: Mesh,
+    ) -> Result<VkMesh, f::Error> {
         let device = renderer.device.clone();
         let staging_queue = renderer.queues.graphics_queue.clone();
         let staging_vbo = CpuAccessibleBuffer::from_iter(

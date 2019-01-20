@@ -108,7 +108,7 @@ impl SingleBuffer {
 impl Drop for SingleBuffer {
     fn drop(&mut self) {
         unsafe {
-            gl::DeleteBuffers(1, & self.0);
+            gl::DeleteBuffers(1, &self.0);
         }
     }
 }

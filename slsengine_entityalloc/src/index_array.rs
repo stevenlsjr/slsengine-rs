@@ -6,22 +6,20 @@ use std::{
 
 #[derive(Clone, Debug)]
 pub struct IndexArray<T>
-where
-    T: Clone + fmt::Debug,
+
 {
     array: Vec<Option<T>>,
 }
 
 impl<T> IndexArray<T>
-where
-    T: Clone + fmt::Debug,
+
 {
     pub fn new() -> Self {
         IndexArray::with_capacity(256)
     }
     pub fn with_capacity(capacity: usize) -> Self {
         IndexArray {
-            array: vec![None; capacity],
+            array: (0..capacity).map(|_| None).collect(),
         }
     }
     pub fn reserve(&mut self, size: usize) {
@@ -39,13 +37,12 @@ where
     }
 
     pub fn remove(&mut self, index: GenerationalIndex) -> Option<T> {
+        use std::mem::replace;
         let i = index.index();
         if self.array.len() <= i {
             None
         } else {
-            let rem = self.array[i].clone();
-            self.array[i] = None;
-            rem
+            replace(&mut self.array[i], None)
         }
     }
 
@@ -62,8 +59,7 @@ where
 }
 
 impl<T> Index<GenerationalIndex> for IndexArray<T>
-where
-    T: Clone + fmt::Debug,
+
 {
     type Output = Option<T>;
     /// Returns Option<&T> for index. IndexArray does not
@@ -74,8 +70,7 @@ where
     }
 }
 impl<T> IndexMut<GenerationalIndex> for IndexArray<T>
-where
-    T: Clone + fmt::Debug,
+
 {
     /// will
     fn index_mut(&mut self, index: GenerationalIndex) -> &mut Self::Output {
