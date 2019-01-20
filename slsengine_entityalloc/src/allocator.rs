@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Hash)]
 pub struct GenerationalIndex {
     index: usize,
@@ -28,7 +30,7 @@ struct AllocEntry {
 #[derive(Debug, Clone, PartialEq)]
 pub struct GenerationalIndexAllocator {
     entries: Vec<AllocEntry>,
-    free_list: Vec<usize>,
+    free_list: VecDeque<usize>,
 }
 
 impl GenerationalIndexAllocator {
@@ -40,14 +42,16 @@ impl GenerationalIndexAllocator {
             };
             capacity
         ];
+        let mut free_list: VecDeque<_> =  (0usize..capacity).collect();
+        free_list.reserve(capacity * 2);
         GenerationalIndexAllocator {
             entries,
-            free_list: (0usize..capacity).collect(),
+            free_list,
         }
     }
 
     fn try_allocate(&mut self) -> Option<GenerationalIndex> {
-        self.free_list.pop().map(|index| {
+        self.free_list.pop_front().map(|index| {
             let e = &mut self.entries[index];
             e.is_live = true;
             GenerationalIndex {
@@ -93,7 +97,7 @@ impl GenerationalIndexAllocator {
         e.is_live = false;
         e.generation += 1;
 
-        self.free_list.push(index.index());
+        self.free_list.push_back(index.index());
 
         return true;
     }
