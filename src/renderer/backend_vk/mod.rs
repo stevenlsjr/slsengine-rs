@@ -32,8 +32,9 @@ use vulkano::{
     sync::*,
 };
 
-#[allow(clippy::ref_in_deref)]
-vulkano::impl_vertex!(Vertex, position, normal);
+
+
+
 pub type VkResult<T> = Result<T, VkContextError>;
 
 /// Type that vulkano objects use for tracking window for Surface<T> and

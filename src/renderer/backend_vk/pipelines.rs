@@ -1,5 +1,6 @@
 use super::VkContextError;
 use super::*;
+use crate::renderer::Vertex as SlsVertex;
 use cgmath::*;
 use failure::{self, bail};
 use std::sync::Arc;
@@ -20,6 +21,40 @@ mod main_fs {
     ty: "fragment",
     path: "assets/shaders/vulkan/flat.frag",
 
+    }
+}
+
+unsafe impl vertex::Vertex for SlsVertex {
+    fn member(name: &str) -> Option<vertex::VertexMemberInfo> {
+        use self::vertex::{VertexMemberInfo, VertexMemberTy};
+        match name {
+            "v_position" => Some(VertexMemberInfo {
+                offset: offset_of!(SlsVertex, position),
+                ty: VertexMemberTy::F32,
+                array_size: 3
+            }),
+            "v_normal" =>  Some(VertexMemberInfo {
+                offset: offset_of!(SlsVertex, normal),
+                ty: VertexMemberTy::F32,
+                array_size: 3
+            }),
+            "v_uv" =>  Some(VertexMemberInfo {
+                offset: offset_of!(SlsVertex, uv),
+                ty: VertexMemberTy::F32,
+                array_size: 2
+            }),
+            "v_tangent" =>  Some(VertexMemberInfo {
+                offset: offset_of!(SlsVertex, tangent),
+                ty: VertexMemberTy::F32,
+                array_size: 3
+            }),
+            "v_bitangent" =>  Some(VertexMemberInfo {
+                offset: offset_of!(SlsVertex, bitangent),
+                ty: VertexMemberTy::F32,
+                array_size: 3
+            }),
+            _ => None,
+        }
     }
 }
 

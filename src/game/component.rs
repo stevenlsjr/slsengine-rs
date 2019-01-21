@@ -89,7 +89,7 @@ impl ComponentManager {
         self.masks.remove(entity.0);
     }
 
-    pub fn entities<'a>(&'a self) -> impl Iterator<Item=Entity> + 'a {
+    pub fn entities<'a>(&'a self) -> impl Iterator<Item = Entity> + 'a {
         self.entity_alloc.iter_live().map(|i| Entity(i))
     }
 }

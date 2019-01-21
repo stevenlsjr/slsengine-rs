@@ -10,8 +10,7 @@ use slsengine::{
 use std::sync::Arc;
 use vulkano::{
     buffer::*, command_buffer::*, format::*, framebuffer::*, image::*,
-    impl_vertex, instance::debug::*, pipeline::*, single_pass_renderpass,
-    sync::*,
+    instance::debug::*, pipeline::*, single_pass_renderpass, sync::*,
 };
 
 use cgmath::*;
@@ -24,42 +23,42 @@ fn setup_game(
     use slsengine::game::{
         built_in_components::*, component::ComponentMask, resource::MeshHandle,
     };
-    let icosphere = IcoSphere::subdivide(3);
-
-    let vk_mesh = {
-        let mesh = Mesh {
-            vertices: icosphere
-                .shared_vertex_iter()
-                .map(|v| Vertex {
-                    position: v.pos.into(),
-                    normal: v.normal.into(),
-                    ..Vertex::default()
-                })
-                .collect(),
-            indices: icosphere
-                .indexed_polygon_iter()
-                .flat_map(|t| vec![t.x as u32, t.y as u32, t.z as u32])
-                .collect(),
-        };
-        VkMesh::new(renderer, mesh).unwrap()
+    let helmet_mesh = {
+        use gltf::*;
+        use slsengine::renderer::model::*;
+       
+        let model = Model::from_gltf("assets/models/DamagedHelmet.glb").unwrap();
+        VkMesh::new(renderer, model.meshes[0].mesh.clone()).unwrap()
     };
-    let mesh_handle = MeshHandle(0);
-    game.resources.meshes.insert(mesh_handle, vk_mesh);
+    let sphere_mesh =
+        VkMesh::new(renderer, Mesh::from_genmesh(IcoSphere::subdivide(4)))
+            .unwrap();
 
-    let entities: Vec<_> = (0..=4)
+    let mesh_handle_a = MeshHandle(0);
+    let mesh_handle_b = MeshHandle(1);
+    game.resources.meshes.insert(mesh_handle_a, helmet_mesh);
+    game.resources.meshes.insert(mesh_handle_b, sphere_mesh);
+
+    let n = 4;
+    let entities: Vec<_> = (0..=n)
         .map(|i| {
             let e = game.components.alloc_entity();
             game.components.transforms[*e] = {
                 let mut xform = TransformComponent::default();
-                xform.transform.disp = vec3((i as f32) as f32, 0.0, 0.0);
+                let x_pos = (n as f32 / 2.0 - i as f32) * 2.2;
+                xform.transform.disp = vec3(x_pos, 0.0, 0.0);
                 Some(xform)
             };
-            game.components.meshes[*e] = Some(MeshComponent{
-                mesh: mesh_handle
-            });
+            let mesh = if i % 2 == 0 {
+                mesh_handle_a
+            } else {
+                mesh_handle_b
+            };
+            game.components.meshes[*e] = Some(MeshComponent { mesh });
             game.components.calc_mask(e);
-            debug_assert!(game.components.masks[*e].unwrap().contains( 
-                ComponentMask::TRANSFORM | ComponentMask::MESH));
+            debug_assert!(game.components.masks[*e]
+                .unwrap()
+                .contains(ComponentMask::TRANSFORM | ComponentMask::MESH));
             e
         })
         .collect();
