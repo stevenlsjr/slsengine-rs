@@ -1,5 +1,6 @@
 #![feature(duration_float)]
 #![feature(const_fn)]
+#![feature(try_trait)] 
 
 #[macro_use]
 extern crate failure;

@@ -16,16 +16,15 @@ use vulkano::{
 
 use cgmath::*;
 
-
 fn setup_game(
     renderer: &VulkanRenderer,
     game: &mut EntityWorld<VulkanRenderer>,
 ) {
-    use genmesh::{generators::*};
+    use genmesh::generators::*;
     use slsengine::game::{
         built_in_components::*, component::ComponentMask, resource::MeshHandle,
     };
-    let icosphere = IcoSphere::subdivide(2);
+    let icosphere = IcoSphere::subdivide(3);
 
     let vk_mesh = {
         let mesh = Mesh {
@@ -47,7 +46,7 @@ fn setup_game(
     let mesh_handle = MeshHandle(0);
     game.resources.meshes.insert(mesh_handle, vk_mesh);
 
-    let triangles: Vec<_> = (0..4)
+    let entities: Vec<_> = (0..=4)
         .map(|i| {
             let e = game.components.alloc_entity();
             game.components.transforms[*e] = {
@@ -55,26 +54,15 @@ fn setup_game(
                 xform.transform.disp = vec3((i as f32) as f32, 0.0, 0.0);
                 Some(xform)
             };
+            game.components.meshes[*e] = Some(MeshComponent{
+                mesh: mesh_handle
+            });
             game.components.calc_mask(e);
+            debug_assert!(game.components.masks[*e].unwrap().contains( 
+                ComponentMask::TRANSFORM | ComponentMask::MESH));
             e
         })
         .collect();
-}
-
-fn triangle_verts() -> Vec<Vertex> {
-    let vertex1 = Vertex {
-        position: [-0.5, -0.5, 0.0],
-        ..Vertex::default()
-    };
-    let vertex2 = Vertex {
-        position: [0.0, 0.5, 1.0],
-        ..Vertex::default()
-    };
-    let vertex3 = Vertex {
-        position: [0.5, -0.25, 0.0],
-        ..Vertex::default()
-    };
-    vec![vertex1, vertex2, vertex3]
 }
 
 fn main() {
@@ -119,11 +107,7 @@ fn main() {
 
                 world.update(delta, game::InputSources::from_event_pump(&ep));
             }
-            r.draw_frame(
-                window,
-                &world,
-                &world.resources.meshes[&MeshHandle(0)],
-            );
+            r.draw_frame(window, &world);
         }
     }
 }

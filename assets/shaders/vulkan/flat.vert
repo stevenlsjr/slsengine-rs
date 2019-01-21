@@ -16,6 +16,6 @@ layout(location = 0) out vec3 frag_normal;
 void
 main()
 {
-  frag_normal = normal;
+  frag_normal = vec3(m.normal * vec4(normal, 0.0));
   gl_Position = m.projection * m.modelview * vec4(position, 1.0);
 }

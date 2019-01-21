@@ -76,6 +76,7 @@ impl ComponentManager {
         if self.materials.get(*entity).is_some() {
             mask |= ComponentMask::MATERIAL;
         }
+        self.masks.insert(*entity, mask);
     }
 
     pub fn alloc_entity(&mut self) -> Entity {
@@ -86,6 +87,10 @@ impl ComponentManager {
     pub fn dealloc_entity(&mut self, entity: Entity) {
         self.entity_alloc.deallocate(entity.0);
         self.masks.remove(entity.0);
+    }
+
+    pub fn entities<'a>(&'a self) -> impl Iterator<Item=Entity> + 'a {
+        self.entity_alloc.iter_live().map(|i| Entity(i))
     }
 }
 

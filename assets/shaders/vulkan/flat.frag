@@ -8,9 +8,5 @@ void
 main()
 {
   vec3 N = normalize(frag_normal);
-  if (gl_FrontFacing) {
-    out_color = vec4((frag_normal + 0.5) * 0.5, 1.0);
-  } else {
-    out_color = vec4(1.0, 0.0, 1.0, 1.0);
-  }
+  out_color = vec4((frag_normal + 0.5) * 0.5, 1.0);
 }

@@ -1,8 +1,6 @@
 use super::*;
-use crate::game::EntityWorld;
-use crate::renderer::mesh::*;
-use crate::renderer::*;
-use cgmath;
+use crate::{game::{prelude::*, EntityWorld, component::*, built_in_components::*}, math::*, renderer::mesh::*, renderer::*};
+use cgmath::*;
 use failure;
 use log::*;
 use sdl2;
@@ -12,6 +10,7 @@ use std::{
     ffi::CString,
     fmt,
     rc::Rc,
+    ops::Try,
     sync::{atomic::*, Arc, RwLock},
 };
 use vulkano::{
@@ -19,6 +18,8 @@ use vulkano::{
     device::*, format::*, framebuffer::*, image::*, instance::*,
     pipeline::viewport::*, single_pass_renderpass, swapchain::*, sync::*,
 };
+
+use slsengine_entityalloc::IndexArray;
 
 struct Foo {
     f: FenceSignalFuture<Box<GpuFuture>>,
@@ -510,7 +511,8 @@ impl VulkanRenderer {
             };
             {
                 let mut perspective = self.camera().perspective();
-                perspective.aspect = dimensions[0] as f32 / dimensions[1] as f32;
+                perspective.aspect =
+                    dimensions[0] as f32 / dimensions[1] as f32;
                 self.camera.replace(Camera::new(perspective));
             }
 
@@ -598,18 +600,39 @@ impl VulkanRenderer {
         Ok(recreate_swapchain)
     }
 
-    pub fn draw_frame(
+    fn create_transform_descriptorset(
         &self,
-        window: &Window,
-        state: &EntityWorld<Self>,
-        mesh: &VkMesh,
-    ) {
+        world: &EntityWorld<Self>,
+        modelview: Mat4,
+        projection: Mat4,
+    ) -> Result<Arc<impl DescriptorSet + Send + Sync>, failure::Error> {
+        let ubo_subbuffer = {
+            use cgmath::*;
+            let data = pipelines::MatrixUniformData::new(modelview, projection)
+                .unwrap();
+            self.pipelines.matrix_ubo.next(data.into())?
+        };
+
+        if let Ok(mut pool) = self.pipelines.matrix_desc_pool.write() {
+            pool.next()
+                .add_buffer(ubo_subbuffer)
+                .map_err(&failure::Error::from)
+                .and_then(|pds| pds.build().map_err(&failure::Error::from))
+                .map(|pds| Arc::new(pds))
+        } else {
+            panic!("poisoned RwLock")
+        }
+    }
+
+    pub fn draw_frame(&self, window: &Window, world: &EntityWorld<Self>) {
+        use crate::game::resource::MeshHandle;
+
         let mut recreate_swapchain = match self.check_swapchain_validity(window)
         {
             Ok(t) => t,
             Err(_) => return,
         };
-        let camera_view = state.main_camera.transform();
+        let camera_view = world.main_camera.transform();
         {
             let mut prev_frame = self.previous_frame_end.replace(None);
             if let Some(mut fence_fut) = prev_frame {
@@ -621,28 +644,7 @@ impl VulkanRenderer {
         {
             let mut state = self.state.borrow_mut();
             let pipeline = &self.pipelines.main_pipeline;
-            let ubo_subbuffer = {
-                use cgmath::*;
-                let modelview = camera_view
-                    * Matrix4::from_translation(vec3(0.0, 0.0, -5.0));
-                let data = pipelines::MatrixUniformData::new(
-                    modelview,
-                    self.camera().projection,
-                )
-                .unwrap();
-                self.pipelines.matrix_ubo.next(data.into()).unwrap()
-            };
 
-            // TODO: should not create a set every frame
-            let desc_set = PersistentDescriptorSet::start(
-                self.pipelines.main_pipeline.clone(),
-                0,
-            )
-            .add_buffer(ubo_subbuffer)
-            .map_err(&failure::Error::from)
-            .and_then(|pds| pds.build().map_err(&failure::Error::from))
-            .map(|pds| Arc::new(pds))
-            .expect("could not create descriptor set");
             let (image_num, acquire_future) =
                 match acquire_next_image(state.swapchain.clone(), None) {
                     Ok(r) => r,
@@ -658,40 +660,56 @@ impl VulkanRenderer {
                 1f32.into(),                 // depth buffer
             ];
 
+            let system = RenderSystem::collect(world);
+            
             let VkMesh {
                 ref vertex_buffer,
                 ref index_buffer,
                 ..
-            } = &mesh;
+            } = &world.resources.meshes[&MeshHandle(0)];
 
-            let command_buffer =
+            
+            let mut cb_builder: Result<AutoCommandBufferBuilder, failure::Error> =
                 AutoCommandBufferBuilder::primary_one_time_submit(
                     self.device.clone(),
                     self.queues.graphics_queue.family(),
                 )
                 .map_err(&failure::Error::from)
-                .and_then(|cb| {
-                    cb.begin_render_pass(
-                        state.framebuffers[image_num].clone(),
-                        false,
-                        clear_values,
+                .and_then(|cb| cb.begin_render_pass(
+                     state.framebuffers[image_num].clone(),
+                     false,
+                     clear_values
+                ).map_err(&failure::Error::from));
+
+            for &(entity, mask) in system.entities.iter() {
+                let model: Mat4 = system.transforms[entity.0].clone().unwrap().transform.into();
+                let modelview = camera_view * model;
+                let mesh_handle = system.meshes.get(*entity).map(|c| c.mesh).unwrap();
+                let VkMesh{ref index_buffer, ref vertex_buffer, ..} = world.resources.fetch(mesh_handle).unwrap();
+
+                let desc_set = self
+                    .create_transform_descriptorset(
+                        world,
+                        modelview,
+                        self.camera().projection,
                     )
-                    .map_err(&failure::Error::from)
-                })
-                .and_then(|cb| {
+                    .expect("could not create descriptor set");
+                cb_builder = cb_builder.and_then(|cb|
                     cb.draw_indexed(
-                        pipeline.clone(),
-                        &state.dynamic_state,
-                        vec![vertex_buffer.clone()],
-                        index_buffer.clone(),
-                        desc_set.clone(),
-                        (),
-                    )
-                    .map_err(&failure::Error::from)
-                })
-                .and_then(|cb| {
+                            pipeline.clone(),
+                            &state.dynamic_state,
+                            vec![vertex_buffer.clone()],
+                            index_buffer.clone(),
+                            desc_set.clone(),
+                            (),
+                        )
+                        .map_err(&failure::Error::from));
+            }
+                
+            cb_builder = cb_builder.and_then(|cb| {
                     cb.end_render_pass().map_err(&failure::Error::from)
-                })
+                });
+            let command_buffer = cb_builder
                 .and_then(|cb| cb.build().map_err(&failure::Error::from))
                 .unwrap_or_else(|e| {
                     panic!("could not create command buffer: {:?}", e)
@@ -740,7 +758,35 @@ impl Renderer for VulkanRenderer {
     }
 
     fn on_resize(&self, _size: (u32, u32)) {
-        let mut state = self.state.borrow_mut();
         self.recreate_swapchain.store(true, Ordering::Relaxed);
+    }
+}
+
+
+struct RenderSystem<'a> {
+    entities: Vec<(Entity, ComponentMask)>,
+    meshes: &'a IndexArray<MeshComponent>,
+    transforms: &'a IndexArray<TransformComponent>,
+}
+
+
+impl<'a> RenderSystem<'a> {
+
+    fn collect(world: &'a EntityWorld<VulkanRenderer>) -> Self {
+        let required_mask: ComponentMask = ComponentMask::MESH | ComponentMask::TRANSFORM;
+
+        RenderSystem {
+            entities: world.components.entities().
+                flat_map(|e| {
+                    let mask = world.components.masks[*e].unwrap_or(ComponentMask::NONE);
+                    if mask.contains(required_mask){
+                        Some((e, mask))
+                    }  else {
+                        None
+                    }
+                }).collect(),
+            meshes: &world.components.meshes,
+            transforms: &world.components.transforms
+        }
     }
 }

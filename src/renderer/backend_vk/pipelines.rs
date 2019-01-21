@@ -3,7 +3,10 @@ use super::*;
 use cgmath::*;
 use failure::{self, bail};
 use std::sync::Arc;
-use vulkano::{device::*, framebuffer::*, pipeline::*};
+use vulkano::{
+    descriptor::descriptor_set::FixedSizeDescriptorSetsPool, device::*,
+    framebuffer::*, pipeline::*,
+};
 
 pub mod main_vs {
     vulkano_shaders::shader! {
@@ -21,10 +24,11 @@ mod main_fs {
 }
 
 /// Contains primary pipelines used by application
-#[derive(Clone)]
 pub struct RendererPipelines {
     pub main_pipeline: DynGraphicsPipeline,
     pub matrix_ubo: CpuBufferPool<main_vs::ty::MatrixData>,
+    pub matrix_desc_pool:
+        RwLock<FixedSizeDescriptorSetsPool<DynGraphicsPipeline>>,
 }
 
 impl RendererPipelines {
@@ -44,26 +48,26 @@ impl RendererPipelines {
             GraphicsPipeline::start()
                 .vertex_input_single_buffer::<Vertex>()
                 .vertex_shader(vs.main_entry_point(), ())
-                .line_list()
+                .triangle_list()
                 .viewports_dynamic_scissors_irrelevant(1)
                 .fragment_shader(fs.main_entry_point(), ())
                 .depth_stencil_simple_depth()
                 .front_face_clockwise()
                 .cull_mode_back()
+                // .polygon_mode_line()
                 .render_pass(subpass)
                 .build(device.clone())
                 .map(&Arc::new)?;
 
-        // let main_matrix_set =
-        //     PersistentDescriptorSet::start(main_pipeline.clone(), 0)
-        //         .add_buffer(matrix_uniform_buffer)
-        //         .unwrap()
-        //         .build()
-        //         .map_err(failure::Error::from);
+        let matrix_desc_pool = RwLock::new(FixedSizeDescriptorSetsPool::new(
+            main_pipeline.clone(),
+            0,
+        ));
 
         Ok(RendererPipelines {
             main_pipeline,
             matrix_ubo,
+            matrix_desc_pool,
         })
     }
     pub fn new(
