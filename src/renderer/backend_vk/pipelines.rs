@@ -31,27 +31,27 @@ unsafe impl vertex::Vertex for SlsVertex {
             "v_position" => Some(VertexMemberInfo {
                 offset: offset_of!(SlsVertex, position),
                 ty: VertexMemberTy::F32,
-                array_size: 3
+                array_size: 3,
             }),
-            "v_normal" =>  Some(VertexMemberInfo {
+            "v_normal" => Some(VertexMemberInfo {
                 offset: offset_of!(SlsVertex, normal),
                 ty: VertexMemberTy::F32,
-                array_size: 3
+                array_size: 3,
             }),
-            "v_uv" =>  Some(VertexMemberInfo {
+            "v_uv" => Some(VertexMemberInfo {
                 offset: offset_of!(SlsVertex, uv),
                 ty: VertexMemberTy::F32,
-                array_size: 2
+                array_size: 2,
             }),
-            "v_tangent" =>  Some(VertexMemberInfo {
+            "v_tangent" => Some(VertexMemberInfo {
                 offset: offset_of!(SlsVertex, tangent),
                 ty: VertexMemberTy::F32,
-                array_size: 3
+                array_size: 3,
             }),
-            "v_bitangent" =>  Some(VertexMemberInfo {
+            "v_bitangent" => Some(VertexMemberInfo {
                 offset: offset_of!(SlsVertex, bitangent),
                 ty: VertexMemberTy::F32,
-                array_size: 3
+                array_size: 3,
             }),
             _ => None,
         }

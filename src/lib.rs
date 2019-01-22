@@ -10,8 +10,6 @@ extern crate failure;
 extern crate memoffset;
 #[macro_use]
 extern crate serde_derive;
-#[cfg(feature = "with-vulkan")]
-extern crate vulkano;
 
 pub mod config;
 pub mod game;

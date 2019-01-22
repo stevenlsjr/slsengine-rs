@@ -26,9 +26,18 @@ fn setup_game(
     let helmet_mesh = {
         use gltf::*;
         use slsengine::renderer::model::*;
-       
-        let model = Model::from_gltf("assets/models/DamagedHelmet.glb").unwrap();
-        VkMesh::new(renderer, model.meshes[0].mesh.clone()).unwrap()
+
+        let model =
+            Model::from_gltf("assets/models/Corset.glb").unwrap();
+        let mut mesh = model.meshes[0].mesh.clone();
+        let scale = Matrix4::from_scale(10.0);
+
+        for mut v in &mut mesh.vertices {
+            let pos =  Vector3::from(v.position).extend(1.0);
+            v.position = (scale * pos).truncate().into();
+        }
+
+        VkMesh::new(renderer, mesh).unwrap()
     };
     let sphere_mesh =
         VkMesh::new(renderer, Mesh::from_genmesh(IcoSphere::subdivide(4)))

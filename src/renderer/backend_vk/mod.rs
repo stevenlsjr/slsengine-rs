@@ -32,9 +32,6 @@ use vulkano::{
     sync::*,
 };
 
-
-
-
 pub type VkResult<T> = Result<T, VkContextError>;
 
 /// Type that vulkano objects use for tracking window for Surface<T> and
