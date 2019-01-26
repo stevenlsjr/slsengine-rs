@@ -83,7 +83,6 @@ impl Mesh {
 
     /// takes a mutable mesh, and sets the vertex tangents and bitangents
     pub fn calculate_tangents(&mut self) {
-        use std::collections::HashMap;
         let mut tangents = vec![Vec::new(); self.vertices.len()];
         let mut bitangents = vec![Vec::new(); self.vertices.len()];
 
@@ -124,6 +123,29 @@ impl Mesh {
             let b_sum: Vector3<_> = b.iter().sum();
             v.bitangent = (b_sum / b.len() as f32).into();
         }
+    }
+
+    /// Creates a mesh from a genmesh geometry.
+    pub fn from_genmesh<G>(generator: G) -> Self
+    where
+        G: SharedVertex<genmesh::Vertex> + IndexedPolygon<Triangle<usize>>,
+    {
+        let mut m = Mesh {
+            vertices: generator
+                .shared_vertex_iter()
+                .map(|v| Vertex {
+                    position: v.pos.into(),
+                    normal: v.normal.into(),
+                    ..Vertex::default()
+                })
+                .collect(),
+            indices: generator
+                .indexed_polygon_iter()
+                .flat_map(|t| vec![t.x as u32, t.y as u32, t.z as u32])
+                .collect(),
+        };
+        m.calculate_tangents();
+        m
     }
 }
 

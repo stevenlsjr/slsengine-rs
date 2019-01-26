@@ -690,7 +690,6 @@ impl VulkanRenderer {
             });
 
             
-
             cb_builder = cb_builder.and_then(|cb| {
                 cb.end_render_pass().map_err(&failure::Error::from)
             });

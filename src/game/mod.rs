@@ -7,6 +7,7 @@ pub mod resource;
 pub mod system;
 pub mod timer;
 pub mod world;
+<<<<<<< HEAD
 
 pub use self::{camera::*, timer::*, world::*};
 pub mod prelude {
@@ -14,6 +15,13 @@ pub mod prelude {
     pub use super::component_stores::{GetComponent, TryGetComponent, Storage};
     pub use super::resource::{ResourceFetcher, ResourceResult};
     pub use super::system::EntitySystem;
+=======
+pub use self::{camera::*, timer::*, world::*};
+
+pub mod prelude {
+    pub use super::component::{Component, GetComponents};
+    pub use super::resource::{ResourceFetcher, ResourceResult};
+>>>>>>> origin/feature_entity_index
 }
 
 pub use self::prelude::*;

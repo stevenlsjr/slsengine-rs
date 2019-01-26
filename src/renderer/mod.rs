@@ -1,5 +1,6 @@
+#[cfg(feature = "backend-gl")]
 pub mod backend_gl;
-#[cfg(feature = "with-vulkan")]
+#[cfg(feature = "backend-vulkan")]
 pub mod backend_vk;
 pub mod camera;
 pub mod color;
