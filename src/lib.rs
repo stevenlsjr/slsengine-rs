@@ -1,6 +1,6 @@
 #![feature(duration_float)]
 #![feature(const_fn)]
-#![feature(try_trait)] 
+#![feature(try_trait)]
 
 #[macro_use]
 extern crate failure;
@@ -15,9 +15,9 @@ extern crate vulkano;
 
 pub mod config;
 pub mod game;
+pub mod platform_system;
 pub mod renderer;
 pub mod sdl_platform;
-pub mod system;
 use std::error;
 
 // vulkan feature

@@ -41,7 +41,7 @@ pub struct GlRenderer {
 }
 
 fn create_scene_shaders() -> Result<(PbrProgram, PbrProgram), ShaderError> {
-    use crate::system::asset_path;
+    use crate::platform_system::asset_path;
     let scene_program = program_from_sources(
         asset_path().join(Path::new("./assets/shaders/brdf.vert")),
         asset_path().join(Path::new("./assets/shaders/brdf.frag")),
@@ -257,57 +257,7 @@ impl GlRenderer {
             })
             .unwrap_or(());
 
-        let entities: Vec<_> = scene
-            .components
-            .entity_alloc
-            .iter_live()
-            .flat_map(|entity| {
-                let mask = scene.components.masks.get(entity);
-                let mesh = scene
-                    .components
-                    .meshes
-                    .get(entity)
-                    .and_then(|c| scene.resources.meshes.get(&c.mesh));
-                let transform = scene.components.transforms.get(entity);
-                match (mask, mesh, transform) {
-                    (Some(a), Some(b), Some(c)) => Some((entity, a, b, c)),
-                    _ => None,
-                }
-            })
-            .collect();
-
-        for (entity, _mask, c_mesh, transform) in entities {
-            let material = self.materials.default_material.clone();
-            self.materials
-                .base_material_ubo
-                .set_material(material.borrow())
-                .unwrap_or_else(|e| {
-                    error!("error {:?}", e);
-                });
-
-            let GlMesh {
-                ref mesh,
-                ref buffers,
-            } = c_mesh;
-
-            self.scene_program.bind_material_textures(material.borrow());
-
-            let model_matrix = Mat4::from(transform.transform);
-
-            let modelview = cam_view * model_matrix;
-            let normal_matrix = modelview.invert().unwrap().transpose();
-            program.bind_uniform(uniforms.modelview, &modelview);
-            program.bind_uniform(uniforms.normal_matrix, &normal_matrix);
-            unsafe {
-                gl::BindVertexArray(buffers.vertex_array.id());
-                gl::DrawElements(
-                    gl::TRIANGLES,
-                    mesh.indices.len() as i32,
-                    gl::UNSIGNED_INT,
-                    ptr::null(),
-                );
-            }
-        }
+        
     }
 }
 

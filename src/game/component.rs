@@ -1,16 +1,19 @@
 pub use super::built_in_components::*;
+use super::component_stores::{Storage, AnyComponentStore, TryGetComponent, GetComponent};
 use crate::renderer::traits::*;
+use anymap::{Map, any::Any};
 use bitflags::bitflags;
 use slsengine_entityalloc::*;
-use std::{
-    fmt::Debug,
-    ops::{Deref, Index},
-};
+use std::{fmt::Debug, ops::Deref, sync::{Arc, RwLock}};
+
 
 pub trait Component: Debug {
     /// The component mask bitflag identifying the given component
     const MASK: ComponentMask;
 }
+
+pub type ComponentList<C> = IndexArray<C>;
+
 
 bitflags! {
     pub struct ComponentMask: u32 {
@@ -47,9 +50,10 @@ pub struct ResourceId(pub usize);
 pub struct ComponentManager {
     pub entity_alloc: GenerationalIndexAllocator,
     pub masks: IndexArray<ComponentMask>,
-    pub transforms: IndexArray<TransformComponent>,
-    pub meshes: IndexArray<MeshComponent>,
-    pub materials: IndexArray<MaterialComponent>,
+    pub transforms: Storage<TransformComponent>,
+    pub meshes: Storage<MeshComponent>,
+    pub materials: Storage<MaterialComponent>,
+    custom_stores: AnyComponentStore,
 }
 
 impl ComponentManager {
@@ -58,22 +62,23 @@ impl ComponentManager {
         ComponentManager {
             entity_alloc: GenerationalIndexAllocator::with_capacity(capacity),
             masks: IndexArray::with_capacity(capacity),
-            transforms: IndexArray::with_capacity(capacity),
-            meshes: IndexArray::with_capacity(capacity),
-            materials: IndexArray::with_capacity(capacity),
+            transforms: Storage::with_capacity(capacity),
+            meshes: Storage::with_capacity(capacity),
+            materials: Storage::with_capacity(capacity),
+            custom_stores: AnyComponentStore::new()
         }
     }
 
     /// generates bitmask for entity by components
     pub fn calc_mask(&mut self, entity: Entity) {
         let mut mask = ComponentMask::NONE;
-        if self.transforms.get(*entity).is_some() {
+        if self.transforms.read().unwrap().get(*entity).is_some() {
             mask |= ComponentMask::TRANSFORM;
         }
-        if self.meshes.get(*entity).is_some() {
+        if self.meshes.read().unwrap().get(*entity).is_some() {
             mask |= ComponentMask::MESH;
         }
-        if self.materials.get(*entity).is_some() {
+        if self.materials.read().unwrap().get(*entity).is_some() {
             mask |= ComponentMask::MATERIAL;
         }
         self.masks.insert(*entity, mask);
@@ -89,23 +94,17 @@ impl ComponentManager {
         self.masks.remove(entity.0);
     }
 
-    pub fn entities<'a>(&'a self) -> impl Iterator<Item=Entity> + 'a {
+    pub fn entities<'a>(&'a self) -> impl Iterator<Item = Entity> + 'a {
         self.entity_alloc.iter_live().map(|i| Entity(i))
     }
 }
 
-//-- Get Component trait & impl
-
-pub trait GetComponents<C: Component> {
-    fn get_components(&self) -> &IndexArray<C>;
-    fn get_components_mut(&mut self) -> &mut IndexArray<C>;
-}
-
-impl GetComponents<TransformComponent> for ComponentManager {
-    fn get_components(&self) -> &IndexArray<TransformComponent> {
-        &self.transforms
-    }
-    fn get_components_mut(&mut self) -> &mut IndexArray<TransformComponent> {
-        &mut self.transforms
+impl TryGetComponent for ComponentManager {
+    fn try_get_component<C:Component+'static>(&self) -> Option<Storage<C>> {
+        use std::any::{TypeId, Any};
+        let tid = TypeId::of::<C>();
+        if tid == TypeId::of::<TransformComponent>() {
+            Some(Any::downcast_ref::<Storage<C>>(&self.transforms).unwrap().clone())
+        } else {None}
     }
 }

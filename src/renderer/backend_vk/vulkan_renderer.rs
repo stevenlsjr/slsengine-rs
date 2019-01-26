@@ -1,5 +1,10 @@
 use super::*;
-use crate::{game::{prelude::*, EntityWorld, component::*, built_in_components::*}, math::*, renderer::mesh::*, renderer::*};
+use crate::{
+    game::{built_in_components::*, component::*, prelude::*, EntityWorld},
+    math::*,
+    renderer::mesh::*,
+    renderer::*,
+};
 use cgmath::*;
 use failure;
 use log::*;
@@ -9,8 +14,8 @@ use std::{
     cell::{Ref, RefCell},
     ffi::CString,
     fmt,
-    rc::Rc,
     ops::Try,
+    rc::Rc,
     sync::{atomic::*, Arc, RwLock},
 };
 use vulkano::{
@@ -660,55 +665,35 @@ impl VulkanRenderer {
                 1f32.into(),                 // depth buffer
             ];
 
-            let system = RenderSystem::collect(world);
-            
+
             let VkMesh {
                 ref vertex_buffer,
                 ref index_buffer,
                 ..
             } = &world.resources.meshes[&MeshHandle(0)];
 
-            
-            let mut cb_builder: Result<AutoCommandBufferBuilder, failure::Error> =
-                AutoCommandBufferBuilder::primary_one_time_submit(
-                    self.device.clone(),
-                    self.queues.graphics_queue.family(),
+            let mut cb_builder: Result<
+                AutoCommandBufferBuilder,
+                failure::Error,
+            > = AutoCommandBufferBuilder::primary_one_time_submit(
+                self.device.clone(),
+                self.queues.graphics_queue.family(),
+            )
+            .map_err(&failure::Error::from)
+            .and_then(|cb| {
+                cb.begin_render_pass(
+                    state.framebuffers[image_num].clone(),
+                    false,
+                    clear_values,
                 )
                 .map_err(&failure::Error::from)
-                .and_then(|cb| cb.begin_render_pass(
-                     state.framebuffers[image_num].clone(),
-                     false,
-                     clear_values
-                ).map_err(&failure::Error::from));
+            });
 
-            for &(entity, mask) in system.entities.iter() {
-                let model: Mat4 = system.transforms[entity.0].clone().unwrap().transform.into();
-                let modelview = camera_view * model;
-                let mesh_handle = system.meshes.get(*entity).map(|c| c.mesh).unwrap();
-                let VkMesh{ref index_buffer, ref vertex_buffer, ..} = world.resources.fetch(mesh_handle).unwrap();
+            
 
-                let desc_set = self
-                    .create_transform_descriptorset(
-                        world,
-                        modelview,
-                        self.camera().projection,
-                    )
-                    .expect("could not create descriptor set");
-                cb_builder = cb_builder.and_then(|cb|
-                    cb.draw_indexed(
-                            pipeline.clone(),
-                            &state.dynamic_state,
-                            vec![vertex_buffer.clone()],
-                            index_buffer.clone(),
-                            desc_set.clone(),
-                            (),
-                        )
-                        .map_err(&failure::Error::from));
-            }
-                
             cb_builder = cb_builder.and_then(|cb| {
-                    cb.end_render_pass().map_err(&failure::Error::from)
-                });
+                cb.end_render_pass().map_err(&failure::Error::from)
+            });
             let command_buffer = cb_builder
                 .and_then(|cb| cb.build().map_err(&failure::Error::from))
                 .unwrap_or_else(|e| {
@@ -759,34 +744,5 @@ impl Renderer for VulkanRenderer {
 
     fn on_resize(&self, _size: (u32, u32)) {
         self.recreate_swapchain.store(true, Ordering::Relaxed);
-    }
-}
-
-
-struct RenderSystem<'a> {
-    entities: Vec<(Entity, ComponentMask)>,
-    meshes: &'a IndexArray<MeshComponent>,
-    transforms: &'a IndexArray<TransformComponent>,
-}
-
-
-impl<'a> RenderSystem<'a> {
-
-    fn collect(world: &'a EntityWorld<VulkanRenderer>) -> Self {
-        let required_mask: ComponentMask = ComponentMask::MESH | ComponentMask::TRANSFORM;
-
-        RenderSystem {
-            entities: world.components.entities().
-                flat_map(|e| {
-                    let mask = world.components.masks[*e].unwrap_or(ComponentMask::NONE);
-                    if mask.contains(required_mask){
-                        Some((e, mask))
-                    }  else {
-                        None
-                    }
-                }).collect(),
-            meshes: &world.components.meshes,
-            transforms: &world.components.transforms
-        }
     }
 }

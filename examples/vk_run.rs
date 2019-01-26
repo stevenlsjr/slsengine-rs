@@ -2,11 +2,15 @@ use failure;
 use image::{ImageBuffer, Rgba};
 use slsengine::{
     self,
-    game::{self, main_loop::*, world::*, *},
+    game::{
+        self, built_in_components::*, component::*, main_loop::*, system::*,
+        world::*, *,
+    },
     renderer::backend_vk::*,
     renderer::*,
     sdl_platform::*,
 };
+use slsengine_entityalloc::*;
 use std::sync::Arc;
 use vulkano::{
     buffer::*, command_buffer::*, format::*, framebuffer::*, image::*,
@@ -15,6 +19,7 @@ use vulkano::{
 };
 
 use cgmath::*;
+
 
 fn setup_game(
     renderer: &VulkanRenderer,
@@ -46,23 +51,6 @@ fn setup_game(
     let mesh_handle = MeshHandle(0);
     game.resources.meshes.insert(mesh_handle, vk_mesh);
 
-    let entities: Vec<_> = (0..=4)
-        .map(|i| {
-            let e = game.components.alloc_entity();
-            game.components.transforms[*e] = {
-                let mut xform = TransformComponent::default();
-                xform.transform.disp = vec3((i as f32) as f32, 0.0, 0.0);
-                Some(xform)
-            };
-            game.components.meshes[*e] = Some(MeshComponent{
-                mesh: mesh_handle
-            });
-            game.components.calc_mask(e);
-            debug_assert!(game.components.masks[*e].unwrap().contains( 
-                ComponentMask::TRANSFORM | ComponentMask::MESH));
-            e
-        })
-        .collect();
 }
 
 fn main() {

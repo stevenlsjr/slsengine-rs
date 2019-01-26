@@ -265,7 +265,7 @@ impl MeshBuffers {
 impl Drop for MeshBuffers {
     fn drop(&mut self) {
         let mut buff_objs = [self.index_buffer, self.vertex_buffer];
-        let mut vao = self.vertex_array.0;
+        let vao = self.vertex_array.0;
         unsafe {
             gl::DeleteBuffers(2, buff_objs.as_mut_ptr());
             gl::DeleteVertexArrays(1, &vao);

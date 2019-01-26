@@ -121,8 +121,9 @@ fn main() {
         window, event_pump, ..
     } = plt;
     let mut loop_state = MainLoopState::new();
-    let path = system::asset_path().join("assets/models/DamagedHelmet.glb");
-    info!("{:?}, {:?}", system::asset_path(), path);
+    let path =
+        platform_system::asset_path().join("assets/models/DamagedHelmet.glb");
+    info!("{:?}, {:?}", platform_system::asset_path(), path);
 
     let mut renderer = GlRenderer::new(&window).unwrap();
 

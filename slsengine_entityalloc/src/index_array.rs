@@ -1,6 +1,5 @@
 use crate::allocator::GenerationalIndex;
 use std::{
-    fmt,
     ops::{Index, IndexMut},
 };
 
