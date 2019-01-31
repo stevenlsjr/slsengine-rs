@@ -665,7 +665,6 @@ impl VulkanRenderer {
                 1f32.into(),                 // depth buffer
             ];
 
-
             let VkMesh {
                 ref vertex_buffer,
                 ref index_buffer,
@@ -689,7 +688,6 @@ impl VulkanRenderer {
                 .map_err(&failure::Error::from)
             });
 
-            
             cb_builder = cb_builder.and_then(|cb| {
                 cb.end_render_pass().map_err(&failure::Error::from)
             });

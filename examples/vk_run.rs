@@ -19,7 +19,6 @@ use vulkano::{
 
 use cgmath::*;
 
-
 fn setup_game(
     renderer: &VulkanRenderer,
     game: &mut EntityWorld<VulkanRenderer>,
@@ -32,13 +31,12 @@ fn setup_game(
         use gltf::*;
         use slsengine::renderer::model::*;
 
-        let model =
-            Model::from_gltf("assets/models/Corset.glb").unwrap();
+        let model = Model::from_gltf("assets/models/Corset.glb").unwrap();
         let mut mesh = model.meshes[0].mesh.clone();
         let scale = Matrix4::from_scale(10.0);
 
         for mut v in &mut mesh.vertices {
-            let pos =  Vector3::from(v.position).extend(1.0);
+            let pos = Vector3::from(v.position).extend(1.0);
             v.position = (scale * pos).truncate().into();
         }
 
@@ -47,38 +45,6 @@ fn setup_game(
     let sphere_mesh =
         VkMesh::new(renderer, Mesh::from_genmesh(IcoSphere::subdivide(4)))
             .unwrap();
-
-<<<<<<< HEAD
-=======
-    let mesh_handle_a = MeshHandle(0);
-    let mesh_handle_b = MeshHandle(1);
-    game.resources.meshes.insert(mesh_handle_a, helmet_mesh);
-    game.resources.meshes.insert(mesh_handle_b, sphere_mesh);
-
-    let n = 4;
-    let entities: Vec<_> = (0..=n)
-        .map(|i| {
-            let e = game.components.alloc_entity();
-            game.components.transforms[*e] = {
-                let mut xform = TransformComponent::default();
-                let x_pos = (n as f32 / 2.0 - i as f32) * 2.2;
-                xform.transform.disp = vec3(x_pos, 0.0, 0.0);
-                Some(xform)
-            };
-            let mesh = if i % 2 == 0 {
-                mesh_handle_a
-            } else {
-                mesh_handle_b
-            };
-            game.components.meshes[*e] = Some(MeshComponent { mesh });
-            game.components.calc_mask(e);
-            debug_assert!(game.components.masks[*e]
-                .unwrap()
-                .contains(ComponentMask::TRANSFORM | ComponentMask::MESH));
-            e
-        })
-        .collect();
->>>>>>> origin/feature_entity_index
 }
 
 fn main() {

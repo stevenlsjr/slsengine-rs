@@ -4,6 +4,7 @@ use crate::renderer::*;
 use cgmath::*;
 use log::*;
 use sdl2::{keyboard::KeyboardState, mouse::MouseState, EventPump};
+use std::fmt;
 use std::time::Duration;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -34,6 +35,31 @@ where
     pub main_camera: FpsCameraComponent,
     pub components: ComponentManager,
     pub resources: ResourceManager<R>,
+}
+
+impl<R> fmt::Debug for EntityWorld<R>
+where
+    R: Renderer,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use std::any::TypeId;
+        f.debug_struct(&"EntityWorld<R>")
+            .field(
+                "input_state",
+                &format_args!(
+                    "{}",
+                    if self.input_state.is_some() {
+                        "Some({{..}}"
+                    } else {
+                        "None"
+                    }
+                ),
+            )
+            .field("main_camera", &format_args!("{{..}}"))
+            .field("components", &format_args!("{{..}}"))
+            .field("resources", &format_args!("{{..}}"))
+            .finish()
+    }
 }
 
 impl<R> EntityWorld<R>

@@ -1,3 +1,4 @@
+use failure;
 #[cfg(feature = "backend-gl")]
 use gl;
 use log::*;
@@ -46,7 +47,7 @@ impl fmt::Display for Platform {
     }
 }
 
-pub type PlatformResult<T> = Result<T, String>;
+pub type PlatformResult<T> = Result<T, failure::Error>;
 
 /// Constructs a PlatformBuilder struct
 pub fn platform() -> PlatformBuilder {
@@ -129,12 +130,13 @@ impl PlatformBuilder {
         &self,
         hooks: &H,
     ) -> PlatformResult<Platform> {
-        let sdl_context = sdl2::init()?;
-        let video_subsystem = sdl_context.video()?;
+        let sdl_context = sdl2::init().map_err(&failure::err_msg)?;
+        let video_subsystem = sdl_context.video().map_err(&failure::err_msg)?;
 
         let window = hooks.build_window(self, &video_subsystem)?;
         {
-            let event_pump = sdl_context.event_pump()?;
+            let event_pump =
+                sdl_context.event_pump().map_err(&failure::err_msg)?;
 
             let render_backend = self.render_backend.clone();
             Ok(Platform {
@@ -176,12 +178,15 @@ pub fn make_window_builder(
 }
 #[cfg(feature = "backend-gl")]
 pub mod gl_platform {
+    use super::*;
+    use sdl2::video::GLContext;
+
     pub struct GlPlatformBuilder {
         gl_ctx: RefCell<Option<GLContext>>,
     }
 
     impl GlPlatformBuilder {
-        fn new() -> GlPlatformBuilder {
+        pub fn new() -> GlPlatformBuilder {
             GlPlatformBuilder {
                 gl_ctx: RefCell::new(None),
             }
@@ -216,9 +221,10 @@ pub mod gl_platform {
 
             wb.opengl();
             wb.resizable();
-            let window = wb.build().map_err(|e| e.to_string())?;
+            let window = wb.build()?;
 
-            let gl_ctx = load_opengl(&window, video_subsystem)?;
+            let gl_ctx = load_opengl(&window, video_subsystem)
+                .map_err(&failure::err_msg)?;
             {
                 self.gl_ctx.replace(Some(gl_ctx));
             }

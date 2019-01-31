@@ -256,8 +256,6 @@ impl GlRenderer {
                 gl::Uniform3fv(id as _, 4, light_pos_ptr as *const _);
             })
             .unwrap_or(());
-
-        
     }
 }
 

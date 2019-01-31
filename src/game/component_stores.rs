@@ -1,8 +1,10 @@
 use super::component::{Component, ComponentList};
-use std::sync::{Arc, RwLock};
+use anymap::AnyMap;
+use std::any::TypeId;
+use std::collections::HashMap;
+use std::fmt;
 use std::ops::Deref;
-use anymap::{AnyMap};
-
+use std::sync::{Arc, RwLock};
 
 /// Newtype for a component array store. Wraps an IndexArray in an
 /// Arc'ed RwLock
@@ -15,10 +17,10 @@ impl<C: Component> Clone for Storage<C> {
 }
 
 impl<C: Component> Storage<C> {
-    pub fn new()-> Self {
+    pub fn new() -> Self {
         Storage::with_array(ComponentList::new())
     }
-    pub fn with_capacity(capacity: usize) ->Self {
+    pub fn with_capacity(capacity: usize) -> Self {
         Storage::with_array(ComponentList::with_capacity(capacity))
     }
 
@@ -37,44 +39,41 @@ pub trait GetComponent<C: Component> {
     fn get_component(&self) -> Storage<C>;
 }
 
-pub trait TryGetComponent {
-    fn try_get_component<C:Component+'static>(&self) -> Option<Storage<C>>;
+pub trait TryGetComponent<C: Component> {
+    fn try_get_component(&self) -> Option<Storage<C>>;
 }
 
 /// A map that contains up to one ComponentStore for each
 /// component type.
 #[derive(Debug)]
 pub struct AnyComponentStore {
-    map: AnyMap
+    map: AnyMap,
 }
 
 impl AnyComponentStore {
     /// Constructs a new store
     pub fn new() -> Self {
-        AnyComponentStore {map: AnyMap::new()}
+        AnyComponentStore { map: AnyMap::new() }
     }
 
     /// Inserts a preexisting list into the map
-    pub fn insert_store<C: 'static>(&mut self, storage: Storage<C>) where C: Component {
+    pub fn insert_store<C: 'static>(&mut self, storage: Storage<C>)
+    where
+        C: Component,
+    {
         self.map.insert(storage);
     }
 
-}
-
-impl Default for AnyComponentStore {
-    fn default() -> Self {
-        Self::new()
+    pub fn keys<'a>(&'a self) -> impl Iterator<Item = TypeId> + 'a {
+        self.map.as_ref().iter().map(|a| a.get_type_id())
     }
 }
 
-impl TryGetComponent for AnyComponentStore {
-    fn try_get_component<C:Component+'static>(&self) -> Option<Storage<C>> {
-        self.map.get::<Storage<C>>().cloned()
+impl<C: Component + 'static> TryGetComponent<C> for AnyComponentStore {
+    fn try_get_component(&self) -> Option<Storage<C>> {
+        self.map.get().cloned()
     }
 }
-
-
-
 
 #[cfg(test)]
 mod test {
@@ -90,7 +89,6 @@ mod test {
         }
     }
 
-   
     pub fn mock_component_store() -> Mock {
         use slsengine_entityalloc::IndexArray;
 
@@ -99,19 +97,63 @@ mod test {
         }
     }
     #[test]
-    fn test_any_store(){
+    fn test_any_store() {
         let mut store = AnyComponentStore::new();
         store.insert_store(Storage::<TransformComponent>::new());
-        assert!(store.try_get_component::<TransformComponent>().is_some());
-        assert!(store.try_get_component::<MeshComponent>().is_none());
+        assert!(TryGetComponent::<TransformComponent>::try_get_component(&store).is_some());
+        assert!(TryGetComponent::<MeshComponent>::try_get_component(&store).is_none());
     }
 
     #[test]
     fn test_component_store() {
-        use super::super::built_in_components::{MeshComponent, TransformComponent};
+        use super::super::built_in_components::{
+            MeshComponent, TransformComponent,
+        };
         use crate::renderer::Mesh;
         let store = test::mock_component_store();
-        assert!((store.get_component() as Storage<TransformComponent>).read().is_ok());
+        assert!((store.get_component() as Storage<TransformComponent>)
+            .read()
+            .is_ok());
     }
 
+}
+/// Generates unique bitset mask values for a componenet
+pub struct ComponentIdGen {
+    lut: HashMap<TypeId, u32>,
+}
+
+impl fmt::Debug for ComponentIdGen {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("ComponentIdGen").finish()
+    }
+}
+
+impl ComponentIdGen {
+    pub fn new() -> Self {
+        ComponentIdGen {
+            lut: HashMap::new(),
+        }
+    }
+
+    pub fn get<C: Component + 'static>(&self) -> Option<u32> {
+        self.get_id(&TypeId::of::<C>())
+    }
+
+    pub fn get_id(&self, id: &TypeId) -> Option<u32> {
+        self.lut.get(id).cloned()
+    }
+
+    pub fn get_or_insert<C: Component + 'static>(&mut self) -> u32 {
+        self.get_or_insert_id(TypeId::of::<C>())
+    }
+
+    pub fn get_or_insert_id(&mut self, tid: TypeId) -> u32 {
+        if let Some(&index) = self.lut.get(&tid) {
+            index
+        } else {
+            let index = self.lut.len() as u32;
+            self.lut.insert(tid, index);
+            index
+        }
+    }
 }

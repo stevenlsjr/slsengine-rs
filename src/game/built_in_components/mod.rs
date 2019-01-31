@@ -13,7 +13,7 @@ pub struct TransformComponent {
 }
 
 impl Component for TransformComponent {
-    const MASK: ComponentMask = ComponentMask::TRANSFORM;
+    // const MASK: ComponentMask = ComponentMask::TRANSFORM;
 }
 
 impl Default for TransformComponent {
@@ -34,9 +34,7 @@ pub struct MaterialComponent {
     pub material: Material<TextureHandle>,
 }
 
-impl Component for MaterialComponent {
-    const MASK: ComponentMask = ComponentMask::MATERIAL;
-}
+impl Component for MaterialComponent {}
 
 #[derive(Debug, Clone)]
 pub struct MeshComponent {
@@ -44,5 +42,5 @@ pub struct MeshComponent {
 }
 
 impl Component for MeshComponent {
-    const MASK: ComponentMask = ComponentMask::MESH;
+    // const MASK: ComponentMask = ComponentMask::MESH;
 }
