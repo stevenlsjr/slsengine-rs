@@ -5,7 +5,7 @@ pub enum SystemDispatch {
     Update,
     FixedUpdate,
     Once,
-    Never
+    Never,
 }
 
 /// System trait.
@@ -33,12 +33,10 @@ fn test_entity_system() {
     #[derive(Debug, Copy, Clone, PartialEq)]
     struct DummyComponent(u32);
     impl Component for DummyComponent {}
-     #[derive(Debug, Clone)]
-    
+    #[derive(Debug, Clone)]
 
     struct SpawnSystem(usize);
     impl<'a> EntitySystem<'a> for SpawnSystem {
-
         const DISPATCH: SystemDispatch = SystemDispatch::Once;
 
         type Data = (Storage<DummyComponent>);
@@ -46,11 +44,13 @@ fn test_entity_system() {
             &self,
             manager: &'a ComponentManager,
             entities: I,
-        ) ->  Result<Self::Data, failure::Error>
+        ) -> Result<Self::Data, failure::Error>
         where
             I: Iterator<Item = Entity> + 'a,
         {
-            let dummies = manager.other_components::<DummyComponent>().ok_or(format_err!("no dummy component store"))?;
+            let dummies = manager
+                .other_components::<DummyComponent>()
+                .ok_or(format_err!("no dummy component store"))?;
             Ok((dummies))
         }
 
@@ -70,7 +70,9 @@ fn test_entity_system() {
     mgr.register::<DummyComponent>();
     let sys = SpawnSystem(10);
     {
-        let data = sys.prep_data(&mgr, mgr.entities()).expect("should be able to prep data");
+        let data = sys
+            .prep_data(&mgr, mgr.entities())
+            .expect("should be able to prep data");
         sys.dispatch(&mut mgr, data);
     }
 
@@ -83,10 +85,13 @@ fn test_entity_system() {
     }
 
     assert_eq!(mgr.entities().count(), sys.0);
-    assert_eq!(mgr.entities().filter(|&e|{
-        let dummies = mgr.other_components::<DummyComponent>().unwrap();
-        dummies.read().map(|store| store[*e].is_some()).unwrap()
-    }).count(), sys.0);
-
-   
+    assert_eq!(
+        mgr.entities()
+            .filter(|&e| {
+                let dummies = mgr.other_components::<DummyComponent>().unwrap();
+                dummies.read().map(|store| store[*e].is_some()).unwrap()
+            })
+            .count(),
+        sys.0
+    );
 }

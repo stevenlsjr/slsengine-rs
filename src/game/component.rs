@@ -1,14 +1,13 @@
 pub use super::built_in_components::*;
 use super::component_stores::{
-    AnyComponentStore, ComponentIdGen, GetComponent, Storage, TryGetComponent,
+    AnyStorageMap, ComponentIdGen, GetComponent, Storage, TryGetComponent,
 };
 use crate::renderer::traits::*;
-use anymap::{any::Any, Map};
 use bitflags::bitflags;
 use hibitset::{BitSet, BitSetLike};
 use slsengine_entityalloc::*;
 use std::{
-    fmt::Debug,
+    any::Any,
     ops::Deref,
     sync::{Arc, RwLock},
 };
@@ -17,7 +16,7 @@ pub enum StoreType {
     IndexArray,
 }
 
-pub trait Component: Debug {
+pub trait Component: Any {
     /// The component mask bitflag identifying the given component
     const STORE: StoreType = StoreType::IndexArray;
 }
@@ -59,10 +58,7 @@ pub struct ResourceId(pub usize);
 pub struct ComponentManager {
     pub entity_alloc: GenerationalIndexAllocator,
     pub masks: IndexArray<BitSet>,
-    pub transforms: Storage<TransformComponent>,
-    pub meshes: Storage<MeshComponent>,
-    pub materials: Storage<MaterialComponent>,
-    custom_stores: AnyComponentStore,
+    custom_stores: AnyStorageMap,
     id_table: ComponentIdGen,
 }
 
@@ -70,47 +66,19 @@ impl ComponentManager {
     pub fn new() -> Self {
         let capacity = 255;
         let mut id_table = ComponentIdGen::new();
-        id_table.get_or_insert::<TransformComponent>();
-        id_table.get_or_insert::<MeshComponent>();
-        id_table.get_or_insert::<MaterialComponent>();
+
         ComponentManager {
             entity_alloc: GenerationalIndexAllocator::with_capacity(capacity),
             masks: IndexArray::with_capacity(capacity),
-            transforms: Storage::with_capacity(capacity),
-            meshes: Storage::with_capacity(capacity),
-            materials: Storage::with_capacity(capacity),
-            custom_stores: AnyComponentStore::new(),
+            custom_stores: AnyStorageMap::new(),
             id_table,
         }
     }
 
     /// generates bitmask for entity by components
     pub fn calc_mask(&mut self, entity: Entity) {
-        use anymap::raw::RawMap;
         use std::any::Any;
         let mut mask = BitSet::new();
-
-        if self.transforms.read().unwrap().get(*entity).is_some() {
-            mask.add(
-                self.id_table
-                    .get::<TransformComponent>()
-                    .expect("BUG!, no mask id for Component"),
-            );
-        }
-        if self.meshes.read().unwrap().get(*entity).is_some() {
-            mask.add(
-                self.id_table
-                    .get::<MeshComponent>()
-                    .expect("BUG!, no mask id for Component"),
-            );
-        }
-        if self.materials.read().unwrap().get(*entity).is_some() {
-            mask.add(
-                self.id_table
-                    .get::<MaterialComponent>()
-                    .expect("BUG!, no mask id for Component"),
-            );
-        }
 
         for i in self.custom_stores.keys() {
             let id = self.id_table.get_or_insert_id(i);
@@ -119,8 +87,20 @@ impl ComponentManager {
         self.masks.insert(*entity, mask);
     }
 
+    pub fn recalculate_masks<I: Iterator<Item = Entity>>(&mut self, itor: I) {
+        for entity in itor {
+            self.calc_mask(entity);
+        }
+    }
+
+    #[inline]
+    pub fn id_table(&self) -> &ComponentIdGen {
+        &self.id_table
+    }
+
     pub fn register<C: Component + 'static>(&mut self) {
-        self.custom_stores.insert_store::<C>(Storage::new());
+        self.custom_stores
+            .insert_store::<C>(Arc::new(Storage::new()));
         self.id_table.get_or_insert::<C>();
     }
 
@@ -139,33 +119,24 @@ impl ComponentManager {
 
     //-- Component retreival
 
-    /// Returns transforms store
-    #[inline]
-    pub fn transforms(&self) -> Storage<TransformComponent> {
-        self.transforms.clone()
-    }
-
-    /// Returns static mesh store
-    #[inline]
-    pub fn meshes(&self) -> Storage<MeshComponent> {
-        self.meshes.clone()
-    }
-
-    /// Returns static mesh store
-    #[inline]
-    pub fn materials(&self) -> Storage<MaterialComponent> {
-        self.materials.clone()
-    }
-
     /// returns runtime registered store
     #[inline]
-    pub fn other_components<C: Component + 'static>(
+    pub fn get_components<C: Component + 'static>(
         &self,
-    ) -> Option<Storage<C>> {
+    ) -> Option<Arc<Storage<C>>> {
         TryGetComponent::<C>::try_get_component(&self.custom_stores)
     }
 
-    pub fn mask_for<C: Component + 'static>(&self) -> u32 {
+    pub fn entity_mask(&self, entity: Entity) -> &BitSet {
+        use lazy_static::lazy_static;
+        lazy_static! {
+            static ref EMPTY_MASK: BitSet = BitSet::new();
+        }
+
+        &self.masks.get(*entity).unwrap_or(&EMPTY_MASK)
+    }
+
+    pub fn component_mask<C: Component + 'static>(&self) -> u32 {
         self.id_table.get::<C>().unwrap_or_else(|| {
             panic!("Mask value for component missing. was it registered?")
         })

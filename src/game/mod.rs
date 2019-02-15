@@ -8,7 +8,11 @@ pub mod system;
 pub mod timer;
 pub mod world;
 
-pub use self::{camera::*, timer::*, world::*};
+pub use self::{
+    camera::*,
+    timer::*,
+    world::{EntityWorld, InputSources, InputState},
+};
 pub mod prelude {
     pub use super::component::Component;
     pub use super::component_stores::{GetComponent, Storage, TryGetComponent};

@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use hibitset::BitSet;
 #[cfg(feature = "backend-vulkan")]
 use slsengine::renderer::backend_vk;
 use slsengine::{
@@ -57,6 +58,31 @@ fn main() -> Result<(), i32> {
         eprintln!("setup failed: {:?}", e);
         1
     })?;
+    let entity = {
+        let world: &mut EntityWorld<_> = &mut app.world;
+        world.components.register::<Point>();
+        let entity = world.components.alloc_entity();
+        let points = world.components.get_components::<Point>().unwrap();
+        {
+            let mut lock = points.write().unwrap();
+            lock[*entity] = Some(Point(0, 20));
+        }
+        world.components.calc_mask(entity);
+        entity
+    };
+    let mask: &BitSet = app.world.components.entity_mask(entity);
+    let point_mask = app.world.components.component_mask::<Point>();
+    // assert!(mask.contains(point_mask));
+    let id_table = app.world.components.id_table();
+    assert_eq!(point_mask, id_table.get::<Point>().unwrap());
+    assert_eq!(mask.clone().into_iter().count(), 1);
+
+    dbg!(("point mask", point_mask));
+    for i in mask.clone().into_iter() {
+        dbg!(i);
+    }
+    use std::any::TypeId;
+    dbg!(TypeId::of::<Point>());
 
     Ok(())
 }

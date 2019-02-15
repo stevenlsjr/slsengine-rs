@@ -1,77 +1,86 @@
 use super::component::{Component, ComponentList};
-use anymap::AnyMap;
+use mopa::{self, mopafy};
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::fmt;
 use std::ops::Deref;
 use std::sync::{Arc, RwLock};
 
-/// Newtype for a component array store. Wraps an IndexArray in an
-/// Arc'ed RwLock
 #[derive(Debug)]
-pub struct Storage<C: Component>(pub Arc<RwLock<ComponentList<C>>>);
-impl<C: Component> Clone for Storage<C> {
-    fn clone(&self) -> Self {
-        Storage(self.0.clone())
-    }
+pub struct Storage<C: Component> {
+    lock: RwLock<ComponentList<C>>,
 }
 
 impl<C: Component> Storage<C> {
     pub fn new() -> Self {
-        Storage::with_array(ComponentList::new())
+        Storage {
+            lock: RwLock::new(ComponentList::new()),
+        }
     }
-    pub fn with_capacity(capacity: usize) -> Self {
-        Storage::with_array(ComponentList::with_capacity(capacity))
-    }
+}
 
-    pub fn with_array(list: ComponentList<C>) -> Self {
-        Storage(Arc::new(RwLock::new(list)))
-    }
-}
 impl<C: Component> Deref for Storage<C> {
-    type Target = Arc<RwLock<ComponentList<C>>>;
+    type Target = RwLock<ComponentList<C>>;
     fn deref(&self) -> &Self::Target {
-        &self.0
+        &self.lock
     }
 }
+
+pub trait AnyStorage: mopa::Any {}
+mopafy!(AnyStorage);
+
+impl<C: Component> AnyStorage for Storage<C> {}
 
 pub trait GetComponent<C: Component> {
-    fn get_component(&self) -> Storage<C>;
+    fn get_component(&self) -> Arc<Storage<C>>;
 }
 
 pub trait TryGetComponent<C: Component> {
-    fn try_get_component(&self) -> Option<Storage<C>>;
+    fn try_get_component(&self) -> Option<Arc<Storage<C>>>;
 }
 
 /// A map that contains up to one ComponentStore for each
 /// component type.
-#[derive(Debug)]
-pub struct AnyComponentStore {
-    map: AnyMap,
+pub struct AnyStorageMap {
+    map: HashMap<TypeId, Arc<AnyStorage>>,
 }
 
-impl AnyComponentStore {
+impl fmt::Debug for AnyStorageMap {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("AnyStorageMap").finish()
+    }
+}
+
+impl AnyStorageMap {
     /// Constructs a new store
     pub fn new() -> Self {
-        AnyComponentStore { map: AnyMap::new() }
+        AnyStorageMap {
+            map: HashMap::new(),
+        }
     }
 
     /// Inserts a preexisting list into the map
-    pub fn insert_store<C: 'static>(&mut self, storage: Storage<C>)
+    pub fn insert_store<C: 'static>(&mut self, storage: Arc<Storage<C>>)
     where
         C: Component,
     {
-        self.map.insert(storage);
+        self.map.insert(TypeId::of::<C>(), storage);
     }
 
     pub fn keys<'a>(&'a self) -> impl Iterator<Item = TypeId> + 'a {
-        self.map.as_ref().iter().map(|a| a.get_type_id())
+        self.map.keys().cloned()
     }
 }
 
-impl<C: Component + 'static> TryGetComponent<C> for AnyComponentStore {
-    fn try_get_component(&self) -> Option<Storage<C>> {
-        self.map.get().cloned()
+impl<C: Component + 'static> TryGetComponent<C> for AnyStorageMap {
+    fn try_get_component(&self) -> Option<Arc<Storage<C>>> {
+        self.map
+            .get(&TypeId::of::<C>())
+            .cloned()
+            .and_then((|a| {
+                let store: & AnyStorage = a.deref();
+                store.downcast_ref()
+            }))
     }
 }
 
@@ -98,10 +107,14 @@ mod test {
     }
     #[test]
     fn test_any_store() {
-        let mut store = AnyComponentStore::new();
+        let mut store = AnyStorageMap::new();
         store.insert_store(Storage::<TransformComponent>::new());
-        assert!(TryGetComponent::<TransformComponent>::try_get_component(&store).is_some());
-        assert!(TryGetComponent::<MeshComponent>::try_get_component(&store).is_none());
+        assert!(TryGetComponent::<TransformComponent>::try_get_component(
+            &store
+        )
+        .is_some());
+        assert!(TryGetComponent::<MeshComponent>::try_get_component(&store)
+            .is_none());
     }
 
     #[test]
@@ -153,6 +166,7 @@ impl ComponentIdGen {
         } else {
             let index = self.lut.len() as u32;
             self.lut.insert(tid, index);
+            println!("insert id {:?}, {}", tid, index);
             index
         }
     }
