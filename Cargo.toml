@@ -18,8 +18,9 @@ debug=true
 
 
 [dependencies]
-anymap = "0.12.1"
+mopa = "0.2.2"
 hibitset = "0.5.4"
+lazy_static = "1.2.0"
 slsengine_entityalloc = {path="slsengine_entityalloc"}
 slsengine_shaders = {path="slsengine_shaders"}
 bitflags = "1.0.4"
