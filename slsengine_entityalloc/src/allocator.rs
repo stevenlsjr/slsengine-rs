@@ -149,7 +149,7 @@ impl<'a> Iterator for GenerationalIndexIter<'a> {
             if e.is_live {
                 self.begin = i;
                 return Some(GenerationalIndex {
-                    index: i,
+                    index: i-1,
                     generation: e.generation,
                 });
             }
@@ -217,4 +217,6 @@ fn test_iter() {
         iter.next().is_none(),
         "there should only be 3 live entities"
     );
+
+    assert_eq!(gia.iter_live().count(), 3);
 }
