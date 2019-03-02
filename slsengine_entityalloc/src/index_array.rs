@@ -7,7 +7,7 @@ use std::{
 pub struct IndexArray<T>
 
 {
-    array: Vec<Option<T>>,
+    pub(crate) array: Vec<Option<T>>,
 }
 
 impl<T> IndexArray<T>
