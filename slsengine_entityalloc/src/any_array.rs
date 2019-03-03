@@ -65,5 +65,5 @@ fn test_array_set(){
     let u32_array = IndexArray::<u32>::new();
     set.insert(i32_array);
     assert!(set.get_by_id(&TypeId::of::<i32>()).is_some());
-    assert!(set.get_by_id(&TypeId::of::<u32>()).is_some());
+    assert!(set.get_by_id(&TypeId::of::<u32>()).is_none());
 }
