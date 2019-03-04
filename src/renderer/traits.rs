@@ -18,13 +18,19 @@ pub trait Renderer: Sized {
     fn camera(&self) -> Ref<Camera>;
     fn set_clear_color(&mut self, _color: ColorRGBA) {}
     fn on_resize(&self, _size: (u32, u32)) {}
-    fn on_update(
+    fn on_update<CS>(
         &mut self,
         _delta_time: Duration,
-        _world: &game::EntityWorld<Self>,
-    ) {
+        _world: &game::EntityWorld<Self, CS>,
+    ) where
+        CS: game::TryGetComponent,
+    {
     }
-    fn render_scene(&self, _scene: &game::EntityWorld<Self>) {}
+    fn render_scene<CS>(&self, _scene: &game::EntityWorld<Self, CS>)
+    where
+        CS: game::TryGetComponent,
+    {
+    }
 
     /// Hints the renderer to recompile shaders, when convenient
     fn flag_shader_recompile(&self) {}

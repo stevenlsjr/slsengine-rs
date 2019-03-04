@@ -1,4 +1,4 @@
-use super::{camera::*, component::*, resource::ResourceManager};
+use super::{camera::*, component::*, TryGetComponent, resource::ResourceManager};
 use crate::math::*;
 use crate::renderer::*;
 use cgmath::*;
@@ -27,19 +27,22 @@ impl<'a> InputSources<'a> {
     }
 }
 
-pub struct EntityWorld<R>
+pub struct EntityWorld<R, CS>
 where
     R: Renderer,
+    CS: TryGetComponent
 {
     pub input_state: Option<InputState>,
     pub main_camera: FpsCameraComponent,
-    pub components: ComponentManager,
+    pub components: ComponentManager<CS>,
     pub resources: ResourceManager<R>,
 }
 
-impl<R> fmt::Debug for EntityWorld<R>
+impl<R, CS> fmt::Debug for EntityWorld<R, CS>
 where
     R: Renderer,
+    CS: TryGetComponent
+
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use std::any::TypeId;
@@ -62,11 +65,13 @@ where
     }
 }
 
-impl<R> EntityWorld<R>
+impl<R, CS> EntityWorld<R, CS>
 where
     R: Renderer,
+    CS: TryGetComponent
+
 {
-    pub fn new(_renderer: &R) -> Self {
+    pub fn new(_renderer: &R, component_store: CS) -> Self {
         use std::f32::consts::PI;
         let main_camera = FpsCameraComponent::new(
             Point3::new(0.0, 0.0, 5.0),
@@ -78,7 +83,7 @@ where
         EntityWorld {
             main_camera,
             input_state: None,
-            components: ComponentManager::new(),
+            components: ComponentManager::new(component_store),
             resources: ResourceManager::new(),
         }
     }

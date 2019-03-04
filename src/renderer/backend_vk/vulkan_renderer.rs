@@ -605,9 +605,9 @@ impl VulkanRenderer {
         Ok(recreate_swapchain)
     }
 
-    fn create_transform_descriptorset(
+    fn create_transform_descriptorset<CS: crate::game::TryGetComponent>(
         &self,
-        world: &EntityWorld<Self>,
+        world: &EntityWorld<Self, CS>,
         modelview: Mat4,
         projection: Mat4,
     ) -> Result<Arc<impl DescriptorSet + Send + Sync>, failure::Error> {
@@ -629,7 +629,10 @@ impl VulkanRenderer {
         }
     }
 
-    pub fn draw_frame(&self, window: &Window, world: &EntityWorld<Self>) {
+    pub fn draw_frame<CS>(&self, window: &Window, world: &EntityWorld<Self, CS>)
+    where
+        CS: crate::game::TryGetComponent,
+    {
         use crate::game::resource::MeshHandle;
 
         let mut recreate_swapchain = match self.check_swapchain_validity(window)

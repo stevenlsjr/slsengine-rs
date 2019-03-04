@@ -3,8 +3,8 @@ use image::{ImageBuffer, Rgba};
 use slsengine::{
     self,
     game::{
-        self, built_in_components::*, component::*, main_loop::*, system::*,
-        world::*, *,
+        self, built_in_components::*, component::*,
+        component_stores::NullComponentStore, main_loop::*, system::*, world::*,
     },
     renderer::backend_vk::*,
     renderer::*,
@@ -21,14 +21,13 @@ use cgmath::*;
 
 fn setup_game(
     renderer: &VulkanRenderer,
-    game: &mut EntityWorld<VulkanRenderer>,
+    game: &mut EntityWorld<VulkanRenderer, NullComponentStore>,
 ) {
     use genmesh::generators::*;
     use slsengine::game::{
         built_in_components::*, component::ComponentMask, resource::MeshHandle,
     };
     let helmet_mesh = {
-        use gltf::*;
         use slsengine::renderer::model::*;
 
         let model = Model::from_gltf("assets/models/Corset.glb").unwrap();
@@ -74,7 +73,7 @@ fn main() {
             ..
         } = platform;
         let mut main_loop = MainLoopState::new();
-        let mut world = EntityWorld::new(&r);
+        let mut world = EntityWorld::new(&r, NullComponentStore);
         setup_game(&r, &mut world);
 
         main_loop.start();

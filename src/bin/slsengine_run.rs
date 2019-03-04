@@ -5,6 +5,7 @@ use hibitset::BitSet;
 use slsengine::renderer::backend_vk;
 use slsengine::{
     game::*,
+    game::component_store::NullComponentStore,
     renderer::*,
     sdl_platform::{self, Platform},
 };
@@ -12,12 +13,13 @@ use slsengine::{
 use failure;
 #[cfg(feature = "backend-gl")]
 use slsengine::renderer::backend_gl;
+use slsengine::game;
 
 struct App<R: Renderer> {
     platform: Platform,
     renderer: R,
     main_loop: MainLoopState,
-    world: EntityWorld<R>,
+    world: EntityWorld<R, NullComponentStore>,
 }
 
 #[cfg(feature = "backend-vulkan")]

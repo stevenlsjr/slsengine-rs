@@ -6,7 +6,7 @@ use std::fmt;
 use std::ops::Deref;
 use std::sync::{Arc, RwLock};
 
-#[derive(Debug)]
+    #[derive(Debug)]
 pub struct Storage<C: Component> {
     lock: RwLock<ComponentList<C>>,
 }
@@ -31,103 +31,36 @@ mopafy!(AnyStorage);
 
 impl<C: Component> AnyStorage for Storage<C> {}
 
+/// Provider of a specifically typed component
 pub trait GetComponent<C: Component> {
     fn get_component(&self) -> Arc<Storage<C>>;
 }
 
-pub trait TryGetComponent<C: Component> {
-    fn try_get_component(&self) -> Option<Arc<Storage<C>>>;
+/// Can try to retrieve a component list of an arbitrary type
+pub trait TryGetComponent {
+    /// Returns Some component list if storage object contains it.
+    fn try_get_component<C: Component>(&self) -> Option<Arc<Storage<C>>>;
 }
 
-/// A map that contains up to one ComponentStore for each
-/// component type.
-pub struct AnyStorageMap {
-    map: HashMap<TypeId, Arc<AnyStorage>>,
+/// A dummy component store that provides no component lists
+#[derive(Clone, PartialEq, Debug, Hash)]
+pub struct NullComponentStore;
+
+impl TryGetComponent for NullComponentStore {
+    fn try_get_component<C: Component>(&self) -> Option<Arc<Storage<C>>> {None}
+
 }
 
-impl fmt::Debug for AnyStorageMap {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("AnyStorageMap").finish()
-    }
-}
-
-impl AnyStorageMap {
-    /// Constructs a new store
-    pub fn new() -> Self {
-        AnyStorageMap {
-            map: HashMap::new(),
-        }
-    }
-
-    /// Inserts a preexisting list into the map
-    pub fn insert_store<C: 'static>(&mut self, storage: Arc<Storage<C>>)
-    where
-        C: Component,
-    {
-        self.map.insert(TypeId::of::<C>(), storage);
-    }
-
-    pub fn keys<'a>(&'a self) -> impl Iterator<Item = TypeId> + 'a {
-        self.map.keys().cloned()
-    }
-}
-
-impl<C: Component + 'static> TryGetComponent<C> for AnyStorageMap {
-    fn try_get_component(&self) -> Option<Arc<Storage<C>>> {
-        self.map
-            .get(&TypeId::of::<C>())
-            .cloned()
-            .and_then((|a| {
-                let store: & AnyStorage = a.deref();
-                store.downcast_ref()
-            }))
-    }
-}
 
 #[cfg(test)]
 mod test {
-    use super::super::built_in_components::*;
-    use super::*;
-    use std::any::{Any, TypeId};
-    pub struct Mock {
-        transforms: Storage<TransformComponent>,
-    }
-    impl GetComponent<TransformComponent> for Mock {
-        fn get_component(&self) -> Storage<TransformComponent> {
-            self.transforms.clone()
-        }
-    }
-
-    pub fn mock_component_store() -> Mock {
-        use slsengine_entityalloc::IndexArray;
-
-        Mock {
-            transforms: Storage::new(),
-        }
-    }
+ 
     #[test]
     fn test_any_store() {
-        let mut store = AnyStorageMap::new();
-        store.insert_store(Storage::<TransformComponent>::new());
-        assert!(TryGetComponent::<TransformComponent>::try_get_component(
-            &store
-        )
-        .is_some());
-        assert!(TryGetComponent::<MeshComponent>::try_get_component(&store)
-            .is_none());
+        unimplemented!()
     }
 
-    #[test]
-    fn test_component_store() {
-        use super::super::built_in_components::{
-            MeshComponent, TransformComponent,
-        };
-        use crate::renderer::Mesh;
-        let store = test::mock_component_store();
-        assert!((store.get_component() as Storage<TransformComponent>)
-            .read()
-            .is_ok());
-    }
+    
 
 }
 /// Generates unique bitset mask values for a componenet

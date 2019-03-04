@@ -1,6 +1,6 @@
 pub use super::built_in_components::*;
 use super::component_stores::{
-    AnyStorageMap, ComponentIdGen, GetComponent, Storage, TryGetComponent,
+    ComponentIdGen, GetComponent, Storage, TryGetComponent,
 };
 use crate::renderer::traits::*;
 use bitflags::bitflags;
@@ -55,36 +55,31 @@ impl Deref for Entity {
 pub struct ResourceId(pub usize);
 
 #[derive(Debug)]
-pub struct ComponentManager {
+pub struct ComponentManager<S>
+where  S: TryGetComponent {
     pub entity_alloc: GenerationalIndexAllocator,
     pub masks: IndexArray<BitSet>,
-    custom_stores: AnyStorageMap,
+    custom_store: S,
     id_table: ComponentIdGen,
 }
 
-impl ComponentManager {
-    pub fn new() -> Self {
+impl<S> ComponentManager<S> where S: TryGetComponent {
+    pub fn new(custom_store: S) -> Self {
         let capacity = 255;
         let mut id_table = ComponentIdGen::new();
+        
 
         ComponentManager {
             entity_alloc: GenerationalIndexAllocator::with_capacity(capacity),
             masks: IndexArray::with_capacity(capacity),
-            custom_stores: AnyStorageMap::new(),
+            custom_store,
             id_table,
         }
     }
 
     /// generates bitmask for entity by components
     pub fn calc_mask(&mut self, entity: Entity) {
-        use std::any::Any;
-        let mut mask = BitSet::new();
-
-        for i in self.custom_stores.keys() {
-            let id = self.id_table.get_or_insert_id(i);
-            mask.add(id);
-        }
-        self.masks.insert(*entity, mask);
+        unimplemented!()
     }
 
     pub fn recalculate_masks<I: Iterator<Item = Entity>>(&mut self, itor: I) {
@@ -98,11 +93,6 @@ impl ComponentManager {
         &self.id_table
     }
 
-    pub fn register<C: Component + 'static>(&mut self) {
-        self.custom_stores
-            .insert_store::<C>(Arc::new(Storage::new()));
-        self.id_table.get_or_insert::<C>();
-    }
 
     pub fn alloc_entity(&mut self) -> Entity {
         let idx = self.entity_alloc.allocate();
@@ -124,7 +114,7 @@ impl ComponentManager {
     pub fn get_components<C: Component + 'static>(
         &self,
     ) -> Option<Arc<Storage<C>>> {
-        TryGetComponent::<C>::try_get_component(&self.custom_stores)
+        TryGetComponent::try_get_component::<C>(&self.custom_store)
     }
 
     pub fn entity_mask(&self, entity: Entity) -> &BitSet {
