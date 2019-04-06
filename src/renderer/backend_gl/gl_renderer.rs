@@ -19,6 +19,7 @@ use std::{
 use std::sync::Arc;
 
 use std::borrow::Borrow;
+use crate::game::component_stores::TryGetComponent;
 
 pub type ManagedTexture = Arc<GlTexture>;
 pub type ManagedTextureMaterial = material::Material<Arc<GlTexture>>;
@@ -228,7 +229,7 @@ impl GlRenderer {
         &self.scene_program
     }
 
-    fn draw_entities(&self, scene: &game::EntityWorld<Self>) {
+    fn draw_entities<CS: TryGetComponent>(&self, scene: &game::EntityWorld<Self, CS>) {
         use crate::math::*;
         use std::ptr;
         let program = &self.scene_program;
@@ -299,10 +300,10 @@ impl Renderer for GlRenderer {
         }
     }
 
-    fn on_update(
+    fn on_update<CS: TryGetComponent>(
         &mut self,
         _delta_time: ::std::time::Duration,
-        _world: &game::EntityWorld<Self>,
+        _world: &game::EntityWorld<Self, CS>,
     ) {
         if let Some(_t) = self.recompile_flag.get() {
             self.rebuild_program();
@@ -316,7 +317,7 @@ impl Renderer for GlRenderer {
         }
     }
 
-    fn render_scene(&self, scene: &game::EntityWorld<Self>) {
+    fn render_scene<CS: TryGetComponent>(&self, scene: &game::EntityWorld<Self, CS>) {
         use std::ptr;
 
         use crate::math::*;

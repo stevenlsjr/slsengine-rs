@@ -1,3 +1,5 @@
+
+
 use super::{camera::*, component::*, TryGetComponent, resource::ResourceManager};
 use crate::math::*;
 use crate::renderer::*;
@@ -123,14 +125,14 @@ where
         if wasd_axis.magnitude() > 0.0 {
             self.main_camera.input_move(
                 wasd_axis,
-                delta.as_float_secs(),
+                delta.as_millis() as f64 / 1000.0,
                 &input,
             );
         }
 
         if mouse_offset.magnitude() > 0.0 && input.mouse_state.left() {
             self.main_camera
-                .mouselook(mouse_offset, delta.as_float_secs());
+                .mouselook(mouse_offset, delta.as_millis() as f64 / 1000.0);
         }
         if let Some(mut input_state) = self.input_state.clone() {
             input_state.last_mousepos = input_state.mousepos;

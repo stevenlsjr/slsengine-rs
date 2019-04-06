@@ -5,7 +5,7 @@ use hibitset::BitSet;
 use slsengine::renderer::backend_vk;
 use slsengine::{
     game::*,
-    game::component_store::NullComponentStore,
+    game::component_stores::NullComponentStore,
     renderer::*,
     sdl_platform::{self, Platform},
 };
@@ -13,7 +13,12 @@ use slsengine::{
 use failure;
 #[cfg(feature = "backend-gl")]
 use slsengine::renderer::backend_gl;
+#[cfg(feature = "backend-gl")]
+use slsengine::renderer::backend_gl::gl_renderer::GlRenderer;
+
 use slsengine::game;
+use slsengine::sdl_platform::OpenGLVersion::GL45;
+use slsengine::sdl_platform::OpenGLVersion;
 
 struct App<R: Renderer> {
     platform: Platform,
@@ -23,12 +28,12 @@ struct App<R: Renderer> {
 }
 
 #[cfg(feature = "backend-vulkan")]
-fn setup() -> Result<App<backend_vk::VulkanRenderer>, failure::Error> {
+fn setup_vk() -> Result<App<backend_vk::VulkanRenderer>, failure::Error> {
     let platform =
         sdl_platform::platform().build(&backend_vk::VulkanPlatformHooks)?;
     let renderer = backend_vk::VulkanRenderer::new(&platform.window)?;
     let main_loop = MainLoopState::new();
-    let world = EntityWorld::new(&renderer);
+    let world = EntityWorld::new(&renderer, NullComponentStore);
     Ok(App {
         platform,
         renderer,
@@ -36,13 +41,14 @@ fn setup() -> Result<App<backend_vk::VulkanRenderer>, failure::Error> {
         world,
     })
 }
-#[cfg(all(not(feature = "backend-vulkan"), feature = "backend-gl"))]
-fn setup() -> Result<App<backend_gl::GlRenderer>, failure::Error> {
-    let platform =
-        sdl_platform::platform().build(&backend_vk::VulkanPlatformHooks)?;
-    let renderer = backend_vk::VulkanRenderer::new(&platform.window)?;
+
+#[cfg(feature = "backend-gl")]
+fn setup_gl() -> Result<App<backend_gl::GlRenderer>, failure::Error> {
+    let (platform, gl) =
+        sdl_platform::platform().with_opengl(OpenGLVersion::GL41).build_gl()?;
+    let renderer = backend_gl::GlRenderer::new(&platform.window)?;
     let main_loop = MainLoopState::new();
-    let world = EntityWorld::new(&renderer);
+    let world = EntityWorld::new(&renderer, NullComponentStore);
     Ok(App {
         platform,
         renderer,
@@ -53,38 +59,27 @@ fn setup() -> Result<App<backend_gl::GlRenderer>, failure::Error> {
 
 #[derive(Debug)]
 struct Point(u32, u32);
+
 impl Component for Point {}
 
-fn main() -> Result<(), i32> {
-    let mut app = setup().map_err(|e| {
-        eprintln!("setup failed: {:?}", e);
-        1
-    })?;
-    let entity = {
-        let world: &mut EntityWorld<_> = &mut app.world;
-        world.components.register::<Point>();
-        let entity = world.components.alloc_entity();
-        let points = world.components.get_components::<Point>().unwrap();
-        {
-            let mut lock = points.write().unwrap();
-            lock[*entity] = Some(Point(0, 20));
-        }
-        world.components.calc_mask(entity);
-        entity
-    };
-    let mask: &BitSet = app.world.components.entity_mask(entity);
-    let point_mask = app.world.components.component_mask::<Point>();
-    // assert!(mask.contains(point_mask));
-    let id_table = app.world.components.id_table();
-    assert_eq!(point_mask, id_table.get::<Point>().unwrap());
-    assert_eq!(mask.clone().into_iter().count(), 1);
-
-    dbg!(("point mask", point_mask));
-    for i in mask.clone().into_iter() {
-        dbg!(i);
-    }
-    use std::any::TypeId;
-    dbg!(TypeId::of::<Point>());
-
+fn run_app<R: Renderer>(app: App<R>) -> Result<(), failure::Error> {
     Ok(())
+}
+
+#[cfg(feature="backend-vulkan")]
+fn main() -> Result<(), i32> {
+
+    setup_vk().and_then(&run_app).map_err(|e| {
+        eprintln!("app error: {}", e);
+       1
+    })
+}
+
+#[cfg(all(not(feature="backend-vulkan"), feature="backend-gl"))]
+fn main() -> Result<(), i32> {
+
+    setup_vk().and_then(&run_app).map_err(|e| {
+        eprintln!("app error: {}", e);
+        1
+    })
 }
