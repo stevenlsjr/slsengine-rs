@@ -52,7 +52,6 @@ impl AnyIndexArraySet {
 #[test]
 fn test_any_index_array(){
     use crate::index_array::*;
-    use crate::allocator::*;
     let array: IndexArray<i32> = IndexArray::new();
     let array: Box<dyn AnyIndexArray> = Box::new(array);
     assert_eq!(array.item_typeid(), TypeId::of::<i32>());

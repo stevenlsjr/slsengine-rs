@@ -7,8 +7,7 @@ pub struct GenerationalIndex {
 }
 
 impl GenerationalIndex {
-
-    /// Constructor uses primarily for mocking indices 
+    /// Constructor uses primarily for mocking indices
     /// in a test. Otherwise, indices are created by an allocator
     #[cfg(test)]
     pub fn new(index: usize, generation: u64) -> Self {
@@ -20,11 +19,13 @@ impl GenerationalIndex {
         self.index
     }
 }
+
 #[derive(Copy, Clone, Debug, PartialEq, PartialOrd)]
 struct AllocEntry {
     is_live: bool,
     generation: u64,
 }
+
 /// Maintains a list of generations and free indices
 /// Allocates and deallocates indices
 #[derive(Debug, Clone, PartialEq)]
@@ -38,11 +39,11 @@ impl GenerationalIndexAllocator {
         let entries = vec![
             AllocEntry {
                 is_live: false,
-                generation: 0
+                generation: 0,
             };
             capacity
         ];
-        let mut free_list: VecDeque<_> =  (0usize..capacity).collect();
+        let mut free_list: VecDeque<_> = (0usize..capacity).collect();
         free_list.reserve(capacity * 2);
         GenerationalIndexAllocator {
             entries,
@@ -99,7 +100,7 @@ impl GenerationalIndexAllocator {
 
         self.free_list.push_back(index.index());
 
-        return true;
+        true
     }
 
     pub fn capacity(&self) -> usize {
@@ -144,12 +145,12 @@ impl<'a> Iterator for GenerationalIndexIter<'a> {
                 .allocator
                 .entries
                 .get(i)
-                .expect(&format!("bounds error: "));
+                .unwrap_or_else(|| panic!("bounds error"));
             i += 1;
             if e.is_live {
                 self.begin = i;
                 return Some(GenerationalIndex {
-                    index: i-1,
+                    index: i - 1,
                     generation: e.generation,
                 });
             }

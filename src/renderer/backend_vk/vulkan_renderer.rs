@@ -14,7 +14,6 @@ use std::{
     cell::{Ref, RefCell},
     ffi::CString,
     fmt,
-    ops::Try,
     rc::Rc,
     sync::{atomic::*, Arc, RwLock},
 };

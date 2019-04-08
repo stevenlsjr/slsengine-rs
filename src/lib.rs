@@ -1,7 +1,3 @@
-#![feature(duration_float)]
-#![feature(const_fn)]
-#![feature(try_trait)]
-#![feature(get_type_id)]
 
 #[macro_use]
 extern crate failure;
