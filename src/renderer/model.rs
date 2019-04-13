@@ -49,7 +49,7 @@ pub struct Model {
 }
 
 impl Model {
-    fn new(imports: GltfImport) -> Self {
+    pub fn new(imports: GltfImport) -> Self {
         Model {
             meshes: Vec::new(),
             transforms: Vec::new(),

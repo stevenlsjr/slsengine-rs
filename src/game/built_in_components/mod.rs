@@ -1,4 +1,5 @@
 use super::component::*;
+use super::resource::{MeshHandle, ResourceManager, TextureHandle};
 use crate::math::*;
 use crate::renderer::{material::Material, mesh::RenderMesh};
 use cgmath::*;
@@ -7,12 +8,12 @@ use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub struct TransformComponent {
-    pub parent: Option<EntityId>,
+    pub parent: Option<Entity>,
     pub transform: Decomposed<Vec3, Quaternion<f32>>,
 }
 
 impl Component for TransformComponent {
-    const MASK: ComponentMask = ComponentMask::TRANSFORM;
+    // const MASK: ComponentMask = ComponentMask::TRANSFORM;
 }
 
 impl Default for TransformComponent {
@@ -28,42 +29,18 @@ impl Default for TransformComponent {
     }
 }
 
-#[derive(Clone)]
-pub struct MaterialComponent<Tex> {
-    material: Material<Tex>,
-}
-impl<T> fmt::Debug for MaterialComponent<T> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "MaterialComponent {{material: {:?}}}", self.material)
-    }
+#[derive(Clone, Debug)]
+pub struct MaterialComponent {
+    pub material: Material<TextureHandle>,
 }
 
-impl<Tex> Component for MaterialComponent<Tex> {
-    const MASK: ComponentMask = ComponentMask::MATERIAL;
+impl Component for MaterialComponent {}
+
+#[derive(Debug, Clone)]
+pub struct MeshComponent {
+    pub mesh: MeshHandle,
 }
 
-#[derive(Clone)]
-pub struct MeshComponent<M>
-where
-    M: RenderMesh,
-{
-    pub name: String,
-    pub mesh: Option<Arc<M>>,
-}
-
-
-
-impl<M> Component for MeshComponent<M>
-where
-    M: RenderMesh,
-{
-    const MASK: ComponentMask = ComponentMask::STATIC_MESH;
-}
-impl<M> Debug for MeshComponent<M>
-where
-    M: RenderMesh,
-{
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "MeshComponent {}", self.name)
-    }
+impl Component for MeshComponent {
+    // const MASK: ComponentMask = ComponentMask::MESH;
 }

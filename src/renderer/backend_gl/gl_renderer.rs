@@ -1,6 +1,6 @@
 pub use super::{errors::*, program::*};
 
-use super::{gl_materials::*, objects::*, textures::*};
+use super::{gl_materials::*, gl_mesh::*, objects::*, textures::*};
 use crate::game;
 use crate::renderer::*;
 use cgmath::prelude::*;
@@ -12,15 +12,14 @@ use log::*;
 use sdl2::video::Window;
 use std::{
     cell::{Cell, Ref, RefCell},
-    collections::HashMap,
     path::Path,
-    rc::Rc,
     time::Instant,
 };
 
 use std::sync::Arc;
 
 use std::borrow::Borrow;
+use crate::game::component_stores::TryGetComponent;
 
 pub type ManagedTexture = Arc<GlTexture>;
 pub type ManagedTextureMaterial = material::Material<Arc<GlTexture>>;
@@ -35,29 +34,15 @@ pub struct GlRenderer {
     camera: RefCell<Camera>,
     scene_program: PbrProgram,
     envmap_program: PbrProgram,
-    pub sample_mesh: Option<GlMesh>,
+    sample_mesh: GlMesh,
     env_cube: GlMesh,
     pub materials: Materials,
 
     recompile_flag: Cell<Option<Instant>>,
 }
 
-pub struct GlMesh {
-    pub mesh: Mesh,
-    pub buffers: MeshBuffers,
-}
-
-impl RenderMesh for GlMesh {
-    fn vertices(&self) -> &[Vertex] {
-        &self.mesh.vertices
-    }
-    fn indices(&self) -> &[u32] {
-        &self.mesh.indices
-    }
-}
-
 fn create_scene_shaders() -> Result<(PbrProgram, PbrProgram), ShaderError> {
-    use crate::system::asset_path;
+    use crate::platform_system::asset_path;
     let scene_program = program_from_sources(
         asset_path().join(Path::new("./assets/shaders/brdf.vert")),
         asset_path().join(Path::new("./assets/shaders/brdf.frag")),
@@ -93,18 +78,10 @@ impl GlMesh {
 
         Ok(GlMesh { mesh, buffers })
     }
-
-    pub fn from_mesh(mesh: Mesh) -> Result<Self, failure::Error> {
-        let buffers = MeshBuffers::new()?;
-        buffers.bind_mesh(&mesh);
-        Ok(GlMesh { buffers, mesh })
-    }
 }
 
 impl GlRenderer {
     pub fn new(window: &Window) -> Result<GlRenderer, RendererError> {
-        use super::objects::*;
-
         let (width, height) = window.size();
         let perspective = PerspectiveFov {
             fovy: Deg(40.0).into(),
@@ -114,6 +91,32 @@ impl GlRenderer {
         };
         let (scene_program, envmap_program) =
             create_scene_shaders().map_err(RendererError::ShaderError)?;
+        let mesh = {
+            use crate::renderer::Vertex as V;
+            use genmesh::generators::*;
+            let icosphere = IcoSphere::new();
+            let vertices: Vec<V> = icosphere
+                .shared_vertex_iter()
+                .map(|v| V {
+                    position: v.pos.into(),
+                    normal: v.normal.into(),
+                    ..V::default()
+                })
+                .collect();
+
+            let mesh = Mesh {
+                vertices,
+                indices: icosphere
+                    .indexed_polygon_iter()
+                    .flat_map(|tri| vec![tri.x, tri.y, tri.z])
+                    .map(|i| i as u32)
+                    .collect(),
+            };
+
+            GlMesh::with_mesh(mesh).map_err(|e| RendererError::Lifecycle {
+                reason: format!("could not create placeholder mesh: {:?}", e),
+            })?
+        };
 
         let materials = GlRenderer::make_materials().map_err(|_| {
             RendererError::Lifecycle {
@@ -130,7 +133,7 @@ impl GlRenderer {
             scene_program,
             envmap_program,
             env_cube,
-            sample_mesh: None,
+            sample_mesh: mesh,
             materials,
             camera: RefCell::new(Camera::new(perspective)),
             recompile_flag: Cell::new(None),
@@ -162,7 +165,6 @@ impl GlRenderer {
     }
 
     fn make_materials() -> Result<Materials, ::failure::Error> {
-        use super::objects::*;
         use crate::renderer::material::*;
 
         use failure::Error;
@@ -227,8 +229,7 @@ impl GlRenderer {
         &self.scene_program
     }
 
-    fn draw_entities(&self, scene: &game::EntityWorld<Self>) {
-        use crate::game::component::*;
+    fn draw_entities<CS: TryGetComponent>(&self, scene: &game::EntityWorld<Self, CS>) {
         use crate::math::*;
         use std::ptr;
         let program = &self.scene_program;
@@ -256,71 +257,6 @@ impl GlRenderer {
                 gl::Uniform3fv(id as _, 4, light_pos_ptr as *const _);
             })
             .unwrap_or(());
-
-        let mask = ComponentMask::LIVE_ENTITY
-            | ComponentMask::TRANSFORM
-            | ComponentMask::STATIC_MESH;
-
-        let entities: Vec<_> = scene
-            .components
-            .enumerate_entities()
-            .filter(|(_k, v)| v.contains(mask))
-            .map(|(k, v)| {
-                let m = &scene.components.static_meshes[&k];
-                (k, v, m.mesh.clone())
-            })
-            .collect();
-
-        for (id, mask, mesh) in entities {
-            let GlMesh {
-                ref mesh,
-                ref buffers,
-            } = match &mesh {
-                Some(m) => {
-                    eprintln!("mesh found");
-                    m
-                }
-                None => &self.env_cube,
-            };
-            if mask.contains(ComponentMask::MATERIAL) {
-                if let Some(material) = scene.components.materials.get(&id) {
-                    self.materials
-                        .base_material_ubo
-                        .set_material(material.borrow())
-                        .unwrap_or_else(|e| {
-                            error!("error {:?}", e);
-                        });
-                    self.scene_program
-                        .bind_material_textures(material.borrow());
-                } else {
-                    warn!("missing material for entity {:?}, {:?}", id, mask);
-                }
-            } else {
-                self.materials
-                    .base_material_ubo
-                    .set_material(self.materials.default_material.borrow())
-                    .unwrap_or_else(|e| {
-                        error!("error {:?}", e);
-                    });
-            }
-
-            let transform = &scene.components.transforms[&id];
-            let model_matrix = Mat4::from(transform.transform);
-
-            let modelview = cam_view * model_matrix;
-            let normal_matrix = modelview.invert().unwrap().transpose();
-            program.bind_uniform(uniforms.modelview, &modelview);
-            program.bind_uniform(uniforms.normal_matrix, &normal_matrix);
-            unsafe {
-                gl::BindVertexArray(buffers.vertex_array.id());
-                gl::DrawElements(
-                    gl::TRIANGLES,
-                    mesh.indices.len() as i32,
-                    gl::UNSIGNED_INT,
-                    ptr::null(),
-                );
-            }
-        }
     }
 }
 
@@ -339,7 +275,7 @@ impl Renderer for GlRenderer {
         self.camera.borrow()
     }
 
-    fn set_clear_color(&mut self, color: Color) {
+    fn set_clear_color(&mut self, color: ColorRGBA) {
         unsafe {
             gl::ClearColor(color.r, color.g, color.b, color.a);
         }
@@ -364,10 +300,10 @@ impl Renderer for GlRenderer {
         }
     }
 
-    fn on_update(
+    fn on_update<CS: TryGetComponent>(
         &mut self,
         _delta_time: ::std::time::Duration,
-        _world: &game::EntityWorld<Self>,
+        _world: &game::EntityWorld<Self, CS>,
     ) {
         if let Some(_t) = self.recompile_flag.get() {
             self.rebuild_program();
@@ -381,7 +317,7 @@ impl Renderer for GlRenderer {
         }
     }
 
-    fn render_scene(&self, scene: &game::EntityWorld<Self>) {
+    fn render_scene<CS: TryGetComponent>(&self, scene: &game::EntityWorld<Self, CS>) {
         use std::ptr;
 
         use crate::math::*;

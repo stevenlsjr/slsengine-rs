@@ -1,5 +1,3 @@
-#![feature(duration_float)]
-#![feature(const_fn)]
 
 #[macro_use]
 extern crate failure;
@@ -9,14 +7,12 @@ extern crate failure;
 extern crate memoffset;
 #[macro_use]
 extern crate serde_derive;
-#[cfg(feature = "with-vulkan")]
-extern crate vulkano;
 
 pub mod config;
 pub mod game;
+pub mod platform_system;
 pub mod renderer;
 pub mod sdl_platform;
-pub mod system;
 use std::error;
 
 // vulkan feature

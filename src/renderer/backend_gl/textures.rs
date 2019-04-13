@@ -1,10 +1,7 @@
-use super::objects::*;
 use failure;
 use gl;
 use gl::types::GLenum;
-use image::{self, DynamicImage};
-
-use std::iter::FromIterator;
+use image;
 
 pub trait FromImage<Image> {
     fn load_from_image(&mut self, image: &Image) -> Result<(), failure::Error>;

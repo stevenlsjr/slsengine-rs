@@ -1,3 +1,4 @@
+use super::color::ColorRGBA;
 use cgmath::*;
 use genmesh::{
     generators::{IndexedPolygon, SharedVertex},
@@ -44,8 +45,13 @@ impl PartialEq for Vertex {
 }
 
 pub trait RenderMesh {
-    fn vertices(&self) -> &[Vertex];
-    fn indices(&self) -> &[u32];
+    fn mesh(&self) -> &Mesh;
+    fn vertices(&self) -> &[Vertex] {
+        &self.mesh().vertices
+    }
+    fn indices(&self) -> &[u32] {
+        &self.mesh().indices
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -77,7 +83,6 @@ impl Mesh {
 
     /// takes a mutable mesh, and sets the vertex tangents and bitangents
     pub fn calculate_tangents(&mut self) {
-        use std::collections::HashMap;
         let mut tangents = vec![Vec::new(); self.vertices.len()];
         let mut bitangents = vec![Vec::new(); self.vertices.len()];
 
@@ -119,14 +124,34 @@ impl Mesh {
             v.bitangent = (b_sum / b.len() as f32).into();
         }
     }
+
+    /// Creates a mesh from a genmesh geometry.
+    pub fn from_genmesh<G>(generator: G) -> Self
+    where
+        G: SharedVertex<genmesh::Vertex> + IndexedPolygon<Triangle<usize>>,
+    {
+        let mut m = Mesh {
+            vertices: generator
+                .shared_vertex_iter()
+                .map(|v| Vertex {
+                    position: v.pos.into(),
+                    normal: v.normal.into(),
+                    ..Vertex::default()
+                })
+                .collect(),
+            indices: generator
+                .indexed_polygon_iter()
+                .flat_map(|t| vec![t.x as u32, t.y as u32, t.z as u32])
+                .collect(),
+        };
+        m.calculate_tangents();
+        m
+    }
 }
 
 impl RenderMesh for Mesh {
-    fn vertices(&self) -> &[Vertex] {
-        &self.vertices
-    }
-    fn indices(&self) -> &[u32] {
-        &self.indices
+    fn mesh(&self) -> &Mesh {
+        self
     }
 }
 
@@ -136,34 +161,5 @@ impl SharedVertex<Vertex> for Mesh {
     }
     fn shared_vertex_count(&self) -> usize {
         self.indices.len()
-    }
-}
-
-#[derive(Clone, Copy, Debug)]
-pub struct Color {
-    pub r: f32,
-    pub g: f32,
-    pub b: f32,
-    pub a: f32,
-}
-
-pub fn color4f(r: f32, g: f32, b: f32, a: f32) -> Color {
-    Color { r, g, b, a }
-}
-
-impl Into<Vector4<f32>> for Color {
-    fn into(self) -> Vector4<f32> {
-        ::cgmath::vec4(self.r, self.g, self.b, self.a)
-    }
-}
-
-impl From<Vector4<f32>> for Color {
-    fn from(v: Vector4<f32>) -> Self {
-        Color {
-            r: v.x,
-            g: v.y,
-            b: v.z,
-            a: v.w,
-        }
     }
 }

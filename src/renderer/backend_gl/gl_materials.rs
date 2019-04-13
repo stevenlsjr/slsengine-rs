@@ -88,7 +88,6 @@ impl MaterialUbo {
         material: &crate::renderer::material::Material<T>,
     ) -> Result<(), super::GlErrors> {
         use super::gl_renderer::{drain_error_stack, dump_errors};
-        use gl::types::*;
         let _buffer = MaterialBufferLayout::from_material(material);
         drain_error_stack();
         unsafe {

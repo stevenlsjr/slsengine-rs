@@ -1,284 +1,85 @@
 #![allow(dead_code)]
 
-extern crate cgmath;
-extern crate genmesh;
-extern crate gl;
-extern crate gltf;
-extern crate sdl2;
-extern crate slsengine;
-extern crate stb_image;
-extern crate toml;
-
-#[macro_use]
-extern crate log;
-extern crate env_logger;
-
-#[macro_use]
-extern crate failure;
-
-use cgmath::prelude::*;
-use cgmath::*;
+use hibitset::BitSet;
+#[cfg(feature = "backend-vulkan")]
+use slsengine::renderer::backend_vk;
 use slsengine::{
     game::*,
-    renderer::{backend_gl::*, *},
-    *,
-};
-use std::{
-    sync::{Arc, RwLock},
-    thread,
+    game::component_stores::NullComponentStore,
+    renderer::*,
+    sdl_platform::{self, Platform},
 };
 
-// returns the [u, v] surface coordinates for a unit sphere.
-fn uv_for_unit_sphere(pos: Vector3<f32>) -> [f32; 2] {
-    use std::f32::consts::PI;
-    let normal: Vector3<f32> = pos.normalize();
-    let u = (normal.x.atan2(normal.z) / (2.0 * PI) + 0.5)
-        .min(1.0)
-        .max(0.0);
-    let v = (normal.y * 0.5 + 0.5).min(1.0).max(0.0);
+use failure;
+#[cfg(feature = "backend-gl")]
+use slsengine::renderer::backend_gl;
+#[cfg(feature = "backend-gl")]
+use slsengine::renderer::backend_gl::gl_renderer::GlRenderer;
 
-    [u, v]
+use slsengine::game;
+use slsengine::sdl_platform::OpenGLVersion::GL45;
+use slsengine::sdl_platform::OpenGLVersion;
+
+struct App<R: Renderer> {
+    platform: Platform,
+    renderer: R,
+    main_loop: MainLoopState,
+    world: EntityWorld<R, NullComponentStore>,
 }
 
-fn get_or_create_config(
-) -> Result<slsengine::config::PlatformConfig, failure::Error> {
-    use slsengine::config::PlatformConfig;
-    use std::{fs, io::Write, path};
-
-    let pref_dir = sdl2::filesystem::pref_path("dangerbird", "slsengine")
-        .map_err(&failure::Error::from)?;
-    if let Err(_) = fs::metadata(&pref_dir) {
-        fs::create_dir_all(&pref_dir).map_err(|_| {
-            format_err!("could not create preferences directory {}", pref_dir)
-        })?;
-    }
-
-    let full_path: path::PathBuf =
-        [&pref_dir, "app_config.toml"].iter().collect();
-    let conf: PlatformConfig = match fs::read(&full_path) {
-        Ok(conf) => {
-            let parsed_conf =
-                toml::from_slice(&conf).map_err(&failure::Error::from)?;
-            info!("read configuration {:?}", parsed_conf);
-            parsed_conf
-        }
-        Err(_) => {
-            let mut f =
-                fs::File::create(full_path).map_err(&failure::Error::from)?;
-            let default_conf = PlatformConfig::default();
-            let v =
-                toml::to_vec(&default_conf).map_err(&failure::Error::from)?;
-
-            f.write(&v).map_err(|e| {
-                format_err!("could not write default configuration!: {}", e)
-            })?;
-            info!("wrote configuration to {:?}", f);
-            default_conf
-        }
-    };
-    Ok(conf)
+#[cfg(feature = "backend-vulkan")]
+fn setup_vk() -> Result<App<backend_vk::VulkanRenderer>, failure::Error> {
+    let platform =
+        sdl_platform::platform().build(&backend_vk::VulkanPlatformHooks)?;
+    let renderer = backend_vk::VulkanRenderer::new(&platform.window)?;
+    let main_loop = MainLoopState::new();
+    let world = EntityWorld::new(&renderer, NullComponentStore);
+    Ok(App {
+        platform,
+        renderer,
+        main_loop,
+        world,
+    })
 }
 
-struct SceneAssets {
-    model: Arc<RwLock<Option<model::Model>>>,
-    worker: thread::JoinHandle<()>,
-    pub is_loaded_by_renderer: bool,
+#[cfg(feature = "backend-gl")]
+fn setup_gl() -> Result<App<backend_gl::GlRenderer>, failure::Error> {
+    let (platform, gl) =
+        sdl_platform::platform().with_opengl(OpenGLVersion::GL41).build_gl()?;
+    let renderer = backend_gl::GlRenderer::new(&platform.window)?;
+    let main_loop = MainLoopState::new();
+    let world = EntityWorld::new(&renderer, NullComponentStore);
+    Ok(App {
+        platform,
+        renderer,
+        main_loop,
+        world,
+    })
 }
 
-impl SceneAssets {
-    fn new() -> Self {
-        use std::time::Duration;
-        let model = Arc::new(RwLock::new(None));
-        let worker = {
-            let model = model.clone();
+#[derive(Debug)]
+struct Point(u32, u32);
 
-            thread::spawn(move || {
-                let path = system::asset_path()
-                    .join("assets/models/DamagedHelmet.glb");
+impl Component for Point {}
 
-                let loaded_model = model::Model::from_gltf(path).unwrap();
-
-                'write_lock: loop {
-                    match model.write() {
-                        Ok(mut m) => {
-                            *m = Some(loaded_model);
-                            info!("loaded model to memory");
-                            break 'write_lock;
-                        }
-                        Err(_) => thread::sleep(Duration::from_millis(10)),
-                    };
-                }
-            })
-        };
-
-        SceneAssets {
-            model: model,
-            worker,
-            is_loaded_by_renderer: false,
-        }
-    }
-
-    fn try_load(
-        &mut self,
-        renderer: &mut GlRenderer,
-        world: &mut EntityWorld<GlRenderer>,
-    ) {
-        use log::*;
-        use slsengine::{
-            game::component::*, renderer::backend_gl::objects::*,
-        };
-        if self.is_loaded_by_renderer {
-            return;
-        }
-        let model_opt = match self.model.try_read() {
-            Ok(m) => m,
-            Err(_) => {
-                error!("could not read model");
-                return;
-            } //
-        };
-
-        if let Some(ref model) = *model_opt {
-            let mesh_data = &model.meshes[0];
-            let mesh = mesh_data.mesh.clone();
-            let gl_mesh = Arc::new(GlMesh::from_mesh(mesh).unwrap());
-
-            let entities = world.components
-                .enumerate_entities()
-                .filter(|(_, mask)| mask.contains(ComponentMask::STATIC_MESH)).collect::<Vec<_>>();
-            for (id, mask) in entities.iter(){
-                let mesh_component = world.components.static_meshes.get_mut(id).unwrap();
-                if mesh_component.name == "HELMET" {
-                    mesh_component.mesh = Some(gl_mesh.clone());
-                }
-
-            }
-            eprintln!("loaded meshes!");
-            self.is_loaded_by_renderer = true;
-        }
-    }
+fn run_app<R: Renderer>(app: App<R>) -> Result<(), failure::Error> {
+    Ok(())
 }
 
-fn setup_materials(
-    _renderer: &GlRenderer,
-    model: &renderer::model::Model,
-    world: &mut EntityWorld<GlRenderer>,
-) {
-    use crate::renderer::{
-        backend_gl::textures::*,
-        material::{Material, MaterialMapName},
-    };
-    use slsengine::game::component::*;
-    use std::sync::*;
-    let mat = model.materials.values().next().unwrap();
-    let imports = model.imports();
+#[cfg(feature="backend-vulkan")]
+fn main() -> Result<(), i32> {
 
-    let tex_images: Vec<Option<Arc<GlTexture>>> = imports
-        .document
-        .images()
-        .map(|i| -> Result<Arc<GlTexture>, failure::Error> {
-            let data = &imports.images[i.index()];
-            let mut tex = GlTexture::new()?;
-            tex.load_from_image(data)?;
-
-            Ok(Arc::new(tex))
-        })
-        .map(|res| match res {
-            Ok(t) => Some(t),
-            Err(e) => {
-                error!("failed to create texture: {:?}", e);
-                None
-            }
-        })
-        .collect();
-
-    let gl_mat = mat.transform_textures(|&img_index, name| {
-        match tex_images.get(img_index).unwrap_or(&None) {
-            Some(t) => Some(t.clone()),
-            None => {
-                error!(
-                    "could not load texture indexed {} for model",
-                    img_index
-                );
-                None
-            }
-        }
-    });
-
-    let entities = world
-        .components
-        .enumerate_entities()
-        .filter(|(_, mask)| mask.contains(ComponentMask::MATERIAL))
-        .collect::<Vec<_>>();
-    for (id, _mask) in entities.iter() {
-        world.components.materials.insert(*id, gl_mat.clone());
-    }
+    setup_vk().and_then(&run_app).map_err(|e| {
+        eprintln!("app error: {}", e);
+       1
+    })
 }
 
-fn main() {
-    use crate::sdl_platform::{platform, Platform};
-    use crate::{renderer::model::*, system::*};
+#[cfg(all(not(feature="backend-vulkan"), feature="backend-gl"))]
+fn main() -> Result<(), i32> {
 
-    use std::time::*;
-    let config = get_or_create_config().unwrap();
-
-    env_logger::init();
-
-    let (plt, gl_platform_builder) =
-        platform().with_config(config).build_gl().unwrap();
-    let _ctx = gl_platform_builder.gl_ctx();
-
-    let Platform {
-        window, event_pump, ..
-    } = plt;
-    let mut loop_state = MainLoopState::new();
-
-    // let model = Model::from_gltf(&path).unwrap();
-
-    let mut renderer = GlRenderer::new(&window).unwrap();
-
-    let mut timer = game::Timer::new(Duration::from_millis(1000 / 50));
-    let mut world = game::EntityWorld::new(&renderer);
-
-    let mut assets = SceneAssets::new();
-
-    // setup_materials(&renderer, &model, &mut world);
-
-    loop_state.is_running = true;
-    let mut accumulator = Duration::from_secs(0);
-    let fixed_dt = Duration::from_millis(100 / 6);
-    while loop_state.is_running {
-        // if not yet loaded, try to get model from worker thread
-        {
-            assets.try_load(&mut renderer, &mut world);
-        };
-        {
-            loop_state.handle_events(
-                &window,
-                &event_pump,
-                &renderer,
-                &mut world,
-            );
-        }
-        let game::Tick { delta, .. } = timer.tick();
-        accumulator += delta;
-
-        let _ticks = Instant::now().duration_since(timer.start_instant());
-
-        while accumulator >= fixed_dt {
-            let ep = event_pump.borrow();
-
-            world.update(fixed_dt, game::InputSources::from_event_pump(&ep));
-            accumulator -= fixed_dt;
-        }
-        {
-            renderer.on_update(delta, &world);
-        }
-        renderer.clear();
-
-        renderer.render_scene(&world);
-
-        window.gl_swap_window();
-    }
-    assets.worker.join().unwrap();
+    setup_vk().and_then(&run_app).map_err(|e| {
+        eprintln!("app error: {}", e);
+        1
+    })
 }

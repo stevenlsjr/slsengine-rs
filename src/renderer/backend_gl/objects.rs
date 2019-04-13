@@ -2,6 +2,7 @@
  *  objects.rs: Managed OpenGL buffer, texture, and vertex objects
  **/
 extern crate failure;
+use super::gl_renderer::{drain_error_stack, dump_errors, GlErrors};
 use crate::renderer;
 use crate::renderer::Mesh;
 use gl;
@@ -10,6 +11,8 @@ use std::ops::*;
 
 #[derive(Fail, Debug)]
 pub enum ObjectError {
+    #[fail(display = "OpenGl error in object creation: {:?}", _0)]
+    Gl(GlErrors),
     #[fail(display = "Could not create object: {:?}", reason)]
     ObjectCreationFailure { reason: String },
 
@@ -105,7 +108,7 @@ impl SingleBuffer {
 impl Drop for SingleBuffer {
     fn drop(&mut self) {
         unsafe {
-            gl::DeleteBuffers(1, &mut self.0);
+            gl::DeleteBuffers(1, &self.0);
         }
     }
 }
@@ -139,7 +142,7 @@ impl BufferObjects {
             gl::GenBuffers(n_objects as i32, ptr);
         }
 
-        BufferObjects { objects: objects }
+        BufferObjects { objects }
     }
 }
 
@@ -166,12 +169,13 @@ impl MeshBuffers {
     pub fn new() -> Result<MeshBuffers, ObjectError> {
         let mut buffers = [0u32, 0];
         let mut vao = 0u32;
-
+        drain_error_stack();
         unsafe {
             gl::GenBuffers(2, buffers.as_mut_ptr());
 
             gl::GenVertexArrays(1, &mut vao);
         }
+        dump_errors().map_err(|e| ObjectError::Gl(e))?;
 
         Ok(MeshBuffers {
             vertex_buffer: buffers[0],
@@ -180,9 +184,10 @@ impl MeshBuffers {
         })
     }
 
-    pub fn bind_mesh(&self, mesh: &Mesh) -> Result<&Self, failure::Error> {
+    pub fn bind_mesh(&self, mesh: &Mesh) -> Result<&Self, GlErrors> {
         use crate::renderer::Vertex;
         use std::mem::size_of;
+        drain_error_stack();
         unsafe {
             gl::BindVertexArray(self.vertex_array.id());
             gl::BindBuffer(gl::ARRAY_BUFFER, self.vertex_buffer);
@@ -251,6 +256,8 @@ impl MeshBuffers {
             gl::EnableVertexAttribArray(4);
         }
 
+        dump_errors()?;
+
         Ok(&self)
     }
 }
@@ -258,10 +265,10 @@ impl MeshBuffers {
 impl Drop for MeshBuffers {
     fn drop(&mut self) {
         let mut buff_objs = [self.index_buffer, self.vertex_buffer];
-        let mut vao = self.vertex_array.0;
+        let vao = self.vertex_array.0;
         unsafe {
             gl::DeleteBuffers(2, buff_objs.as_mut_ptr());
-            gl::DeleteVertexArrays(1, &mut vao);
+            gl::DeleteVertexArrays(1, &vao);
         }
     }
 }

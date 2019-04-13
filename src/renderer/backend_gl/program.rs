@@ -164,7 +164,8 @@ pub unsafe fn get_shader_info_log(shader: u32) -> String {
         buffer.as_mut_ptr() as *mut i8,
     );
 
-    String::from_utf8(buffer).unwrap_or("Could not read log".to_string())
+    String::from_utf8(buffer)
+        .unwrap_or_else(|_| "Could not read log".to_string())
 }
 
 pub unsafe fn compile_source(
@@ -198,7 +199,7 @@ pub unsafe fn compile_source(
     compile_status = 0;
     gl::GetShaderiv(shader, gl::COMPILE_STATUS, &mut compile_status);
     assert_eq!(cs_1, compile_status);
-    if compile_status != gl::TRUE as i32 {
+    if compile_status != i32::from(gl::TRUE) {
         let info_log = get_shader_info_log(shader);
         return Err(ShaderError::CompileFailure { info_log });
     }
@@ -215,6 +216,7 @@ impl Drop for ShaderStage {
 }
 
 pub fn get_program_info_log(program: u32) -> String {
+    use std::ptr;
     let mut log_len = 0;
     unsafe {
         gl::GetProgramiv(program, gl::INFO_LOG_LENGTH, &mut log_len);
@@ -224,7 +226,7 @@ pub fn get_program_info_log(program: u32) -> String {
         gl::GetProgramInfoLog(
             program,
             log_len,
-            0 as *mut _,
+            ptr::null_mut(),
             buffer.as_mut_ptr() as *mut i8,
         );
     }
@@ -334,13 +336,19 @@ where
     }
 }
 
-impl ProgramBuilder {
-    pub fn new() -> ProgramBuilder {
+impl Default for ProgramBuilder {
+    fn default() -> Self {
         ProgramBuilder {
             frag_shader: None,
             vert_shader: None,
             //            geometry_shader: None,
         }
+    }
+}
+
+impl ProgramBuilder {
+    pub fn new() -> ProgramBuilder {
+        Self::default()
     }
     pub fn frag_shader(&mut self, frag_shader: u32) -> &mut ProgramBuilder {
         self.frag_shader = Some(frag_shader);
@@ -385,7 +393,7 @@ impl ProgramBuilder {
 
         let mut result = 0;
         gl::GetProgramiv(program, gl::LINK_STATUS, &mut result);
-        if result != gl::TRUE as i32 {
+        if result != i32::from(gl::TRUE) {
             let log: String = get_program_info_log(program);
             gl::DeleteProgram(program);
             return Err(ShaderError::LinkFailure { reason: log });

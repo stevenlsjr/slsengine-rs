@@ -1,11 +1,13 @@
-use super::{camera::*, component::*};
+
+
+use super::{camera::*, component::*, TryGetComponent, resource::ResourceManager};
 use crate::math::*;
 use crate::renderer::*;
 use cgmath::*;
 use log::*;
 use sdl2::{keyboard::KeyboardState, mouse::MouseState, EventPump};
-use std::collections::HashMap;
-use std::time::{Duration, Instant};
+use std::fmt;
+use std::time::Duration;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct InputState {
@@ -27,21 +29,51 @@ impl<'a> InputSources<'a> {
     }
 }
 
-pub struct EntityWorld<R>
+pub struct EntityWorld<R, CS>
 where
     R: Renderer,
+    CS: TryGetComponent
 {
     pub input_state: Option<InputState>,
     pub main_camera: FpsCameraComponent,
-    pub components: ComponentManager<R>,
+    pub components: ComponentManager<CS>,
+    pub resources: ResourceManager<R>,
 }
 
-impl<R> EntityWorld<R>
+impl<R, CS> fmt::Debug for EntityWorld<R, CS>
 where
     R: Renderer,
+    CS: TryGetComponent
+
 {
-    pub fn new(_renderer: &R) -> Self {
-        use rand::random;
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use std::any::TypeId;
+        f.debug_struct(&"EntityWorld<R>")
+            .field(
+                "input_state",
+                &format_args!(
+                    "{}",
+                    if self.input_state.is_some() {
+                        "Some({{..}}"
+                    } else {
+                        "None"
+                    }
+                ),
+            )
+            .field("main_camera", &format_args!("{{..}}"))
+            .field("components", &format_args!("{{..}}"))
+            .field("resources", &format_args!("{{..}}"))
+            .finish()
+    }
+}
+
+impl<R, CS> EntityWorld<R, CS>
+where
+    R: Renderer,
+    CS: TryGetComponent
+
+{
+    pub fn new(_renderer: &R, component_store: CS) -> Self {
         use std::f32::consts::PI;
         let main_camera = FpsCameraComponent::new(
             Point3::new(0.0, 0.0, 5.0),
@@ -50,47 +82,11 @@ where
             Rad(0.0),
         );
 
-        let mut world = EntityWorld {
+        EntityWorld {
             main_camera,
             input_state: None,
-            components: ComponentManager::new(),
-        };
-        world.setup_game();
-        world
-    }
-
-    fn setup_game(&mut self) {
-        use crate::renderer::material::*;
-        let spacing = 3.0;
-        /// setup grid of drawable entities
-        let n_rows = 5;
-        let n_cols = 5;
-        for j in 0..n_rows {
-            for i in 0..n_cols {
-                use std::f32::consts::PI;
-                let eid = self.components.alloc_entity();
-                let mask = ComponentMask::TRANSFORM
-                    | ComponentMask::STATIC_MESH
-                    | ComponentMask::MATERIAL;
-                self.components.masks[eid.0] |= mask;
-                let mut xform = TransformComponent {
-                    ..TransformComponent::default()
-                };
-                let rotation: Euler<Rad<f32>> =
-                    Euler::new(Rad(PI / 2.0), Rad::zero(), Rad::zero());
-                xform.transform.disp = vec3(
-                    (i as f32 - (n_cols as f32 / 2.0)) * spacing,
-                    (j as f32 - (n_rows as f32 / 2.0)) as f32 * spacing,
-                    -3.0,
-                );
-                xform.transform.rot = rotation.into();
-
-                self.components.transforms.insert(eid, xform);
-                self.components.static_meshes.insert(eid, MeshComponent {
-                    mesh: None,
-                    name: "HELMET".to_owned()
-                });
-            }
+            components: ComponentManager::new(component_store),
+            resources: ResourceManager::new(),
         }
     }
 
@@ -129,14 +125,14 @@ where
         if wasd_axis.magnitude() > 0.0 {
             self.main_camera.input_move(
                 wasd_axis,
-                delta.as_float_secs(),
+                delta.as_millis() as f64 / 1000.0,
                 &input,
             );
         }
 
         if mouse_offset.magnitude() > 0.0 && input.mouse_state.left() {
             self.main_camera
-                .mouselook(mouse_offset, delta.as_float_secs());
+                .mouselook(mouse_offset, delta.as_millis() as f64 / 1000.0);
         }
         if let Some(mut input_state) = self.input_state.clone() {
             input_state.last_mousepos = input_state.mousepos;

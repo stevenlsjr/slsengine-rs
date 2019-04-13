@@ -1,0 +1,8 @@
+[package]
+name = "slsengine_entityalloc"
+version = "0.1.0"
+authors = ["Steve Shea <stevenlsjr@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+mopa = "0.2.2"
