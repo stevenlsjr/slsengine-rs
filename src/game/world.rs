@@ -1,12 +1,11 @@
-
-
-use super::{camera::*, component::*, TryGetComponent, resource::ResourceManager};
+use super::camera::*;
 use crate::math::*;
 use crate::renderer::*;
 use cgmath::*;
 use log::*;
 use sdl2::{keyboard::KeyboardState, mouse::MouseState, EventPump};
 use std::fmt;
+use std::marker::PhantomData;
 use std::time::Duration;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -29,22 +28,18 @@ impl<'a> InputSources<'a> {
     }
 }
 
-pub struct EntityWorld<R, CS>
+pub struct WorldManager<R>
 where
     R: Renderer,
-    CS: TryGetComponent
 {
     pub input_state: Option<InputState>,
     pub main_camera: FpsCameraComponent,
-    pub components: ComponentManager<CS>,
-    pub resources: ResourceManager<R>,
+    phantom_renderer: PhantomData<R>,
 }
 
-impl<R, CS> fmt::Debug for EntityWorld<R, CS>
+impl<R> fmt::Debug for WorldManager<R>
 where
     R: Renderer,
-    CS: TryGetComponent
-
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use std::any::TypeId;
@@ -61,19 +56,15 @@ where
                 ),
             )
             .field("main_camera", &format_args!("{{..}}"))
-            .field("components", &format_args!("{{..}}"))
-            .field("resources", &format_args!("{{..}}"))
             .finish()
     }
 }
 
-impl<R, CS> EntityWorld<R, CS>
+impl<R> WorldManager<R>
 where
     R: Renderer,
-    CS: TryGetComponent
-
 {
-    pub fn new(_renderer: &R, component_store: CS) -> Self {
+    pub fn new(_renderer: &R) -> Self {
         use std::f32::consts::PI;
         let main_camera = FpsCameraComponent::new(
             Point3::new(0.0, 0.0, 5.0),
@@ -82,11 +73,10 @@ where
             Rad(0.0),
         );
 
-        EntityWorld {
+        WorldManager {
             main_camera,
             input_state: None,
-            components: ComponentManager::new(component_store),
-            resources: ResourceManager::new(),
+            phantom_renderer: PhantomData,
         }
     }
 

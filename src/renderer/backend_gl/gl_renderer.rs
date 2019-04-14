@@ -19,7 +19,6 @@ use std::{
 use std::sync::Arc;
 
 use std::borrow::Borrow;
-use crate::game::component_stores::TryGetComponent;
 
 pub type ManagedTexture = Arc<GlTexture>;
 pub type ManagedTextureMaterial = material::Material<Arc<GlTexture>>;
@@ -229,35 +228,38 @@ impl GlRenderer {
         &self.scene_program
     }
 
-    fn draw_entities<CS: TryGetComponent>(&self, scene: &game::EntityWorld<Self, CS>) {
-        use crate::math::*;
-        use std::ptr;
-        let program = &self.scene_program;
-        let uniforms = program.uniforms();
-
-        program.use_program();
-        unsafe { gl::Enable(gl::CULL_FACE) };
-
-        let cam_view = scene.main_camera.transform();
-        let light_positions: &[Vec3] = &[
-            vec3(10.0, 10.0, 10.0),
-            vec3(10.0, -10.0, 10.0),
-            vec3(-10.0, -10.0, 10.0),
-            vec3(-10.0, 10.0, 10.0),
-        ];
-        let xformed_light_positions: Vec<Vec3> = light_positions
-            .iter()
-            .map(|v| (cam_view * v.extend(1.0)).xyz())
-            .collect();
-        let light_pos_ptr = xformed_light_positions.as_ptr();
-
-        uniforms
-            .light_positions
-            .map(|id| unsafe {
-                gl::Uniform3fv(id as _, 4, light_pos_ptr as *const _);
-            })
-            .unwrap_or(());
-    }
+    //    fn draw_entities<CS: TryGetComponent>(
+    //        &self,
+    //        scene: &game::WorldManager<Self, CS>,
+    //    ) {
+    //        use crate::math::*;
+    //        use std::ptr;
+    //        let program = &self.scene_program;
+    //        let uniforms = program.uniforms();
+    //
+    //        program.use_program();
+    //        unsafe { gl::Enable(gl::CULL_FACE) };
+    //
+    //        let cam_view = scene.main_camera.transform();
+    //        let light_positions: &[Vec3] = &[
+    //            vec3(10.0, 10.0, 10.0),
+    //            vec3(10.0, -10.0, 10.0),
+    //            vec3(-10.0, -10.0, 10.0),
+    //            vec3(-10.0, 10.0, 10.0),
+    //        ];
+    //        let xformed_light_positions: Vec<Vec3> = light_positions
+    //            .iter()
+    //            .map(|v| (cam_view * v.extend(1.0)).xyz())
+    //            .collect();
+    //        let light_pos_ptr = xformed_light_positions.as_ptr();
+    //
+    //        uniforms
+    //            .light_positions
+    //            .map(|id| unsafe {
+    //                gl::Uniform3fv(id as _, 4, light_pos_ptr as *const _);
+    //            })
+    //            .unwrap_or(());
+    //    }
 }
 
 impl Renderer for GlRenderer {
@@ -300,56 +302,48 @@ impl Renderer for GlRenderer {
         }
     }
 
-    fn on_update<CS: TryGetComponent>(
-        &mut self,
-        _delta_time: ::std::time::Duration,
-        _world: &game::EntityWorld<Self, CS>,
-    ) {
-        if let Some(_t) = self.recompile_flag.get() {
-            self.rebuild_program();
-            self.recompile_flag.set(None);
-        }
-    }
-
     fn flag_shader_recompile(&self) {
         if self.recompile_flag.get().is_none() {
             self.recompile_flag.set(Some(Instant::now()))
         }
     }
 
-    fn render_scene<CS: TryGetComponent>(&self, scene: &game::EntityWorld<Self, CS>) {
-        use std::ptr;
-
-        use crate::math::*;
-        let _program = self.scene_program();
-        let cam_view = scene.main_camera.transform();
-
-        let _uniforms = &self.scene_program.uniforms();
-
-        {
-            let GlMesh {
-                ref buffers,
-                ref mesh,
-            } = self.env_cube;
-
-            let uniforms = self.envmap_program.uniforms();
-            let program = &self.envmap_program;
-            let modelview = cam_view;
-            program.use_program();
-            program.bind_uniform(uniforms.modelview, &modelview);
-            unsafe {
-                gl::Disable(gl::CULL_FACE);
-                gl::DepthFunc(gl::LEQUAL);
-                gl::BindVertexArray(buffers.vertex_array.id());
-                gl::DrawElements(
-                    gl::TRIANGLES,
-                    mesh.indices.len() as i32,
-                    gl::UNSIGNED_INT,
-                    ptr::null(),
-                );
-                gl::DepthFunc(gl::LESS);
-            }
-        }
-        self.draw_entities(scene);
-    }
+    //    fn render_scene<CS: TryGetComponent>(
+    //        &self,
+    //        scene: &game::WorldManager<Self>,
+    //    ) {
+    //        use std::ptr;
+    //
+    //        use crate::math::*;
+    //        let _program = self.scene_program();
+    //        let cam_view = scene.main_camera.transform();
+    //
+    //        let _uniforms = &self.scene_program.uniforms();
+    //
+    //        {
+    //            let GlMesh {
+    //                ref buffers,
+    //                ref mesh,
+    //            } = self.env_cube;
+    //
+    //            let uniforms = self.envmap_program.uniforms();
+    //            let program = &self.envmap_program;
+    //            let modelview = cam_view;
+    //            program.use_program();
+    //            program.bind_uniform(uniforms.modelview, &modelview);
+    //            unsafe {
+    //                gl::Disable(gl::CULL_FACE);
+    //                gl::DepthFunc(gl::LEQUAL);
+    //                gl::BindVertexArray(buffers.vertex_array.id());
+    //                gl::DrawElements(
+    //                    gl::TRIANGLES,
+    //                    mesh.indices.len() as i32,
+    //                    gl::UNSIGNED_INT,
+    //                    ptr::null(),
+    //                );
+    //                gl::DepthFunc(gl::LESS);
+    //            }
+    //        }
+    //        self.draw_entities(scene);
+    //    }
 }

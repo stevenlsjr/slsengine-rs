@@ -1,6 +1,6 @@
 use super::*;
 use crate::{
-    game::{built_in_components::*, component::*, prelude::*, EntityWorld},
+    game::{prelude::*, WorldManager},
     math::*,
     renderer::mesh::*,
     renderer::*,
@@ -604,9 +604,9 @@ impl VulkanRenderer {
         Ok(recreate_swapchain)
     }
 
-    fn create_transform_descriptorset<CS: crate::game::TryGetComponent>(
+    fn create_transform_descriptorset(
         &self,
-        world: &EntityWorld<Self, CS>,
+        world: &WorldManager<Self>,
         modelview: Mat4,
         projection: Mat4,
     ) -> Result<Arc<impl DescriptorSet + Send + Sync>, failure::Error> {
@@ -628,107 +628,104 @@ impl VulkanRenderer {
         }
     }
 
-    pub fn draw_frame<CS>(&self, window: &Window, world: &EntityWorld<Self, CS>)
-    where
-        CS: crate::game::TryGetComponent,
-    {
-        use crate::game::resource::MeshHandle;
-
-        let mut recreate_swapchain = match self.check_swapchain_validity(window)
-        {
-            Ok(t) => t,
-            Err(_) => return,
-        };
-        let camera_view = world.main_camera.transform();
-        {
-            let mut prev_frame = self.previous_frame_end.replace(None);
-            if let Some(mut fence_fut) = prev_frame {
-                fence_fut.cleanup_finished();
-                fence_fut.wait(None).unwrap();
-            }
-        }
-
-        {
-            let mut state = self.state.borrow_mut();
-            let pipeline = &self.pipelines.main_pipeline;
-
-            let (image_num, acquire_future) =
-                match acquire_next_image(state.swapchain.clone(), None) {
-                    Ok(r) => r,
-                    Err(AcquireError::OutOfDate) => {
-                        self.recreate_swapchain.store(true, Ordering::Release);
-                        return;
-                    }
-                    Err(e) => panic!("unexpected error: {:?}", e),
-                };
-
-            let clear_values = vec![
-                [0.0, 0.0, 1.0, 1.0].into(), // color buffer
-                1f32.into(),                 // depth buffer
-            ];
-
-            let VkMesh {
-                ref vertex_buffer,
-                ref index_buffer,
-                ..
-            } = &world.resources.meshes[&MeshHandle(0)];
-
-            let mut cb_builder: Result<
-                AutoCommandBufferBuilder,
-                failure::Error,
-            > = AutoCommandBufferBuilder::primary_one_time_submit(
-                self.device.clone(),
-                self.queues.graphics_queue.family(),
-            )
-            .map_err(&failure::Error::from)
-            .and_then(|cb| {
-                cb.begin_render_pass(
-                    state.framebuffers[image_num].clone(),
-                    false,
-                    clear_values,
-                )
-                .map_err(&failure::Error::from)
-            });
-
-            cb_builder = cb_builder.and_then(|cb| {
-                cb.end_render_pass().map_err(&failure::Error::from)
-            });
-            let command_buffer = cb_builder
-                .and_then(|cb| cb.build().map_err(&failure::Error::from))
-                .unwrap_or_else(|e| {
-                    panic!("could not create command buffer: {:?}", e)
-                });
-
-            let future: Box<dyn GpuFuture> = Box::new(
-                acquire_future
-                    .then_execute(
-                        self.queues.graphics_queue.clone(),
-                        command_buffer,
-                    )
-                    .unwrap()
-                    .then_swapchain_present(
-                        self.queues.graphics_queue.clone(),
-                        state.swapchain.clone(),
-                        image_num,
-                    ),
-            );
-
-            match future.then_signal_fence_and_flush() {
-                Ok(f) => {
-                    self.previous_frame_end.replace(Some(f));
-                }
-                Err(FlushError::OutOfDate) => {
-                    self.recreate_swapchain.store(true, Ordering::Release);
-                }
-                Err(e) => {
-                    error!("vulkan error: {:?}", e);
-                }
-            }
-        }
-
-        self.recreate_swapchain
-            .store(recreate_swapchain, Ordering::Release);
-    }
+    //    pub fn draw_frame(&self, window: &Window, world: &WorldManager<Self>) {
+    //        use crate::game::resource::MeshHandle;
+    //
+    //        let mut recreate_swapchain = match self.check_swapchain_validity(window)
+    //        {
+    //            Ok(t) => t,
+    //            Err(_) => return,
+    //        };
+    //        let camera_view = world.main_camera.transform();
+    //        {
+    //            let mut prev_frame = self.previous_frame_end.replace(None);
+    //            if let Some(mut fence_fut) = prev_frame {
+    //                fence_fut.cleanup_finished();
+    //                fence_fut.wait(None).unwrap();
+    //            }
+    //        }
+    //
+    //        {
+    //            let mut state = self.state.borrow_mut();
+    //            let pipeline = &self.pipelines.main_pipeline;
+    //
+    //            let (image_num, acquire_future) =
+    //                match acquire_next_image(state.swapchain.clone(), None) {
+    //                    Ok(r) => r,
+    //                    Err(AcquireError::OutOfDate) => {
+    //                        self.recreate_swapchain.store(true, Ordering::Release);
+    //                        return;
+    //                    }
+    //                    Err(e) => panic!("unexpected error: {:?}", e),
+    //                };
+    //
+    //            let clear_values = vec![
+    //                [0.0, 0.0, 1.0, 1.0].into(), // color buffer
+    //                1f32.into(),                 // depth buffer
+    //            ];
+    //
+    //            let VkMesh {
+    //                ref vertex_buffer,
+    //                ref index_buffer,
+    //                ..
+    //            } = &world.resources.meshes[&MeshHandle(0)];
+    //
+    //            let mut cb_builder: Result<
+    //                AutoCommandBufferBuilder,
+    //                failure::Error,
+    //            > = AutoCommandBufferBuilder::primary_one_time_submit(
+    //                self.device.clone(),
+    //                self.queues.graphics_queue.family(),
+    //            )
+    //            .map_err(&failure::Error::from)
+    //            .and_then(|cb| {
+    //                cb.begin_render_pass(
+    //                    state.framebuffers[image_num].clone(),
+    //                    false,
+    //                    clear_values,
+    //                )
+    //                .map_err(&failure::Error::from)
+    //            });
+    //
+    //            cb_builder = cb_builder.and_then(|cb| {
+    //                cb.end_render_pass().map_err(&failure::Error::from)
+    //            });
+    //            let command_buffer = cb_builder
+    //                .and_then(|cb| cb.build().map_err(&failure::Error::from))
+    //                .unwrap_or_else(|e| {
+    //                    panic!("could not create command buffer: {:?}", e)
+    //                });
+    //
+    //            let future: Box<dyn GpuFuture> = Box::new(
+    //                acquire_future
+    //                    .then_execute(
+    //                        self.queues.graphics_queue.clone(),
+    //                        command_buffer,
+    //                    )
+    //                    .unwrap()
+    //                    .then_swapchain_present(
+    //                        self.queues.graphics_queue.clone(),
+    //                        state.swapchain.clone(),
+    //                        image_num,
+    //                    ),
+    //            );
+    //
+    //            match future.then_signal_fence_and_flush() {
+    //                Ok(f) => {
+    //                    self.previous_frame_end.replace(Some(f));
+    //                }
+    //                Err(FlushError::OutOfDate) => {
+    //                    self.recreate_swapchain.store(true, Ordering::Release);
+    //                }
+    //                Err(e) => {
+    //                    error!("vulkan error: {:?}", e);
+    //                }
+    //            }
+    //        }
+    //
+    //        self.recreate_swapchain
+    //            .store(recreate_swapchain, Ordering::Release);
+    //    }
 }
 
 #[derive(Debug, Clone)]
