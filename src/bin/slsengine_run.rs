@@ -11,14 +11,14 @@ use slsengine::{
 
 use failure;
 #[cfg(feature = "backend-gl")]
-use slsengine::renderer::backend_gl;
-#[cfg(feature = "backend-gl")]
-use slsengine::renderer::backend_gl::gl_renderer::GlRenderer;
+use slsengine::{
+    renderer::backend_gl::{self, gl_renderer::GlRenderer},
+    sdl_platform::{OpenGLVersion, OpenGLVersion::GL45},
+};
 
 use slsengine::game;
-use slsengine::sdl_platform::OpenGLVersion;
-use slsengine::sdl_platform::OpenGLVersion::GL45;
-
+use slsengine::game::resource::DeltaTime;
+#[cfg(feature = "backend-gl")]
 use specs::prelude::*;
 
 struct App<R: Renderer> {
@@ -60,9 +60,36 @@ fn setup_gl() -> Result<App<backend_gl::GlRenderer>, failure::Error> {
 }
 
 fn main() -> Result<(), i32> {
-    let app = setup_gl().map_err(|e| {
+    let mut app = setup_gl().map_err(|e| {
         eprintln!("app error: {}", e);
         1
     })?;
+
+    app.main_loop.start();
+    let mut update_dispatch = DispatcherBuilder::new().build();
+    while app.main_loop.is_running() {
+        {
+            let App {
+                ref mut main_loop,
+                ref renderer,
+                ref mut world,
+                ref mut platform,
+                ..
+            } = app;
+            main_loop.handle_events(
+                &mut platform.window,
+                &mut platform.event_pump,
+                renderer,
+                world,
+            );
+        }
+        let frame = app.main_loop.tick_frame();
+        let entity_world = app.world.world();
+        {
+            let mut dt = entity_world.write_resource::<DeltaTime>();
+            dt.0 = frame.delta;
+        }
+    }
+
     Ok(())
 }

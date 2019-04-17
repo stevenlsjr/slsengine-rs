@@ -1,9 +1,11 @@
 use super::camera::*;
+use crate::game::resource::DeltaTime;
 use crate::math::*;
 use crate::renderer::*;
 use cgmath::*;
 use log::*;
 use sdl2::{keyboard::KeyboardState, mouse::MouseState, EventPump};
+use specs::prelude::*;
 use std::fmt;
 use std::marker::PhantomData;
 use std::time::Duration;
@@ -34,6 +36,7 @@ where
 {
     pub input_state: Option<InputState>,
     pub main_camera: FpsCameraComponent,
+    world: World,
     phantom_renderer: PhantomData<R>,
 }
 
@@ -73,60 +76,19 @@ where
             Rad(0.0),
         );
 
+        let mut world = World::new();
+        // add base resources
+        world.add_resource(DeltaTime(Duration::new(0, 0)));
+
         WorldManager {
             main_camera,
             input_state: None,
+            world,
             phantom_renderer: PhantomData,
         }
     }
 
-    pub fn update(&mut self, delta: Duration, input: InputSources) {
-        use sdl2::keyboard::Scancode;
-        let input_state = self
-            .input_state
-            .clone()
-            .expect("Event loop should have already populated input_state");
-        let mouse_offset = {
-            let mut m = input_state.mousepos - input_state.last_mousepos;
-            m.y *= -1.0;
-            m
-        };
-        let mut wasd_axis = Vec2::new(0.0, 0.0);
-        {
-            let InputSources { keyboard_state, .. } = &input;
-
-            if keyboard_state.is_scancode_pressed(Scancode::W) {
-                wasd_axis.y += 1.0;
-            }
-            if keyboard_state.is_scancode_pressed(Scancode::S) {
-                wasd_axis.y -= 1.0;
-            }
-            if keyboard_state.is_scancode_pressed(Scancode::D) {
-                wasd_axis.x += 1.0;
-            }
-            if keyboard_state.is_scancode_pressed(Scancode::A) {
-                wasd_axis.x -= 1.0;
-            }
-
-            if keyboard_state.is_scancode_pressed(Scancode::Y) {
-                info!("Camera: {:?}", self.main_camera);
-            }
-        }
-        if wasd_axis.magnitude() > 0.0 {
-            self.main_camera.input_move(
-                wasd_axis,
-                delta.as_millis() as f64 / 1000.0,
-                &input,
-            );
-        }
-
-        if mouse_offset.magnitude() > 0.0 && input.mouse_state.left() {
-            self.main_camera
-                .mouselook(mouse_offset, delta.as_millis() as f64 / 1000.0);
-        }
-        if let Some(mut input_state) = self.input_state.clone() {
-            input_state.last_mousepos = input_state.mousepos;
-            self.input_state = Some(input_state);
-        }
+    pub fn world(&mut self) -> &mut World {
+        &mut self.world
     }
 }

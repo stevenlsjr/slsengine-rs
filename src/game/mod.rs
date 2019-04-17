@@ -11,7 +11,7 @@ pub use self::{
 };
 pub mod prelude {
     pub use super::main_loop::{FrameTick, MainLoopState};
-    pub use super::resource::{ResourceFetcher, ResourceResult};
+    pub use super::resource;
 }
 
 pub use self::prelude::*;
