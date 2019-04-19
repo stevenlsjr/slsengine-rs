@@ -24,12 +24,12 @@ fn setup_vk() -> Result<Application<backend_vk::VulkanRenderer>, failure::Error>
         sdl_platform::platform().build(&backend_vk::VulkanPlatformHooks)?;
     let renderer = backend_vk::VulkanRenderer::new(&platform.window)?;
     let main_loop = MainLoopState::new();
-    let world = WorldManager::new(&renderer);
+    let world_manager = WorldManager::new(&renderer);
     Ok(Application {
         platform,
         renderer,
         main_loop,
-        world,
+        world_manager,
     })
 }
 

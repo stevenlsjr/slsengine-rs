@@ -2,6 +2,7 @@ use std::any::Any;
 use std::fmt::{Debug, Display};
 
 use sdl2::event::EventType::AppDidEnterBackground;
+use specs::World;
 
 use crate::game::main_loop::FrameTick;
 use crate::game::WorldManager;
@@ -12,7 +13,6 @@ use crate::MainLoopState;
 use crate::renderer::Renderer;
 use crate::sdl_platform::{Platform, RenderBackend};
 use crate::sdl_platform::RenderBackend::Undefined;
-use specs::World;
 
 pub struct ApplicationBuilder {
     preferred_backend: RenderBackend,
@@ -43,8 +43,6 @@ pub struct Application<R: Renderer> {
 }
 
 impl<R: Renderer> Application<R> {
-
-
     #[inline]
     pub fn world(&self) -> &World {
         self.world_manager.world()
@@ -54,21 +52,22 @@ impl<R: Renderer> Application<R> {
     pub fn world_mut(&mut self) -> &mut World {
         self.world_manager.world_mut()
     }
-    pub fn run(self) -> Result<(), i32> {
+    pub fn run(mut self) -> Result<(), i32> {
         self.setup().map_err(|e| {
             eprintln!("app startup error! {:?}", e);
             -1
         })?;
         while self.main_loop.is_running() {
-            let frame = self.world_manager.world_mut().write_resource::<FrameTick>();
-            *frame = self.main_loop.tick_frame();
+            {
+                let mut frame = self.world_manager.world_mut().write_resource::<FrameTick>();
+                *frame = self.main_loop.tick_frame();
+            }
             {
                 self.main_loop.handle_events(&self.platform.window,
                                              &self.platform.event_pump,
                                              &self.renderer,
                                              &mut self.world_manager);
             }
-
         }
 
         Ok(())
