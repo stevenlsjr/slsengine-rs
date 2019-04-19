@@ -48,12 +48,13 @@ impl MainLoopState {
         FrameTick { delta, last_time }
     }
 
+
     pub fn handle_events<R: renderer::Renderer>(
         &mut self,
         window: &Window,
         event_pump: &RefCell<sdl2::EventPump>,
         renderer: &R,
-        world: &mut game::WorldManager<R>,
+        world: &mut game::WorldManager,
     ) {
         use cgmath::*;
         if world.input_state.is_none() {

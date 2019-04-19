@@ -30,19 +30,15 @@ impl<'a> InputSources<'a> {
     }
 }
 
-pub struct WorldManager<R>
+pub struct WorldManager
 where
-    R: Renderer,
 {
     pub input_state: Option<InputState>,
     pub main_camera: FpsCameraComponent,
     world: World,
-    phantom_renderer: PhantomData<R>,
 }
 
-impl<R> fmt::Debug for WorldManager<R>
-where
-    R: Renderer,
+impl fmt::Debug for WorldManager
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use std::any::TypeId;
@@ -63,11 +59,9 @@ where
     }
 }
 
-impl<R> WorldManager<R>
-where
-    R: Renderer,
+impl WorldManager
 {
-    pub fn new(_renderer: &R) -> Self {
+    pub fn new<R: Renderer>(_renderer: &R) -> Self {
         use std::f32::consts::PI;
         let main_camera = FpsCameraComponent::new(
             Point3::new(0.0, 0.0, 5.0),
@@ -84,11 +78,11 @@ where
             main_camera,
             input_state: None,
             world,
-            phantom_renderer: PhantomData,
         }
     }
 
-    pub fn world(&mut self) -> &mut World {
+    pub fn world(&self) -> &World {&self.world}
+    pub fn world_mut(&mut self) -> &mut World {
         &mut self.world
     }
 }

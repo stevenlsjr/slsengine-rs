@@ -606,7 +606,7 @@ impl VulkanRenderer {
 
     fn create_transform_descriptorset(
         &self,
-        world: &WorldManager<Self>,
+        world: &WorldManager,
         modelview: Mat4,
         projection: Mat4,
     ) -> Result<Arc<impl DescriptorSet + Send + Sync>, failure::Error> {
