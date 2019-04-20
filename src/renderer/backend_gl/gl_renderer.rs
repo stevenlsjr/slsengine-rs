@@ -1,24 +1,22 @@
-pub use super::{errors::*, program::*};
-
-use super::{gl_materials::*, gl_mesh::*, objects::*, textures::*};
-use crate::game;
-use crate::renderer::*;
-use cgmath::prelude::*;
-use cgmath::*;
 use core;
+use std::{
+    borrow::Borrow,
+    cell::{Cell, Ref, RefCell},
+    path::Path,
+    sync::Arc, time::Instant,
+};
+
+use cgmath::*;
 use failure;
 use gl;
 use log::*;
 use sdl2::video::Window;
-use std::{
-    cell::{Cell, Ref, RefCell},
-    path::Path,
-    time::Instant,
-};
+use specs::prelude::*;
 
-use std::sync::Arc;
+use crate::{game, renderer::{*, traits::*}};
 
-use std::borrow::Borrow;
+pub use super::{errors::*, program::*};
+use super::{gl_materials::*, gl_mesh::*, objects::*, textures::*};
 
 pub type ManagedTexture = Arc<GlTexture>;
 pub type ManagedTextureMaterial = material::Material<Arc<GlTexture>>;
@@ -227,50 +225,27 @@ impl GlRenderer {
     pub fn scene_program(&self) -> &PbrProgram {
         &self.scene_program
     }
-
-    //    fn draw_entities<CS: TryGetComponent>(
-    //        &self,
-    //        scene: &game::WorldManager<Self, CS>,
-    //    ) {
-    //        use crate::math::*;
-    //        use std::ptr;
-    //        let program = &self.scene_program;
-    //        let uniforms = program.uniforms();
-    //
-    //        program.use_program();
-    //        unsafe { gl::Enable(gl::CULL_FACE) };
-    //
-    //        let cam_view = scene.main_camera.transform();
-    //        let light_positions: &[Vec3] = &[
-    //            vec3(10.0, 10.0, 10.0),
-    //            vec3(10.0, -10.0, 10.0),
-    //            vec3(-10.0, -10.0, 10.0),
-    //            vec3(-10.0, 10.0, 10.0),
-    //        ];
-    //        let xformed_light_positions: Vec<Vec3> = light_positions
-    //            .iter()
-    //            .map(|v| (cam_view * v.extend(1.0)).xyz())
-    //            .collect();
-    //        let light_pos_ptr = xformed_light_positions.as_ptr();
-    //
-    //        uniforms
-    //            .light_positions
-    //            .map(|id| unsafe {
-    //                gl::Uniform3fv(id as _, 4, light_pos_ptr as *const _);
-    //            })
-    //            .unwrap_or(());
-    //    }
 }
 
 impl Renderer for GlRenderer {
-    type Texture = ManagedTexture;
-    type Mesh = GlMesh;
     fn clear(&self) {
         unsafe {
             gl::ClearColor(0.6, 0.0, 0.8, 1.0);
             gl::Enable(gl::DEPTH_TEST);
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
         }
+    }
+
+    fn render_system<'a>(&self, window: &Window, world: &mut World) {
+
+        use crate::math::*;
+        use std::ptr;
+
+        unsafe {
+            gl::ClearColor(1.0, 0.0, 1.0, 1.0);
+            gl::Clear(gl::COLOR_BUFFER_BIT);
+        }
+        window.gl_swap_window();
     }
 
     fn camera(&self) -> Ref<Camera> {
@@ -300,6 +275,7 @@ impl Renderer for GlRenderer {
         unsafe {
             gl::Viewport(0, 0, width as i32, height as i32);
         }
+
     }
 
     fn flag_shader_recompile(&self) {
@@ -307,43 +283,5 @@ impl Renderer for GlRenderer {
             self.recompile_flag.set(Some(Instant::now()))
         }
     }
-
-    //    fn render_scene<CS: TryGetComponent>(
-    //        &self,
-    //        scene: &game::WorldManager<Self>,
-    //    ) {
-    //        use std::ptr;
-    //
-    //        use crate::math::*;
-    //        let _program = self.scene_program();
-    //        let cam_view = scene.main_camera.transform();
-    //
-    //        let _uniforms = &self.scene_program.uniforms();
-    //
-    //        {
-    //            let GlMesh {
-    //                ref buffers,
-    //                ref mesh,
-    //            } = self.env_cube;
-    //
-    //            let uniforms = self.envmap_program.uniforms();
-    //            let program = &self.envmap_program;
-    //            let modelview = cam_view;
-    //            program.use_program();
-    //            program.bind_uniform(uniforms.modelview, &modelview);
-    //            unsafe {
-    //                gl::Disable(gl::CULL_FACE);
-    //                gl::DepthFunc(gl::LEQUAL);
-    //                gl::BindVertexArray(buffers.vertex_array.id());
-    //                gl::DrawElements(
-    //                    gl::TRIANGLES,
-    //                    mesh.indices.len() as i32,
-    //                    gl::UNSIGNED_INT,
-    //                    ptr::null(),
-    //                );
-    //                gl::DepthFunc(gl::LESS);
-    //            }
-    //        }
-    //        self.draw_entities(scene);
-    //    }
 }
+

@@ -6,6 +6,9 @@ extern crate memoffset;
 #[macro_use]
 extern crate serde_derive;
 
+#[macro_use]
+extern crate specs_derive;
+
 use std::error;
 /// application error handling
 

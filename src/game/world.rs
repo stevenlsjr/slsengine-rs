@@ -10,6 +10,9 @@ use std::fmt;
 use std::marker::PhantomData;
 use std::time::Duration;
 
+use specs::shred::*;
+
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct InputState {
     pub last_mousepos: Point2<f32>,
@@ -33,7 +36,6 @@ impl<'a> InputSources<'a> {
 pub struct WorldManager
 where
 {
-    pub input_state: Option<InputState>,
     pub main_camera: FpsCameraComponent,
     world: World,
 }
@@ -43,25 +45,19 @@ impl fmt::Debug for WorldManager
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use std::any::TypeId;
         f.debug_struct(&"EntityWorld<R>")
-            .field(
-                "input_state",
-                &format_args!(
-                    "{}",
-                    if self.input_state.is_some() {
-                        "Some({{..}}"
-                    } else {
-                        "None"
-                    }
-                ),
-            )
+
             .field("main_camera", &format_args!("{{..}}"))
             .finish()
     }
 }
 
+
+
 impl WorldManager
 {
     pub fn new<R: Renderer>(_renderer: &R) -> Self {
+        use crate::renderer::components::*;
+
         use std::f32::consts::PI;
         let main_camera = FpsCameraComponent::new(
             Point3::new(0.0, 0.0, 5.0),
@@ -71,14 +67,27 @@ impl WorldManager
         );
 
         let mut world = World::new();
+        world.register::<MeshComponent>();
+        world.register::<TransformComponent>();
         // add base resources
+
         world.add_resource(DeltaTime(Duration::new(0, 0)));
+        world.add_resource::<Option<InputState>>(None);
+//        world.add_resource(main_camera);
 
         WorldManager {
             main_camera,
-            input_state: None,
             world,
         }
+    }
+
+
+    pub fn read_input_state(&self) -> Fetch<Option<InputState>>{
+        self.world.read_resource()
+    }
+
+    pub fn write_input_state(&mut self) ->FetchMut<Option<InputState>> {
+        self.world.write_resource()
     }
 
     pub fn world(&self) -> &World {&self.world}

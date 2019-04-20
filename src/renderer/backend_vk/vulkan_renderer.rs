@@ -628,6 +628,8 @@ impl VulkanRenderer {
         }
     }
 
+
+
     //    pub fn draw_frame(&self, window: &Window, world: &WorldManager<Self>) {
     //        use crate::game::resource::MeshHandle;
     //
@@ -728,12 +730,13 @@ impl VulkanRenderer {
     //    }
 }
 
+use specs::prelude::*;
+use crate::renderer::components::*;
+
 #[derive(Debug, Clone)]
 pub struct VkTexture;
 
 impl Renderer for VulkanRenderer {
-    type Texture = VkTexture;
-    type Mesh = VkMesh;
     fn camera(&self) -> Ref<Camera> {
         self.camera.borrow()
     }
@@ -741,4 +744,11 @@ impl Renderer for VulkanRenderer {
     fn on_resize(&self, _size: (u32, u32)) {
         self.recreate_swapchain.store(true, Ordering::Relaxed);
     }
+
+    fn render_system<'a>(&self, window: &Window, world: &mut World) {
+        let drawables =
+            world.system_data::<(ReadStorage<MeshComponent>, ReadStorage<TransformComponent>)>();
+    }
+
+
 }

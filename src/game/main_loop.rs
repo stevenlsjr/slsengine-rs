@@ -1,11 +1,14 @@
-use crate::{game, renderer};
-use sdl2::event::{Event, WindowEvent};
-use sdl2::keyboard::Keycode;
-use sdl2::video::Window;
 use std::{
     cell::RefCell,
     time::{Duration, Instant},
 };
+
+use sdl2::event::{Event, WindowEvent};
+use sdl2::keyboard::Keycode;
+use sdl2::video::Window;
+
+use crate::{game, renderer};
+use crate::game::InputState;
 
 /// State object for main loop information, such as
 /// Event handlers and frame timers.
@@ -48,6 +51,19 @@ impl MainLoopState {
         FrameTick { delta, last_time }
     }
 
+    fn create_input_state(&mut self, event_pump: &RefCell<sdl2::EventPump>) -> InputState {
+        use cgmath::*;
+
+        let ep = event_pump.borrow();
+        let mouse_state = ep.mouse_state();
+        let mousepos =
+            Point2::new(mouse_state.x() as f32, mouse_state.y() as f32);
+        game::InputState {
+            mousepos,
+            last_mousepos: mousepos,
+        }
+    }
+
 
     pub fn handle_events<R: renderer::Renderer>(
         &mut self,
@@ -57,16 +73,11 @@ impl MainLoopState {
         world: &mut game::WorldManager,
     ) {
         use cgmath::*;
-        if world.input_state.is_none() {
-            let ep = event_pump.borrow();
-            let mouse_state = ep.mouse_state();
-            let mousepos =
-                Point2::new(mouse_state.x() as f32, mouse_state.y() as f32);
-            world.input_state = Some(game::InputState {
-                mousepos,
-                last_mousepos: mousepos,
-            });
-        }
+
+        let mut input_state: InputState = {
+            let opt: Option<InputState> = world.read_input_state().clone();
+            opt.unwrap_or_else(||self.create_input_state(event_pump))
+        };
         for event in event_pump.borrow_mut().poll_iter() {
             match event {
                 Event::Quit { .. }
@@ -85,11 +96,8 @@ impl MainLoopState {
                     renderer.on_resize(size);
                 }
                 Event::MouseMotion { x, y, .. } => {
-                    if let Some(mut input_state) = world.input_state.clone() {
                         input_state.last_mousepos = input_state.mousepos;
                         input_state.mousepos = Point2::new(x as f32, y as f32);
-                        world.input_state = Some(input_state);
-                    }
                 }
                 Event::KeyDown {
                     keycode,
@@ -109,6 +117,9 @@ impl MainLoopState {
                 }
                 _ => {}
             }
+        }
+        {
+            *world.write_input_state() = Some(input_state);
         }
     }
 }

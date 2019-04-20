@@ -2,7 +2,7 @@ use std::any::Any;
 use std::fmt::{Debug, Display};
 
 use sdl2::event::EventType::AppDidEnterBackground;
-use specs::World;
+use specs::prelude::*;
 
 use crate::game::main_loop::FrameTick;
 use crate::game::WorldManager;
@@ -68,6 +68,10 @@ impl<R: Renderer> Application<R> {
                                              &self.renderer,
                                              &mut self.world_manager);
             }
+
+            self.renderer.render_system(&self.platform.window,self.world_manager.world_mut());
+
+
         }
 
         Ok(())
