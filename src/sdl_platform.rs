@@ -24,6 +24,7 @@ pub struct Platform {
     pub window: Window,
     pub video_subsystem: VideoSubsystem,
     pub sdl_context: Sdl,
+    pub gl_context: Option<GLContext>,
     pub event_pump: Rc<RefCell<sdl2::EventPump>>,
     pub render_backend: RenderBackend,
 }
@@ -140,6 +141,7 @@ impl PlatformBuilder {
 
             let render_backend = self.render_backend.clone();
             Ok(Platform {
+                gl_context: None,
                 window,
                 video_subsystem,
                 sdl_context,
@@ -149,10 +151,11 @@ impl PlatformBuilder {
         }
     }
     #[cfg(feature = "backend-gl")]
-    pub fn build_gl(&self) -> PlatformResult<(Platform, GlPlatformBuilder)> {
+    pub fn build_gl(&self) -> PlatformResult<Platform> {
         let pb = GlPlatformBuilder::new();
-        let platform = self.build(&pb)?;
-        Ok((platform, pb))
+        let mut platform = self.build(&pb)?;
+        platform.gl_context = pb.gl_ctx.replace(None);
+        Ok(platform)
     }
 }
 
@@ -182,7 +185,7 @@ pub mod gl_platform {
     use sdl2::video::GLContext;
 
     pub struct GlPlatformBuilder {
-        gl_ctx: RefCell<Option<GLContext>>,
+        pub gl_ctx: RefCell<Option<GLContext>>,
     }
 
     impl GlPlatformBuilder {

@@ -7,8 +7,8 @@ use sdl2::event::{Event, WindowEvent};
 use sdl2::keyboard::Keycode;
 use sdl2::video::Window;
 
-use crate::{game, renderer};
 use crate::game::InputState;
+use crate::{game, renderer};
 
 /// State object for main loop information, such as
 /// Event handlers and frame timers.
@@ -51,7 +51,10 @@ impl MainLoopState {
         FrameTick { delta, last_time }
     }
 
-    fn create_input_state(&mut self, event_pump: &RefCell<sdl2::EventPump>) -> InputState {
+    fn create_input_state(
+        &mut self,
+        event_pump: &RefCell<sdl2::EventPump>,
+    ) -> InputState {
         use cgmath::*;
 
         let ep = event_pump.borrow();
@@ -64,7 +67,6 @@ impl MainLoopState {
         }
     }
 
-
     pub fn handle_events<R: renderer::Renderer>(
         &mut self,
         window: &Window,
@@ -76,7 +78,7 @@ impl MainLoopState {
 
         let mut input_state: InputState = {
             let opt: Option<InputState> = world.read_input_state().clone();
-            opt.unwrap_or_else(||self.create_input_state(event_pump))
+            opt.unwrap_or_else(|| self.create_input_state(event_pump))
         };
         for event in event_pump.borrow_mut().poll_iter() {
             match event {
@@ -96,8 +98,8 @@ impl MainLoopState {
                     renderer.on_resize(size);
                 }
                 Event::MouseMotion { x, y, .. } => {
-                        input_state.last_mousepos = input_state.mousepos;
-                        input_state.mousepos = Point2::new(x as f32, y as f32);
+                    input_state.last_mousepos = input_state.mousepos;
+                    input_state.mousepos = Point2::new(x as f32, y as f32);
                 }
                 Event::KeyDown {
                     keycode,

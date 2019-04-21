@@ -12,7 +12,6 @@ use std::time::Duration;
 
 use specs::shred::*;
 
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct InputState {
     pub last_mousepos: Point2<f32>,
@@ -33,28 +32,21 @@ impl<'a> InputSources<'a> {
     }
 }
 
-pub struct WorldManager
-where
-{
+pub struct WorldManager {
     pub main_camera: FpsCameraComponent,
     world: World,
 }
 
-impl fmt::Debug for WorldManager
-{
+impl fmt::Debug for WorldManager {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use std::any::TypeId;
         f.debug_struct(&"EntityWorld<R>")
-
             .field("main_camera", &format_args!("{{..}}"))
             .finish()
     }
 }
 
-
-
-impl WorldManager
-{
+impl WorldManager {
     pub fn new<R: Renderer>(_renderer: &R) -> Self {
         use crate::renderer::components::*;
 
@@ -73,24 +65,22 @@ impl WorldManager
 
         world.add_resource(DeltaTime(Duration::new(0, 0)));
         world.add_resource::<Option<InputState>>(None);
-//        world.add_resource(main_camera);
+        //        world.add_resource(main_camera);
 
-        WorldManager {
-            main_camera,
-            world,
-        }
+        WorldManager { main_camera, world }
     }
 
-
-    pub fn read_input_state(&self) -> Fetch<Option<InputState>>{
+    pub fn read_input_state(&self) -> Fetch<Option<InputState>> {
         self.world.read_resource()
     }
 
-    pub fn write_input_state(&mut self) ->FetchMut<Option<InputState>> {
+    pub fn write_input_state(&mut self) -> FetchMut<Option<InputState>> {
         self.world.write_resource()
     }
 
-    pub fn world(&self) -> &World {&self.world}
+    pub fn world(&self) -> &World {
+        &self.world
+    }
     pub fn world_mut(&mut self) -> &mut World {
         &mut self.world
     }

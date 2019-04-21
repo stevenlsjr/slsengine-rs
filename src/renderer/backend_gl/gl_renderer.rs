@@ -3,7 +3,8 @@ use std::{
     borrow::Borrow,
     cell::{Cell, Ref, RefCell},
     path::Path,
-    sync::Arc, time::Instant,
+    sync::Arc,
+    time::Instant,
 };
 
 use cgmath::*;
@@ -13,7 +14,10 @@ use log::*;
 use sdl2::video::Window;
 use specs::prelude::*;
 
-use crate::{game, renderer::{*, traits::*}};
+use crate::{
+    game,
+    renderer::{traits::*, *},
+};
 
 pub use super::{errors::*, program::*};
 use super::{gl_materials::*, gl_mesh::*, objects::*, textures::*};
@@ -237,7 +241,6 @@ impl Renderer for GlRenderer {
     }
 
     fn render_system<'a>(&self, window: &Window, world: &mut World) {
-
         use crate::math::*;
         use std::ptr;
 
@@ -275,7 +278,6 @@ impl Renderer for GlRenderer {
         unsafe {
             gl::Viewport(0, 0, width as i32, height as i32);
         }
-
     }
 
     fn flag_shader_recompile(&self) {
@@ -284,4 +286,3 @@ impl Renderer for GlRenderer {
         }
     }
 }
-

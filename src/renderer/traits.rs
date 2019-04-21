@@ -8,8 +8,8 @@ use specs::world::EntitiesRes;
 use crate::game;
 use crate::renderer::components::{MeshComponent, TransformComponent};
 
-use super::{camera::*, mesh::*};
 use super::color::*;
+use super::{camera::*, mesh::*};
 use sdl2::video::Window;
 
 /// A trait encapsulating the game's rendering capabilities
@@ -30,19 +30,15 @@ pub trait Renderer: Sized {
     /// Hints the renderer to recompile shaders, when convenient
     fn flag_shader_recompile(&self) {}
 
-
-
-
     /// code dispatched by RenderSystem.
     fn render_system<'a>(&self, window: &Window, world: &mut World);
 }
 
-
-
-pub(crate)  type RenderSystemData<'a> = (Entities<'a>, ReadStorage<'a, MeshComponent>,
-                                 ReadStorage<'a, TransformComponent>);
-
-
+pub(crate) type RenderSystemData<'a> = (
+    Entities<'a>,
+    ReadStorage<'a, MeshComponent>,
+    ReadStorage<'a, TransformComponent>,
+);
 
 pub trait Resizable {
     fn on_resize(&mut self, size: (u32, u32));

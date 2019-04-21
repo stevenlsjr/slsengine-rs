@@ -628,8 +628,6 @@ impl VulkanRenderer {
         }
     }
 
-
-
     //    pub fn draw_frame(&self, window: &Window, world: &WorldManager<Self>) {
     //        use crate::game::resource::MeshHandle;
     //
@@ -730,8 +728,8 @@ impl VulkanRenderer {
     //    }
 }
 
-use specs::prelude::*;
 use crate::renderer::components::*;
+use specs::prelude::*;
 
 #[derive(Debug, Clone)]
 pub struct VkTexture;
@@ -749,6 +747,4 @@ impl Renderer for VulkanRenderer {
         let drawables =
             world.system_data::<(ReadStorage<MeshComponent>, ReadStorage<TransformComponent>)>();
     }
-
-
 }

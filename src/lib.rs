@@ -11,19 +11,17 @@ extern crate specs_derive;
 
 use std::error;
 /// application error handling
-
-
 use std::fmt::{Debug, Display};
 use std::marker::{Send, Sync};
 
 pub use crate::{application::AppError, game::main_loop::MainLoopState};
 
+pub mod application;
 pub mod config;
 pub mod game;
 pub mod platform_system;
 pub mod renderer;
 pub mod sdl_platform;
-pub mod application;
 
 pub fn get_error_desc<E: error::Error>(e: E) -> String {
     e.description().to_string()
