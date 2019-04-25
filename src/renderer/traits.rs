@@ -32,6 +32,9 @@ pub trait Renderer: Sized {
 
     /// code dispatched by RenderSystem.
     fn render_system<'a>(&self, window: &Window, world: &mut World);
+
+    /// callback for presenting render to screen, platform applicable
+    fn present(&self, window: &Window) {}
 }
 
 pub(crate) type RenderSystemData<'a> = (

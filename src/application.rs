@@ -5,6 +5,7 @@ use sdl2::event::EventType::AppDidEnterBackground;
 use specs::prelude::*;
 
 use crate::game::main_loop::FrameTick;
+use crate::game::populate_world_system::PopulateWorldSystem;
 use crate::game::WorldManager;
 ///!
 ///! Application lifecycle manager
@@ -12,6 +13,8 @@ use crate::renderer::Renderer;
 use crate::sdl_platform::RenderBackend::Undefined;
 use crate::sdl_platform::{Platform, RenderBackend};
 use crate::MainLoopState;
+use core::borrow::Borrow;
+use sdl2::hint::set;
 
 pub trait RunnableApplication {
     fn run(self) -> Result<(), i32>;
@@ -54,6 +57,16 @@ impl<R: Renderer> RunnableApplication for Application<R> {
             eprintln!("app startup error! {:?}", e);
             -1
         })?;
+
+        let mut setup_dispatcher = DispatcherBuilder::new()
+            .with(PopulateWorldSystem, "populate-world", &[])
+            .build();
+        {
+            let res = &mut self.world_mut().res;
+            setup_dispatcher.setup(res);
+            setup_dispatcher.dispatch(res)
+        }
+
         while self.main_loop.is_running() {
             {
                 let mut frame = self
@@ -70,11 +83,12 @@ impl<R: Renderer> RunnableApplication for Application<R> {
                     &mut self.world_manager,
                 );
             }
-
             self.renderer.render_system(
                 &self.platform.window,
                 self.world_manager.world_mut(),
             );
+
+            self.renderer.present(&self.platform.window);
         }
 
         Ok(())

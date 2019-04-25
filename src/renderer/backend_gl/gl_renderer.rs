@@ -248,7 +248,6 @@ impl Renderer for GlRenderer {
             gl::ClearColor(1.0, 0.0, 1.0, 1.0);
             gl::Clear(gl::COLOR_BUFFER_BIT);
         }
-        window.gl_swap_window();
     }
 
     fn camera(&self) -> Ref<Camera> {
@@ -284,5 +283,9 @@ impl Renderer for GlRenderer {
         if self.recompile_flag.get().is_none() {
             self.recompile_flag.set(Some(Instant::now()))
         }
+    }
+
+    fn present(&self, window: &Window) {
+        window.gl_swap_window();
     }
 }

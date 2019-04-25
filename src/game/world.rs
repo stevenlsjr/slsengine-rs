@@ -1,7 +1,6 @@
 use super::camera::*;
-use crate::game::resource::DeltaTime;
-use crate::math::*;
-use crate::renderer::*;
+use super::components::*;
+use crate::{game::resource::DeltaTime, math::*, renderer::*};
 use cgmath::*;
 use log::*;
 use sdl2::{keyboard::KeyboardState, mouse::MouseState, EventPump};
@@ -34,7 +33,7 @@ impl<'a> InputSources<'a> {
 
 pub struct WorldManager {
     pub main_camera: FpsCameraComponent,
-    world: World,
+    pub(crate) world: World,
 }
 
 impl fmt::Debug for WorldManager {
