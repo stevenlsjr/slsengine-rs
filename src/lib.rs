@@ -1,11 +1,14 @@
 #[macro_use]
 extern crate failure;
+#[macro_use]
+extern crate lazy_static;
 #[allow(unused_imports)]
 #[macro_use]
 extern crate memoffset;
 #[macro_use]
 extern crate serde_derive;
-
+#[macro_use]
+extern crate smart_default;
 #[macro_use]
 extern crate specs_derive;
 
@@ -17,6 +20,7 @@ use std::marker::{Send, Sync};
 pub use crate::{application::AppError, game::main_loop::MainLoopState};
 
 pub mod application;
+pub mod assets;
 pub mod config;
 pub mod game;
 pub mod platform_system;

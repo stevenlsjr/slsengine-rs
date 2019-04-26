@@ -1,21 +1,29 @@
-use failure;
-use sdl2::filesystem::*;
 use std::path::{Path, PathBuf};
 
-static ASSET_PATH: Option<&'static str> = option_env!("SLSENGINE_ASSET_PATH");
+use core::borrow::Borrow;
+use failure;
+use sdl2::filesystem::*;
+
+static COMPILE_TIME_ASSET_PATH: Option<&'static str> =
+    option_env!("SLSENGINE_ASSET_PATH");
+lazy_static! {
+    static ref ASSET_PATH: PathBuf = {
+        match COMPILE_TIME_ASSET_PATH {
+            Some(p) => PathBuf::from(p),
+            None => {
+                let p = base_path()
+                    .expect("fatal error: could not retrieve app base path");
+                PathBuf::from(&p)
+            }
+        }
+    };
+}
 
 /// if the build system defines SLSENGINE_ASSET_PATH as a compile-time environment variable,
 /// this function will return a PathBuff to this path. Otherwise, it will use the path
 /// relative to project root
-pub fn asset_path() -> PathBuf {
-    match ASSET_PATH {
-        Some(p) => PathBuf::from(p),
-        None => {
-            let p = base_path()
-                .expect("fatal error: could not retrieve app base path");
-            PathBuf::from(&p)
-        }
-    }
+pub fn asset_path() -> &'static Path {
+    &*ASSET_PATH
 }
 
 #[test]

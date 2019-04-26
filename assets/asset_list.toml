@@ -1,0 +1,4 @@
+[[assets]]
+name = "brdf_vert"
+path = "shaders/brdf.vert"
+kind = "shader"

@@ -21,6 +21,7 @@ use crate::{
 
 pub use super::{errors::*, program::*};
 use super::{gl_materials::*, gl_mesh::*, objects::*, textures::*};
+use slsengine_entityalloc::*;
 
 pub type ManagedTexture = Arc<GlTexture>;
 pub type ManagedTextureMaterial = material::Material<Arc<GlTexture>>;
@@ -32,10 +33,8 @@ pub struct Materials {
 
 /// the renderer backend for openGL
 pub struct GlRenderer {
-    camera: RefCell<Camera>,
     scene_program: PbrProgram,
     envmap_program: PbrProgram,
-    sample_mesh: GlMesh,
     env_cube: GlMesh,
     pub materials: Materials,
 
@@ -134,9 +133,7 @@ impl GlRenderer {
             scene_program,
             envmap_program,
             env_cube,
-            sample_mesh: mesh,
             materials,
-            camera: RefCell::new(Camera::new(perspective)),
             recompile_flag: Cell::new(None),
         };
 
@@ -149,10 +146,6 @@ impl GlRenderer {
         renderer.on_resize((width, height));
 
         Ok(renderer)
-    }
-
-    pub fn projection(&self) -> Matrix4<f32> {
-        self.camera.borrow().projection
     }
 
     fn initialize(&mut self) -> Result<(), failure::Error> {
@@ -200,21 +193,6 @@ impl GlRenderer {
 
         self.scene_program = scene;
         self.envmap_program = skybox;
-        {
-            let camera = self.camera.borrow();
-
-            self.scene_program.use_program();
-            self.scene_program.bind_uniform(
-                self.scene_program.uniforms().projection,
-                &camera.projection,
-            );
-            self.envmap_program.use_program();
-
-            self.envmap_program.bind_uniform(
-                self.envmap_program.uniforms().projection,
-                &camera.projection,
-            );
-        }
 
         let ubo = &self.materials.base_material_ubo;
         for i in &[&self.envmap_program, &self.scene_program] {
@@ -250,10 +228,6 @@ impl Renderer for GlRenderer {
         }
     }
 
-    fn camera(&self) -> Ref<Camera> {
-        self.camera.borrow()
-    }
-
     fn set_clear_color(&mut self, color: ColorRGBA) {
         unsafe {
             gl::ClearColor(color.r, color.g, color.b, color.a);
@@ -261,22 +235,21 @@ impl Renderer for GlRenderer {
     }
 
     fn on_resize(&self, size: (u32, u32)) {
-        self.camera.borrow_mut().on_resize(size);
-        let (width, height) = size;
-        self.scene_program.use_program();
-        let projection = &self.camera.borrow().projection;
+        // let (width, height) = size;
+        // self.scene_program.use_program();
+        // let projection = &self.camera.borrow().projection;
 
-        self.scene_program
-            .bind_uniform(self.scene_program.uniforms().projection, projection);
-        self.envmap_program.use_program();
-        self.envmap_program.bind_uniform(
-            self.envmap_program.uniforms().projection,
-            projection,
-        );
+        // self.scene_program
+        //     .bind_uniform(self.scene_program.uniforms().projection, projection);
+        // self.envmap_program.use_program();
+        // self.envmap_program.bind_uniform(
+        //     self.envmap_program.uniforms().projection,
+        //     projection,
+        // );
 
-        unsafe {
-            gl::Viewport(0, 0, width as i32, height as i32);
-        }
+        // unsafe {
+        //     gl::Viewport(0, 0, width as i32, height as i32);
+        // }
     }
 
     fn flag_shader_recompile(&self) {

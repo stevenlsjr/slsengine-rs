@@ -74,9 +74,10 @@ fn main() -> Result<(), i32> {
         let transform: Decomposed<Vec3, Quaternion<f32>> = Decomposed::one();
         let e = world
             .create_entity()
-            .with(MeshComponent {})
+            .with(MeshComponent::default())
             .with(TransformComponent { transform })
             .build();
+        entities.push(e);
     }
 
     app.run()

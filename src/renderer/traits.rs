@@ -21,7 +21,6 @@ pub trait Renderer: Sized {
     fn cleanup(&self) {}
 
     fn clear(&self) {}
-    fn camera(&self) -> Ref<Camera>;
     fn set_clear_color(&mut self, _color: ColorRGBA) {}
     fn on_resize(&self, _size: (u32, u32)) {}
 
@@ -36,12 +35,6 @@ pub trait Renderer: Sized {
     /// callback for presenting render to screen, platform applicable
     fn present(&self, window: &Window) {}
 }
-
-pub(crate) type RenderSystemData<'a> = (
-    Entities<'a>,
-    ReadStorage<'a, MeshComponent>,
-    ReadStorage<'a, TransformComponent>,
-);
 
 pub trait Resizable {
     fn on_resize(&mut self, size: (u32, u32));
