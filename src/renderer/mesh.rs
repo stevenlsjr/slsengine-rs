@@ -1,10 +1,13 @@
-use super::color::ColorRGBA;
+use std::convert::TryInto;
+use std::slice::Chunks;
+
 use cgmath::*;
 use genmesh::{
     generators::{IndexedPolygon, SharedVertex},
-    Triangle,
+    Quad, Triangle,
 };
-use std::slice::Chunks;
+
+use super::color::ColorRGBA;
 
 /// A cffi and GPU-friendly vertex representaion
 #[derive(Debug, Copy, Clone)]
@@ -61,7 +64,7 @@ pub struct Mesh {
 }
 
 impl Mesh {
-    pub fn new() -> Mesh {
+    pub fn new() -> Self {
         Mesh {
             vertices: Vec::new(),
             indices: Vec::new(),
@@ -75,6 +78,12 @@ impl Mesh {
     pub fn indices_size(&self) -> usize {
         use std::mem::size_of;
         (self.indices.len() * size_of::<u32>())
+    }
+
+    pub fn cube() -> Self {
+        use genmesh::generators;
+        use genmesh::*;
+        Self::from_quad_genmesh(generators::Cube::new())
     }
 
     pub fn triangle_indices(&self) -> Chunks<u32> {
@@ -125,6 +134,33 @@ impl Mesh {
         }
     }
 
+    pub fn from_quad_genmesh<G>(generator: G) -> Self
+    where
+        G: SharedVertex<genmesh::Vertex> + IndexedPolygon<Quad<usize>>,
+    {
+        use genmesh::*;
+
+        let mut m = Mesh {
+            vertices: generator
+                .shared_vertex_iter()
+
+                .map(|v| crate::renderer::Vertex {
+
+                    position: v.pos.into(),
+                    normal: v.normal.into(),
+                    ..Vertex::default()
+                })
+                .collect(),
+            indices: generator
+                .indexed_polygon_iter()
+                .map(|q: Quad<_>| q.emit_triangles())
+                .flat_map(|t| vec![t.x as u32, t.y as u32, t.z as u32])
+                .collect(),
+        };
+
+        m.calculate_tangents();
+        m
+    }
     /// Creates a mesh from a genmesh geometry.
     pub fn from_genmesh<G>(generator: G) -> Self
     where

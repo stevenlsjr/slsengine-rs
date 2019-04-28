@@ -55,6 +55,27 @@ fn setup_gl() -> Result<Application<backend_gl::GlRenderer>, failure::Error> {
     })
 }
 
+struct SpawnEntitiesSystem;
+
+impl<'a> System<'a> for SpawnEntitiesSystem {
+    type SystemData = ();
+
+    fn run(&mut self, data: Self::SystemData) {
+        for i in 0..4 {
+            for j in 0..4 {
+                let e = world
+                    .create_entity()
+                    .with(MeshComponent {
+                        mesh: Some(Mesh::cube()),
+                        ..Default::default()
+                    })
+                    .with(TransformComponent { transform })
+                    .build();
+            }
+        }
+    }
+}
+
 fn main() -> Result<(), i32> {
     #[cfg(feature = "backend-gl")]
     let mut app = setup_gl().map_err(|e| {
@@ -72,11 +93,7 @@ fn main() -> Result<(), i32> {
         let world = app.world_mut();
 
         let transform: Decomposed<Vec3, Quaternion<f32>> = Decomposed::one();
-        let e = world
-            .create_entity()
-            .with(MeshComponent::default())
-            .with(TransformComponent { transform })
-            .build();
+
         entities.push(e);
     }
 
