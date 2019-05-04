@@ -1,18 +1,15 @@
+use wasm_bindgen::prelude::*;
 use crate::allocator::GenerationalIndex;
-use std::{
-    ops::{Index, IndexMut},
-};
+use std::ops::{Index, IndexMut};
+
 
 #[derive(Clone, Debug)]
-pub struct IndexArray<T>
-
-{
+pub struct IndexArray<T> {
     pub(crate) array: Vec<Option<T>>,
 }
 
-impl<T> IndexArray<T>
 
-{
+impl<T> IndexArray<T> {
     pub fn new() -> Self {
         IndexArray::with_capacity(256)
     }
@@ -57,9 +54,7 @@ impl<T> IndexArray<T>
     }
 }
 
-impl<T> Index<GenerationalIndex> for IndexArray<T>
-
-{
+impl<T> Index<GenerationalIndex> for IndexArray<T> {
     type Output = Option<T>;
     /// Returns Option<&T> for index. IndexArray does not
     /// maintain a maximum length, and will silenty return None
@@ -68,14 +63,13 @@ impl<T> Index<GenerationalIndex> for IndexArray<T>
         self.array.get(index.index()).unwrap_or(&None)
     }
 }
-impl<T> IndexMut<GenerationalIndex> for IndexArray<T>
-
-{
+impl<T> IndexMut<GenerationalIndex> for IndexArray<T> {
     /// will
     fn index_mut(&mut self, index: GenerationalIndex) -> &mut Self::Output {
         self.get_mut(index).unwrap()
     }
 }
+
 
 #[test]
 fn test_getters() {

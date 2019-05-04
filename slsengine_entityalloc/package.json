@@ -1,0 +1,18 @@
+{
+  "name": "slsengine_entityalloc",
+  "version": "1.0.0",
+  "description": "",
+  "main": "wasm-server.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "start": "node wasm-server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Steve Shea <stevenlsjr@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "express": "^4.16.4"
+  }
+}

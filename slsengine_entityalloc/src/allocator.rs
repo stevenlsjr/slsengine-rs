@@ -1,11 +1,17 @@
+use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
+use wasm_bindgen::prelude::*;
 
-#[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Hash)]
+#[wasm_bindgen]
+#[derive(
+    Clone, Copy, Debug, PartialEq, PartialOrd, Hash, Serialize, Deserialize,
+)]
 pub struct GenerationalIndex {
     index: usize,
     generation: u64,
 }
 
+#[wasm_bindgen]
 impl GenerationalIndex {
     /// Constructor uses primarily for mocking indices
     /// in a test. Otherwise, indices are created by an allocator
@@ -14,7 +20,6 @@ impl GenerationalIndex {
         GenerationalIndex { index, generation }
     }
 
-    #[inline]
     pub fn index(&self) -> usize {
         self.index
     }
@@ -28,13 +33,17 @@ struct AllocEntry {
 
 /// Maintains a list of generations and free indices
 /// Allocates and deallocates indices
+
+#[wasm_bindgen]
 #[derive(Debug, Clone, PartialEq)]
 pub struct GenerationalIndexAllocator {
     entries: Vec<AllocEntry>,
     free_list: VecDeque<usize>,
 }
 
+#[wasm_bindgen]
 impl GenerationalIndexAllocator {
+    #[wasm_bindgen(constructor)]
     pub fn with_capacity(capacity: usize) -> Self {
         let entries = vec![
             AllocEntry {
@@ -45,10 +54,7 @@ impl GenerationalIndexAllocator {
         ];
         let mut free_list: VecDeque<_> = (0usize..capacity).collect();
         free_list.reserve(capacity * 2);
-        GenerationalIndexAllocator {
-            entries,
-            free_list,
-        }
+        GenerationalIndexAllocator { entries, free_list }
     }
 
     fn try_allocate(&mut self) -> Option<GenerationalIndex> {
@@ -114,7 +120,9 @@ impl GenerationalIndexAllocator {
         let e = self.entries[index.index()];
         e.is_live && e.generation == index.generation
     }
+}
 
+impl GenerationalIndexAllocator {
     /// Produces an iterator of live entry indices. In the context of a game
     /// ecs, this would iterate through in-scene entities
     pub fn iter_live(&self) -> GenerationalIndexIter {
