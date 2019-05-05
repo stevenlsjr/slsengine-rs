@@ -12,16 +12,16 @@ use failure;
 use gl;
 use log::*;
 use sdl2::video::Window;
+use slsengine_entityalloc::*;
 use specs::prelude::*;
 
 use crate::{
-    game,
-    renderer::{traits::*, *},
+    *,
+    traits::*,
 };
 
 pub use super::{errors::*, program::*};
 use super::{gl_materials::*, gl_mesh::*, objects::*, textures::*};
-use slsengine_entityalloc::*;
 
 pub type ManagedTexture = Arc<GlTexture>;
 pub type ManagedTextureMaterial = material::Material<Arc<GlTexture>>;
@@ -59,7 +59,7 @@ fn create_scene_shaders() -> Result<(PbrProgram, PbrProgram), ShaderError> {
 
 impl GlMesh {
     fn skybox_mesh() -> Result<Self, failure::Error> {
-        use crate::renderer::Vertex;
+        use crate::Vertex;
         use genmesh::*;
         let cube = generators::Cube::new();
         let vertices: Vec<Vertex> = cube
@@ -92,7 +92,7 @@ impl GlRenderer {
         let (scene_program, envmap_program) =
             create_scene_shaders().map_err(RendererError::ShaderError)?;
         let mesh = {
-            use crate::renderer::Vertex as V;
+            use crate::Vertex as V;
             use genmesh::generators::*;
             let icosphere = IcoSphere::new();
             let vertices: Vec<V> = icosphere
@@ -159,7 +159,7 @@ impl GlRenderer {
     }
 
     fn make_materials() -> Result<Materials, ::failure::Error> {
-        use crate::renderer::material::*;
+        use crate::material::*;
 
         use failure::Error;
         let base_material: UntexturedMat = base::PLASTIC_RED;

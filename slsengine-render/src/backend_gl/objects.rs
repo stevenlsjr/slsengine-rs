@@ -3,11 +3,11 @@
  **/
 extern crate failure;
 use super::gl_renderer::{drain_error_stack, dump_errors, GlErrors};
-use crate::renderer;
-use crate::renderer::Mesh;
+use crate::Mesh;
 use gl;
 use gl::types::*;
 use std::ops::*;
+
 
 #[derive(Fail, Debug)]
 pub enum ObjectError {
@@ -185,7 +185,7 @@ impl MeshBuffers {
     }
 
     pub fn bind_mesh(&self, mesh: &Mesh) -> Result<&Self, GlErrors> {
-        use crate::renderer::Vertex;
+        use crate::Vertex;
         use std::mem::size_of;
         drain_error_stack();
         unsafe {

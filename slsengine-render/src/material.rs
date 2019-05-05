@@ -1,4 +1,3 @@
-use crate::math::*;
 use cgmath::*;
 use failure;
 use gltf;
@@ -6,12 +5,12 @@ use std::fmt;
 
 #[derive(Clone)]
 pub struct Material<Tex> {
-    pub albedo_factor: Vec4,
+    pub albedo_factor: Vector4<f32>,
     pub albedo_map: Option<Tex>,
     pub metallic_factor: f32,
     pub metallic_roughness_map: Option<Tex>,
     pub roughness_factor: f32,
-    pub emissive_factor: Vec3,
+    pub emissive_factor: Vector3<f32>,
     pub emissive_map: Option<Tex>,
     pub normal_map: Option<Tex>,
     pub occlusion_map: Option<Tex>,
@@ -44,10 +43,10 @@ pub enum MaterialMapName {
 
 impl<Tex> Material<Tex> {
     pub fn new(
-        albedo_factor: Vec4,
+        albedo_factor: Vector4<f32>,
         metallic_factor: f32,
         roughness_factor: f32,
-        emissive_factor: Vec3,
+        emissive_factor: Vector3<f32>,
     ) -> Self {
         Material {
             albedo_factor,
@@ -156,7 +155,7 @@ pub struct Untextured;
 pub type UntexturedMat = Material<Untextured>;
 
 const fn untextured_mat(
-    albedo_factor: Vec4,
+    albedo_factor: Vector4<f32>,
     metallic_factor: f32,
     roughness_factor: f32,
 ) -> UntexturedMat {
@@ -164,7 +163,7 @@ const fn untextured_mat(
         albedo_factor,
         metallic_factor,
         roughness_factor,
-        emissive_factor: Vec3 {
+        emissive_factor: Vector3 {
             x: 0.0,
             y: 0.0,
             z: 0.0,
@@ -181,7 +180,7 @@ pub mod base {
     use super::*;
 
     pub const GOLD: UntexturedMat = untextured_mat(
-        Vec4 {
+        Vector4 {
             x: 1.0,
             y: 0.766,
             z: 0.336,
@@ -191,7 +190,7 @@ pub mod base {
         0.3,
     );
     pub const PLASTIC_WHITE: UntexturedMat = untextured_mat(
-        Vec4 {
+        Vector4 {
             x: 1.0,
             y: 1.0,
             z: 1.0,
@@ -201,7 +200,7 @@ pub mod base {
         0.3,
     );
     pub const PLASTIC_RED: UntexturedMat = Material {
-        albedo_factor: Vec4 {
+        albedo_factor: Vector4 {
             x: 1.0,
             y: 0.0,
             z: 0.0,

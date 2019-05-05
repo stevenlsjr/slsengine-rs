@@ -1,9 +1,8 @@
 // Gltf Model
 // and scene presentation structure
-use crate::math::*;
 
-use crate::renderer::material;
-use crate::renderer::Mesh;
+use crate::material;
+use crate::Mesh;
 use cgmath::*;
 use failure;
 use gltf;
@@ -43,7 +42,7 @@ pub struct GltfImport {
 #[derive(Clone)]
 pub struct Model {
     pub meshes: Vec<MeshData>,
-    pub transforms: Vec<Mat4>,
+    pub transforms: Vec<Matrix4<f32>>,
     pub materials: HashMap<Option<usize>, material::Material<usize>>,
     imports: GltfImport,
 }
@@ -114,7 +113,7 @@ impl Model {
                 ..
             } = model.imports;
 
-            model.transforms.push(Mat4::identity());
+            model.transforms.push(Matrix4::identity());
             for ref g_mesh in document.meshes() {
                 let meshes: Vec<_> = make_mesh(g_mesh, &buffers)?;
                 for m in meshes {
@@ -143,7 +142,7 @@ fn make_mesh(
     gltf_mesh: &gltf::Mesh,
     buffers: &[gltf::buffer::Data],
 ) -> Result<Vec<ParsedMesh>, failure::Error> {
-    use crate::renderer::Vertex as SlsVertex;
+    use crate::Vertex as SlsVertex;
     let mut meshes = Vec::new();
     let get_buffer_data =
         |buffer: gltf::Buffer| Some(&*buffers[buffer.index()]);

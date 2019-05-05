@@ -1,6 +1,6 @@
 use super::objects::{BufferObject, ObjectError, SingleBuffer, UboBindings};
-use crate::renderer::backend_gl::program::PbrProgram;
-use crate::renderer::material::Material;
+use crate::backend_gl::program::PbrProgram;
+use crate::material::Material;
 use gl;
 
 /// Material ubo representation shared by shader memory
@@ -85,7 +85,7 @@ impl MaterialUbo {
 
     pub fn set_material<T>(
         &self,
-        material: &crate::renderer::material::Material<T>,
+        material: &crate::material::Material<T>,
     ) -> Result<(), super::GlErrors> {
         use super::gl_renderer::{drain_error_stack, dump_errors};
         let _buffer = MaterialBufferLayout::from_material(material);

@@ -1,8 +1,7 @@
 use specs::prelude::*;
 use specs::storage::*;
 
-use crate::platform_system::asset_path;
-use crate::renderer::mesh::Mesh;
+use crate::mesh::Mesh;
 use cgmath::*;
 use slsengine_entityalloc::allocator::GenerationalIndex;
 

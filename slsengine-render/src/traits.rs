@@ -5,8 +5,7 @@ use sdl2::log::Category::Render;
 use specs::prelude::*;
 use specs::world::EntitiesRes;
 
-use crate::game;
-use crate::renderer::components::{MeshComponent, TransformComponent};
+use crate::components::{MeshComponent, TransformComponent};
 
 use super::color::*;
 use super::{camera::*, mesh::*};

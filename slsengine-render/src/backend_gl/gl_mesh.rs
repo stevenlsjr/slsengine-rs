@@ -1,5 +1,5 @@
 use super::objects::*;
-use crate::renderer::*;
+use crate::*;
 #[derive(Debug)]
 pub struct GlMesh {
     pub mesh: Mesh,

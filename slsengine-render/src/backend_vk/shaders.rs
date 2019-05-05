@@ -6,10 +6,10 @@ mod backup_vs {
         src: "
         #version 450
 
-        layout(location = 0) in vec2 position;
+        layout(location = 0) in Vector2<f32> position;
         
         void main(){
-            gl_Position = vec4(position, 0.0, 1.0);
+            gl_Position = Vector4<f32>(position, 0.0, 1.0);
         }
         "
     }
@@ -20,10 +20,10 @@ mod backup_fs {
     ty: "fragment",
     src: "#version 450
 
-    layout(location = 0) out vec4 out_color;
+    layout(location = 0) out Vector4<f32> out_color;
     
     void main(){
-        out_color = vec4(1.0, 1.0, 0.0, 1.0);
+        out_color = Vector4<f32>(1.0, 1.0, 0.0, 1.0);
     }
     "
     }

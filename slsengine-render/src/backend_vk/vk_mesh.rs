@@ -1,5 +1,5 @@
 use super::VulkanRenderer;
-use crate::renderer::{Mesh, RenderMesh, Vertex};
+use crate::::{Mesh, RenderMesh, Vertex};
 use failure as f;
 use std::sync::Arc;
 use vulkano::{

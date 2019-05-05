@@ -607,8 +607,8 @@ impl VulkanRenderer {
     fn create_transform_descriptorset(
         &self,
         world: &WorldManager,
-        modelview: Mat4,
-        projection: Mat4,
+        modelview: Matrix4<f32>,
+        projection: Matrix4<f32>,
     ) -> Result<Arc<impl DescriptorSet + Send + Sync>, failure::Error> {
         let ubo_subbuffer = {
             use cgmath::*;
@@ -728,7 +728,7 @@ impl VulkanRenderer {
     //    }
 }
 
-use crate::renderer::components::*;
+use crate::::components::*;
 use specs::prelude::*;
 
 #[derive(Debug, Clone)]

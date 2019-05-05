@@ -1,6 +1,6 @@
 use super::VkContextError;
 use super::*;
-use crate::renderer::Vertex as SlsVertex;
+use crate::::Vertex as SlsVertex;
 use cgmath::*;
 use failure::{self, bail};
 use std::sync::Arc;
