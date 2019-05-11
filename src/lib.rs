@@ -12,19 +12,22 @@ extern crate smart_default;
 #[macro_use]
 extern crate specs_derive;
 
+
+
 use std::error;
 /// application error handling
 use std::fmt::{Debug, Display};
 use std::marker::{Send, Sync};
 
 pub use crate::{application::AppError, game::main_loop::MainLoopState};
+pub use slsengine_render as renderer;
+
 
 pub mod application;
 pub mod assets;
 pub mod config;
 pub mod game;
 pub mod platform_system;
-pub mod renderer;
 pub mod sdl_platform;
 
 pub fn get_error_desc<E: error::Error>(e: E) -> String {
