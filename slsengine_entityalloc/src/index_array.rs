@@ -1,13 +1,13 @@
-use wasm_bindgen::prelude::*;
+//! Container for a set of index arrays by array item type
+//!
 use crate::allocator::GenerationalIndex;
 use std::ops::{Index, IndexMut};
-
+use wasm_bindgen::prelude::*;
 
 #[derive(Clone, Debug)]
 pub struct IndexArray<T> {
     pub(crate) array: Vec<Option<T>>,
 }
-
 
 impl<T> IndexArray<T> {
     pub fn new() -> Self {
@@ -69,7 +69,6 @@ impl<T> IndexMut<GenerationalIndex> for IndexArray<T> {
         self.get_mut(index).unwrap()
     }
 }
-
 
 #[test]
 fn test_getters() {

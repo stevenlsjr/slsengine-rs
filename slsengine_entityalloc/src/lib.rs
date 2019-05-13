@@ -3,8 +3,8 @@ extern crate wasm_bindgen;
 extern crate serde_derive;
 
 pub mod allocator;
-/// Container for a set of index arrays by array item type
-///
+pub mod components;
+
 pub mod ffi;
 pub mod index_array;
 

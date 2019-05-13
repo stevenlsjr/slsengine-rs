@@ -23,7 +23,7 @@ console_log = "0.1.2"
 js-sys="0.3.20"
 [target.'cfg(target_arch="wasm32")'.dependencies.web-sys]
 version="0.3.20"
-features=["console", ]
+features=["console"]
 
 [build-dependencies]
 cc = { version = "1.0", features = ["parallel"] }
