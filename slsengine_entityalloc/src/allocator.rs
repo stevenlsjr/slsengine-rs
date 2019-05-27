@@ -15,8 +15,7 @@ pub struct GenerationalIndex {
 impl GenerationalIndex {
     /// Constructor uses primarily for mocking indices
     /// in a test. Otherwise, indices are created by an allocator
-    #[cfg(test)]
-    fn new(index: usize, generation: u64) -> Self {
+    pub(crate) fn new(index: usize, generation: u64) -> Self {
         GenerationalIndex { index, generation }
     }
 
