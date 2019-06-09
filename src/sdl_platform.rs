@@ -1,5 +1,4 @@
 use failure;
-#[cfg(feature = "backend-gl")]
 use gl;
 use log::*;
 use sdl2;
@@ -150,7 +149,6 @@ impl PlatformBuilder {
             })
         }
     }
-    #[cfg(feature = "backend-gl")]
     pub fn build_gl(&self) -> PlatformResult<Platform> {
         let pb = GlPlatformBuilder::new();
         let mut platform = self.build(&pb)?;
@@ -179,7 +177,6 @@ pub fn make_window_builder(
     }
     wb
 }
-#[cfg(feature = "backend-gl")]
 pub mod gl_platform {
     use super::*;
     use sdl2::video::GLContext;
@@ -341,5 +338,4 @@ pub mod gl_platform {
 
 }
 
-#[cfg(feature = "backend-gl")]
 pub use self::gl_platform::{load_opengl, GlPlatformBuilder};
