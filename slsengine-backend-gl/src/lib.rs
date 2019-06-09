@@ -1,7 +1,3 @@
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
-}
+pub use slsengine_platform_sdl as platform_sdl;
+pub mod gl_platform;
+pub use gl_platform::BuildGlPlatform;

@@ -1,14 +1,16 @@
 [package]
-name = "slsengine-backend-gl"
+name = "slsengine-platform-sdl"
 version = "0.1.0"
 authors = ["Steve Shea <stevenlsjr@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-slsengine-platform-sdl = {path="../slsengine-platform-sdl"}
 failure = "0.1.5"
+
+serde = "1.0.90"
+serde_derive = "1.0.90"
 log = "0.4"
 
 
-[dependencies.gl]
-    path ="../lib/gl"
+[dependencies.sdl2]
+  version="0.32.2"

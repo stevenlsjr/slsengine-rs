@@ -1,3 +1,24 @@
+
+
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+pub enum AntiAliasing {
+    None,
+    MSAAx2,
+    MSAAx4,
+    MSAAx8,
+}
+
+impl AntiAliasing {
+    pub fn n_samples(self) -> usize {
+        match self {
+            AntiAliasing::None => 0,
+            AntiAliasing::MSAAx2 => 2,
+            AntiAliasing::MSAAx4 => 4,
+            AntiAliasing::MSAAx8 => 8,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlatformConfig {
     pub window_size: (u32, u32),
@@ -19,21 +40,3 @@ impl Default for PlatformConfig {
     }
 }
 
-#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
-pub enum AntiAliasing {
-    None,
-    MSAAx2,
-    MSAAx4,
-    MSAAx8,
-}
-
-impl AntiAliasing {
-    pub fn n_samples(self) -> usize {
-        match self {
-            AntiAliasing::None => 0,
-            AntiAliasing::MSAAx2 => 2,
-            AntiAliasing::MSAAx4 => 4,
-            AntiAliasing::MSAAx8 => 8,
-        }
-    }
-}

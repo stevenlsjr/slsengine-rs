@@ -10,6 +10,21 @@
       <sourceFolder url="file://$MODULE_DIR$/slsengine-render/examples" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/slsengine-render/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/slsengine-render/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/slsengine-platform-sdl/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/slsengine-platform-sdl/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/slsengine-platform-sdl/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/slsengine-platform-sdl/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/slsengine-backend-gl/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/slsengine-backend-gl/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/slsengine-backend-gl/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/slsengine-backend-gl/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/examples/vulkan/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/examples/vulkan/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/examples/vulkan/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/examples/vulkan/benches" isTestSource="true" />
+      <excludeFolder url="file://$MODULE_DIR$/examples/vulkan/target" />
+      <excludeFolder url="file://$MODULE_DIR$/slsengine-backend-gl/target" />
+      <excludeFolder url="file://$MODULE_DIR$/slsengine-platform-sdl/target" />
       <excludeFolder url="file://$MODULE_DIR$/slsengine-render/target" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>

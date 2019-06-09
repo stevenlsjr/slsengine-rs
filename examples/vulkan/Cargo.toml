@@ -1,5 +1,5 @@
 [package]
-name = "slsengine-platform"
+name = "vulkan"
 version = "0.1.0"
 authors = ["Steve Shea <stevenlsjr@gmail.com>"]
 edition = "2018"
