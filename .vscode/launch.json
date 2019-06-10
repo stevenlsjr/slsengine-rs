@@ -1,0 +1,206 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "slsengine_run vsdbg",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceRoot}\\target\\debug\\slsengine_run.exe",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [
+        {
+          "name": "RUST_LOG",
+          "value": "slsengine"
+        }
+      ],
+      "preLaunchTask": "cargo build",
+      "externalConsole": false,
+      "logging": {
+        "engineLogging": false
+      }
+    },
+    {
+      "name": "vk_run vsdbg",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceRoot}\\target\\debug\\examples\\vk_run.exe",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [
+        {
+          "name": "RUST_LOG",
+          "value": "slsengine"
+        }
+      ],
+      "preLaunchTask": "cargo build",
+      "externalConsole": false,
+      "logging": {
+        "engineLogging": false
+      }
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in library 'slsengine'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--lib",
+          "--package=slsengine"
+        ],
+        "filter": {
+          "kind": "lib"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}",
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug executable 'slsengine_run'",
+      "cargo": {
+        "args": [
+          "build",
+          "--bin=slsengine_run",
+          "--package=slsengine"
+        ],
+        "filter": {
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in executable 'slsengine_run'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--bin=slsengine_run",
+          "--package=slsengine"
+        ],
+        "filter": {
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug example 'vk_run'",
+      "cargo": {
+        "args": [
+          "build",
+          "--example=vk_run",
+          "--package=slsengine"
+        ],
+        "filter": {
+          "kind": "example"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in example 'vk_run'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--example=vk_run",
+          "--package=slsengine"
+        ],
+        "filter": {
+          "kind": "example"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug example 'webgl_run'",
+      "cargo": {
+        "args": [
+          "build",
+          "--example=webgl_run",
+          "--package=slsengine"
+        ],
+        "filter": {
+          "kind": "example"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in example 'webgl_run'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--example=webgl_run",
+          "--package=slsengine"
+        ],
+        "filter": {
+          "kind": "example"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug test 'run_gltests'",
+      "cargo": {
+        "args": [
+          "build",
+          "--test=run_gltests",
+          "--package=slsengine"
+        ],
+        "filter": {
+          "kind": "test"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in test 'run_gltests'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--test=run_gltests",
+          "--package=slsengine"
+        ],
+        "filter": {
+          "kind": "test"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}
