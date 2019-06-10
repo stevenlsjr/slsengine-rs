@@ -48,3 +48,5 @@ pub fn from_base_path<P: AsRef<Path>>(
     let path = base_path().map_err(&failure::err_msg)?;
     Ok(Path::new(&path).join(subpath))
 }
+
+

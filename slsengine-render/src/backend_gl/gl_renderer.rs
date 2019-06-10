@@ -41,8 +41,12 @@ pub struct GlRenderer {
     recompile_flag: Cell<Option<Instant>>,
 }
 
+
+
 fn create_scene_shaders() -> Result<(PbrProgram, PbrProgram), ShaderError> {
-    use crate::platform_system::asset_path;
+    fn asset_path() -> &'static Path {
+        Path::new("")
+    }
     let scene_program = program_from_sources(
         asset_path().join(Path::new("./assets/shaders/brdf.vert")),
         asset_path().join(Path::new("./assets/shaders/brdf.frag")),
