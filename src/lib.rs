@@ -17,7 +17,7 @@ use std::error;
 use std::fmt::{Debug, Display};
 use std::marker::{Send, Sync};
 
-pub use crate::{application::AppError, game::main_loop::MainLoopState};
+pub use crate::{ game::main_loop::MainLoopState};
 pub use slsengine_render as renderer;
 
 pub mod assets;
