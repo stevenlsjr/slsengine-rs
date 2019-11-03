@@ -3,6 +3,7 @@ name = "slsengine-render"
 version = "0.1.0"
 authors = ["Steve Shea <stevenlsjr@gmail.com>"]
 edition = "2018"
+default-run="render-sample"
 
 [features]
 default = []
@@ -15,9 +16,12 @@ vulkan = ["gfx-backend-vulkan"]
 unstable = []
 bin-deps = ["env_logger"]
 
+[lib]
+crate-type = ["cdylib", "rlib"]
+
 [[bin]]
-name = "slsengine-sample"
-path = "bin/main.rs"
+name = "render-sample"
+path = "src/render-sample/main.rs"
 required-features = ["bin-deps"]
 
 [dependencies]
@@ -35,12 +39,12 @@ log = "0.4"
 memoffset = "0.5.2"
 serde = "1.0.90"
 serde_derive = "1.0.90"
-stb_image = "0.2.2"
 rayon = "1.0.3"
 specs = {version="0.14.3"}
 specs-derive = "0.4.0"
 toml = "0.5.0"
 smart-default = "0.5.2"
+winit = { version = "0.20.0-alpha4", features = ["web-sys"] }
 
 # gfx-rs stuff
 hal = {  version = "0.4", package = "gfx-hal" }
@@ -50,7 +54,8 @@ env_logger = { version = "0.6.1" , optional=true}
 
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-glsl-to-spirv = "0.1.4"
+shaderc = "0.6"
+sdl2 = "0.32.1"
 
 [dependencies.gfx-backend-gl]
 version = "0.4"
@@ -88,5 +93,3 @@ optional = true
     version = "0.11.3"
     features = ["extras", "names"]
 
-[dependencies.sdl2]
-    version="0.32.1"

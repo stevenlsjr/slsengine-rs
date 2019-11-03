@@ -7,6 +7,8 @@ extern crate smart_default;
 #[macro_use]
 extern crate memoffset;
 
+pub mod backend;
+
 pub mod camera;
 pub mod color;
 pub mod components;
