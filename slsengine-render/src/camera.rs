@@ -42,10 +42,3 @@ impl Camera {
     }
 }
 
-impl Resizable for Camera {
-    fn on_resize(&mut self, (width, height): (u32, u32)) {
-        let aspect = width as f32 / height as f32;
-        self.perspective.aspect = aspect;
-        self.build_perspective();
-    }
-}

@@ -1,0 +1,19 @@
+{
+  "name": "slsengine-render",
+  "version": "1.0.0",
+  "main": "web/index.js",
+  "author": "Steve Shea",
+  "license": "MIT",
+  "devDependencies": {
+    "@wasm-tool/wasm-pack-plugin": "^1.0.1",
+    "copy-webpack-plugin": "^5.0.4",
+    "rimraf": "^3.0.0",
+    "webpack": "^4.41.2",
+    "webpack-cli": "^3.3.10",
+    "webpack-dev-server": "^3.9.0",
+    "html-webpack-plugin": "3.2.0"
+  },
+  "installConfig": {
+    "pnp": false
+  }
+}

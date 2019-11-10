@@ -21,10 +21,8 @@ pub mod draw;
 
 pub use self::color::{color4f, ColorRGBA};
 pub use self::{camera::*, mesh::*, traits::*};
-
-pub trait ShaderPipeline<T: Renderer> {
-    fn use_program(&self, renderer: &T);
-}
+#[cfg(target_arch = "wasm32")]
+pub mod web_entry; 
 
 pub(crate) mod math {
     use cgmath;
