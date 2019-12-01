@@ -7,7 +7,11 @@ extern crate smart_default;
 #[macro_use]
 extern crate memoffset;
 
-pub mod backend;
+#[cfg(target_os="ios")]
+pub mod ios_run;
+#[cfg(target_arch = "ios")]
+pub mod ios;
+
 
 pub mod camera;
 pub mod color;
@@ -23,6 +27,7 @@ pub use self::color::{color4f, ColorRGBA};
 pub use self::{camera::*, mesh::*, traits::*};
 #[cfg(target_arch = "wasm32")]
 pub mod web_entry; 
+
 
 pub(crate) mod math {
     use cgmath;

@@ -17,7 +17,7 @@ unstable = []
 bin-deps = ["env_logger"]
 
 [lib]
-crate-type = ["cdylib", "rlib"]
+crate-type = ["cdylib", "rlib", "staticlib"]
 
 [[bin]]
 name = "render-sample"
@@ -53,9 +53,9 @@ gfx-backend-empty = { version = "0.4" }
 env_logger = { version = "0.6.1" , optional=true}
 
 
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+[target.'cfg(not(any(target_arch = "wasm32", target_os="ios")))'.dependencies]
 shaderc = "0.6"
-sdl2 = "0.32.1"
+sdl2 = "0.32.2"
 
 [dependencies.gfx-backend-gl]
 version = "0.4"
@@ -75,9 +75,11 @@ version = "0.4"
 features = ["x11"]
 optional = true
 
-[target.'cfg(any(target_os = "macos", all(target_os = "ios", target_arch = "aarch64")))'.dependencies.gfx-backend-metal]
+[target.'cfg(any(target_os = "macos", all(target_os="ios", target_pointer_width="64")))'.dependencies.gfx-backend-metal]
 version = "0.4"
 optional = true
+[target.'cfg(any(target_os = "macos", all(target_os="ios", target_pointer_width="64")))'.dependencies.objc]
+version = "0.2.7"
 
 [target.'cfg(windows)'.dependencies.gfx-backend-dx11]
 version = "0.4"
@@ -90,6 +92,6 @@ optional = true
 # platform deps
 
 [dependencies.gltf]
-    version = "0.11.3"
+    version = "0.14.0"
     features = ["extras", "names"]
 

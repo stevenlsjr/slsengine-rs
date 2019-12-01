@@ -21,8 +21,8 @@ slsengine_entityalloc = {path="slsengine_entityalloc"}
 slsengine-render = {path="slsengine-render", features=["backend-gl", "gl-debug-output"]}
 bitflags = "1.0.4"
 cgmath = {version="0.17.0", features=["swizzle"]}
-env_logger = "0.6.1"
-failure = "0.1.5"
+env_logger = "0.7.1"
+failure = "0.1.6"
 genmesh = "0.6.2"
 image = "0.20.1"
 log = "0.4"

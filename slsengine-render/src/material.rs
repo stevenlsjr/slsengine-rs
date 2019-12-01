@@ -18,7 +18,7 @@ pub struct Material<Tex> {
 
 impl<Tex> fmt::Debug for Material<Tex> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let map: &[(&str, &fmt::Debug)] = &[
+        let map: &[(&str, &dyn fmt::Debug)] = &[
             ("albedo_factor", &self.albedo_factor),
             ("metallic_factor", &self.metallic_factor),
             ("roughness_factor", &self.roughness_factor),
@@ -27,8 +27,7 @@ impl<Tex> fmt::Debug for Material<Tex> {
         write!(f, "Material<Tex>")?;
         f.debug_map()
             .entries(map.iter().map(|&(ref k, ref v)| (k, v)))
-            .finish()?;
-        Ok(())
+            .finish()
     }
 }
 
